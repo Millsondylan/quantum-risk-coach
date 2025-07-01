@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -13,33 +14,38 @@ import Journal from "./pages/Journal";
 import TradeBuilder from "./pages/TradeBuilder";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// Protected Route Component with error handling
+// Protected Route Component with improved error handling
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  try {
-    const { user, loading } = useAuth();
-    
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
-            <p className="text-slate-400">Loading...</p>
-          </div>
+  const { user, loading } = useAuth();
+  
+  console.log('ProtectedRoute - loading:', loading, 'user:', user?.email);
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading...</p>
         </div>
-      );
-    }
-    
-    if (!user) {
-      return <Navigate to="/auth" replace />;
-    }
-    
-    return <>{children}</>;
-  } catch (error) {
-    console.error('ProtectedRoute error:', error);
+      </div>
+    );
+  }
+  
+  if (!user) {
+    console.log('No user, redirecting to auth');
     return <Navigate to="/auth" replace />;
   }
+  
+  return <>{children}</>;
 };
 
 const App = () => {

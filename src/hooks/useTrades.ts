@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,16 +21,27 @@ export const useTrades = () => {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      setError(null);
+      
+      console.log('Fetching trades for user:', user.id);
+      
+      const { data, error: fetchError } = await supabase
         .from('trades')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (fetchError) {
+        console.error('Error fetching trades:', fetchError);
+        throw fetchError;
+      }
+      
+      console.log('Fetched trades:', data?.length || 0);
       setTrades(data || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch trades');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch trades';
+      console.error('useTrades fetchTrades error:', errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -39,7 +51,9 @@ export const useTrades = () => {
     if (!user) throw new Error('User not authenticated');
 
     try {
-      const { data, error } = await supabase
+      console.log('Adding trade:', tradeData);
+      
+      const { data, error: insertError } = await supabase
         .from('trades')
         .insert([
           {
@@ -50,44 +64,71 @@ export const useTrades = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Error adding trade:', insertError);
+        throw insertError;
+      }
+      
+      console.log('Trade added:', data);
       setTrades(prev => [data, ...prev]);
       return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add trade');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add trade';
+      console.error('useTrades addTrade error:', errorMessage);
+      setError(errorMessage);
       throw err;
     }
   };
 
   const updateTrade = async (id: string, updates: Partial<Trade>) => {
     try {
-      const { data, error } = await supabase
+      console.log('Updating trade:', id, updates);
+      
+      const { data, error: updateError } = await supabase
         .from('trades')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user?.id) // Ensure user can only update their own trades
         .select()
         .single();
 
-      if (error) throw error;
+      if (updateError) {
+        console.error('Error updating trade:', updateError);
+        throw updateError;
+      }
+      
+      console.log('Trade updated:', data);
       setTrades(prev => prev.map(trade => trade.id === id ? data : trade));
       return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update trade');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update trade';
+      console.error('useTrades updateTrade error:', errorMessage);
+      setError(errorMessage);
       throw err;
     }
   };
 
   const deleteTrade = async (id: string) => {
     try {
-      const { error } = await supabase
+      console.log('Deleting trade:', id);
+      
+      const { error: deleteError } = await supabase
         .from('trades')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user?.id); // Ensure user can only delete their own trades
 
-      if (error) throw error;
+      if (deleteError) {
+        console.error('Error deleting trade:', deleteError);
+        throw deleteError;
+      }
+      
+      console.log('Trade deleted');
       setTrades(prev => prev.filter(trade => trade.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete trade');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete trade';
+      console.error('useTrades deleteTrade error:', errorMessage);
+      setError(errorMessage);
       throw err;
     }
   };
@@ -155,4 +196,4 @@ export const useTrades = () => {
     deleteTrade,
     getPerformanceMetrics,
   };
-}; 
+};
