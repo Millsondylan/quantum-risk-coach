@@ -1,8 +1,11 @@
 
 import React from 'react';
-import { Shield, AlertTriangle, TrendingDown, BarChart3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Shield, AlertTriangle, BarChart3 } from 'lucide-react';
 
 const RiskAnalyzer = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="holo-card p-6 h-full">
       <div className="flex items-center space-x-3 mb-6">
@@ -58,7 +61,10 @@ const RiskAnalyzer = () => {
       </div>
 
       <div className="mt-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
-        <div className="flex items-center justify-between">
+        <div 
+          onClick={() => navigate('/connect-mt4')}
+          className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+        >
           <div className="flex items-center space-x-3">
             <BarChart3 className="w-5 h-5 text-blue-400" />
             <div>

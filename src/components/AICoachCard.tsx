@@ -1,8 +1,11 @@
 
 import React from 'react';
-import { Brain, Lightbulb, AlertTriangle, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Brain, Lightbulb, AlertTriangle } from 'lucide-react';
 
 const AICoachCard = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="holo-card p-6 h-full">
       <div className="flex items-center space-x-3 mb-6">
@@ -28,7 +31,10 @@ const AICoachCard = () => {
           </p>
         </div>
 
-        <div className="p-4 rounded-lg border border-slate-600/30 bg-slate-700/30">
+        <div 
+          onClick={() => navigate('/connect-mt4')}
+          className="p-4 rounded-lg border border-slate-600/30 bg-slate-700/30 cursor-pointer hover:bg-slate-700/50 transition-colors"
+        >
           <div className="flex items-center space-x-3 mb-3">
             <div className="p-2 bg-orange-500/20 rounded-lg">
               <AlertTriangle className="w-4 h-4 text-orange-400" />
@@ -41,7 +47,10 @@ const AICoachCard = () => {
         </div>
       </div>
 
-      <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
+      <div 
+        onClick={() => navigate('/connect-mt4')}
+        className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20 cursor-pointer hover:opacity-80 transition-opacity"
+      >
         <div className="text-center">
           <p className="text-sm text-slate-300 mb-2">AI Coach Status</p>
           <div className="text-2xl font-bold text-slate-400">Waiting for Data</div>

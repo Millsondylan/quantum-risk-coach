@@ -1,8 +1,11 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BookOpen, Plus, MessageSquare } from 'lucide-react';
 
 const TradeJournalCard = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="holo-card p-6 h-full">
       <div className="flex items-center justify-between mb-6">
@@ -10,7 +13,10 @@ const TradeJournalCard = () => {
           <BookOpen className="w-6 h-6 text-cyan-400" />
           <h2 className="text-xl font-semibold text-white">Smart Journal</h2>
         </div>
-        <button className="holo-button px-4 py-2 rounded-lg text-white text-sm flex items-center space-x-2">
+        <button 
+          onClick={() => navigate('/journal')}
+          className="holo-button px-4 py-2 rounded-lg text-white text-sm flex items-center space-x-2"
+        >
           <Plus className="w-4 h-4" />
           <span>New Entry</span>
         </button>
@@ -25,7 +31,10 @@ const TradeJournalCard = () => {
           <p className="text-sm text-slate-400 leading-relaxed">
             Start documenting your trades to build a comprehensive trading history and receive AI-powered insights.
           </p>
-          <button className="mt-4 holo-button px-4 py-2 rounded-lg text-white text-sm">
+          <button 
+            onClick={() => navigate('/journal')}
+            className="mt-4 holo-button px-4 py-2 rounded-lg text-white text-sm"
+          >
             Create First Entry
           </button>
         </div>

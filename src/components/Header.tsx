@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { TrendingUp, Settings, Bell, User, Wifi, WifiOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingUp, Settings, Bell, User, WifiOff } from 'lucide-react';
 
 const Header = () => {
-  // In a real implementation, this would come from your trading platform connection status
+  const navigate = useNavigate();
   const isConnected = false;
   const balance = null;
 
@@ -26,17 +27,8 @@ const Header = () => {
           <div className="flex items-center space-x-6">
             <div className="hidden md:flex items-center space-x-4 text-sm">
               <div className="flex items-center space-x-2">
-                {isConnected ? (
-                  <>
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-green-400">MT5 Connected</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="w-4 h-4 text-red-400" />
-                    <span className="text-red-400">Disconnected</span>
-                  </>
-                )}
+                <WifiOff className="w-4 h-4 text-red-400" />
+                <span className="text-red-400">Disconnected</span>
               </div>
               <div className="text-slate-400">
                 Balance: <span className="text-slate-400 font-semibold">
@@ -46,13 +38,22 @@ const Header = () => {
             </div>
             
             <div className="flex items-center space-x-3">
-              <button className="relative p-2 text-slate-400 hover:text-white transition-colors">
+              <button 
+                onClick={() => navigate('/auth')}
+                className="relative p-2 text-slate-400 hover:text-white transition-colors"
+              >
                 <Bell className="w-5 h-5" />
               </button>
-              <button className="p-2 text-slate-400 hover:text-white transition-colors">
+              <button 
+                onClick={() => navigate('/settings')}
+                className="p-2 text-slate-400 hover:text-white transition-colors"
+              >
                 <Settings className="w-5 h-5" />
               </button>
-              <button className="p-2 text-slate-400 hover:text-white transition-colors">
+              <button 
+                onClick={() => navigate('/auth')}
+                className="p-2 text-slate-400 hover:text-white transition-colors"
+              >
                 <User className="w-5 h-5" />
               </button>
             </div>

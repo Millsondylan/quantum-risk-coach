@@ -1,8 +1,11 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, TrendingUp } from 'lucide-react';
 
 const PerformanceCalendar = () => {
+  const navigate = useNavigate();
+
   // Generate empty calendar grid for the last 30 days
   const generateCalendarData = () => {
     const data = [];
@@ -67,10 +70,13 @@ const PerformanceCalendar = () => {
             <span className="text-slate-400">No trades</span>
           </div>
         </div>
-        <div className="text-slate-400">
+        <button 
+          onClick={() => navigate('/connect-mt4')}
+          className="text-slate-400 hover:text-white transition-colors"
+        >
           <TrendingUp className="w-4 h-4 inline mr-1" />
           Connect MT4/5 for data
-        </div>
+        </button>
       </div>
     </div>
   );

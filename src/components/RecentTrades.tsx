@@ -1,8 +1,11 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Activity, TrendingUp } from 'lucide-react';
 
 const RecentTrades = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="holo-card p-6">
       <div className="flex items-center justify-between mb-6">
@@ -23,7 +26,10 @@ const RecentTrades = () => {
         <p className="text-slate-400 mb-6 max-w-md mx-auto">
           Connect your MetaTrader 4 or 5 account to automatically sync your trades and view real-time performance data.
         </p>
-        <button className="holo-button px-6 py-3 rounded-lg text-white font-medium">
+        <button 
+          onClick={() => navigate('/connect-mt4')}
+          className="holo-button px-6 py-3 rounded-lg text-white font-medium"
+        >
           Connect MT4/5 Account
         </button>
       </div>
