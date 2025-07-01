@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
+  signOut: (callback?: () => void) => Promise<void>;
   updateProfile: (updates: { username?: string; avatar_url?: string }) => Promise<{ error: any }>;
 }
 
@@ -154,16 +153,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signOut = async () => {
+  const signOut = async (callback?: () => void) => {
     try {
       cleanupAuthState();
       await supabase.auth.signOut({ scope: 'global' });
-      // Force page reload for clean state
-      window.location.href = '/auth';
+      // Let React Router handle navigation instead of hard redirect
+      if (callback) {
+        callback();
+      }
     } catch (error) {
       console.error('Sign out error:', error);
-      // Force reload even on error
-      window.location.href = '/auth';
+      // Still call callback even on error to ensure navigation
+      if (callback) {
+        callback();
+      }
     }
   };
 

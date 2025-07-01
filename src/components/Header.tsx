@@ -29,10 +29,10 @@ const Header = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      navigate('/auth');
+      await signOut(() => navigate('/auth'));
     } catch (error) {
       console.error('Sign out error:', error);
+      navigate('/auth');
     }
   };
 
@@ -120,6 +120,7 @@ const Header = () => {
                   <Button variant="ghost" size="sm" className="relative p-2 text-slate-400 hover:text-white transition-colors">
                     <Bell className="w-5 h-5" />
                     {notificationCount > 0 && (
+                      // @ts-ignore: className is used for styling, BadgeProps may not include it
                       <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 text-xs bg-red-500">
                         {notificationCount}
                       </Badge>
