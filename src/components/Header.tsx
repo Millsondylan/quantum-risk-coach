@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { TrendingUp, Settings, Bell, User, WifiOff, Menu, LogOut, UserCircle, Home, BookOpen, Trophy, Brain, Target, Zap } from 'lucide-react';
+import { TrendingUp, Settings, Bell, User, WifiOff, Menu, LogOut, UserCircle, Home, BookOpen, Trophy, Brain, Target, Zap, ChevronDown, Plus, BarChart3, Tag, Download, Upload } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +28,18 @@ const Header = () => {
 
   const handleConnectMT4 = () => {
     navigate('/connect-mt4');
+  };
+
+  const handleConnectMT5 = () => {
+    navigate('/connect-mt5');
+  };
+
+  const handleConnectCTrader = () => {
+    navigate('/connect-ctrader');
+  };
+
+  const handleConnectTradingView = () => {
+    navigate('/connect-tradingview');
   };
 
   const handleSignOut = async () => {
@@ -46,6 +61,26 @@ const Header = () => {
 
   const handleJournal = () => {
     navigate('/journal');
+  };
+
+  const handleJournalView = () => {
+    navigate('/journal');
+  };
+
+  const handleJournalAdd = () => {
+    navigate('/journal/add');
+  };
+
+  const handleJournalAnalytics = () => {
+    navigate('/journal/analytics');
+  };
+
+  const handleJournalTags = () => {
+    navigate('/journal/tags');
+  };
+
+  const handleJournalExport = () => {
+    navigate('/journal/export');
   };
 
   const handleLeaderboard = () => {
@@ -74,6 +109,14 @@ const Header = () => {
 
   const handleTradeBuilder = () => {
     navigate('/trade-builder');
+  };
+
+  const handlePerformanceCalendar = () => {
+    navigate('/performance-calendar');
+  };
+
+  const handleStrategyAnalyzer = () => {
+    navigate('/strategy-analyzer');
   };
 
   const markNotificationsAsRead = () => {
@@ -160,6 +203,108 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
 
+              {/* Desktop Navigation Menu */}
+              <div className="hidden md:flex items-center space-x-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                      Dashboard
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleDashboard}>
+                      <Home className="w-4 h-4 mr-2" />
+                      Overview
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLeaderboard}>
+                      <Trophy className="w-4 h-4 mr-2" />
+                      Leaderboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleAICoach}>
+                      <Brain className="w-4 h-4 mr-2" />
+                      AI Coach
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                      Trading
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleTradeBuilder}>
+                      <Target className="w-4 h-4 mr-2" />
+                      Trade Builder
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handlePerformanceCalendar}>
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Performance Calendar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleStrategyAnalyzer}>
+                      <Zap className="w-4 h-4 mr-2" />
+                      Strategy Analyzer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                      Journal
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={handleJournalView}>
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      View Journal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleJournalAdd}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Entry
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleJournalAnalytics}>
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Analytics
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleJournalTags}>
+                      <Tag className="w-4 h-4 mr-2" />
+                      Tags & Categories
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleJournalExport}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export/Import
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <WifiOff className="w-4 h-4 mr-2" />
+                        Connections
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem onClick={handleConnectMT4}>
+                          <WifiOff className="w-4 h-4 mr-2" />
+                          Connect MT4
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleConnectMT5}>
+                          <WifiOff className="w-4 h-4 mr-2" />
+                          Connect MT5
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleConnectCTrader}>
+                          <WifiOff className="w-4 h-4 mr-2" />
+                          Connect cTrader
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleConnectTradingView}>
+                          <WifiOff className="w-4 h-4 mr-2" />
+                          Connect TradingView
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -185,22 +330,6 @@ const Header = () => {
                     <BookOpen className="w-4 h-4 mr-2" />
                     Trading Journal
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLeaderboard}>
-                    <Trophy className="w-4 h-4 mr-2" />
-                    Leaderboard
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAICoach}>
-                    <Brain className="w-4 h-4 mr-2" />
-                    AI Coach
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleTradeBuilder}>
-                    <Target className="w-4 h-4 mr-2" />
-                    Trade Builder
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleConnectMT4}>
-                    <WifiOff className="w-4 h-4 mr-2" />
-                    Connect MT4/5
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="w-4 h-4 mr-2" />
@@ -216,23 +345,43 @@ const Header = () => {
                     <Menu className="w-5 h-5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-64">
                   <DropdownMenuItem onClick={handleDashboard}>
                     <Home className="w-4 h-4 mr-2" />
                     Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleJournal}>
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Journal
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleTradeBuilder}>
                     <Target className="w-4 h-4 mr-2" />
                     Trade Builder
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleConnectMT4}>
-                    <WifiOff className="w-4 h-4 mr-2" />
-                    Connect MT4/5
+                  <DropdownMenuItem onClick={handleJournal}>
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Journal
                   </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <WifiOff className="w-4 h-4 mr-2" />
+                      Connections
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={handleConnectMT4}>
+                        <WifiOff className="w-4 h-4 mr-2" />
+                        Connect MT4
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleConnectMT5}>
+                        <WifiOff className="w-4 h-4 mr-2" />
+                        Connect MT5
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleConnectCTrader}>
+                        <WifiOff className="w-4 h-4 mr-2" />
+                        Connect cTrader
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleConnectTradingView}>
+                        <WifiOff className="w-4 h-4 mr-2" />
+                        Connect TradingView
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                   <DropdownMenuItem onClick={handleProfile}>
                     <Settings className="w-4 h-4 mr-2" />
                     Settings

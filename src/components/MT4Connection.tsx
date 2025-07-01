@@ -22,7 +22,11 @@ interface ConnectionStatus {
   lastUpdate: Date;
 }
 
-const MT4Connection = () => {
+interface MT4ConnectionProps {
+  platform?: string;
+}
+
+const MT4Connection: React.FC<MT4ConnectionProps> = ({ platform = "MT4/MT5" }) => {
   const navigate = useNavigate();
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     isConnected: false,
@@ -44,6 +48,37 @@ const MT4Connection = () => {
     password: '',
     port: '443'
   });
+
+  const getPlatformInfo = (platform: string) => {
+    switch (platform) {
+      case "MT5":
+        return {
+          name: "MT5",
+          fullName: "MetaTrader 5",
+          description: "Connect your MetaTrader 5 account to start receiving real-time data"
+        };
+      case "cTrader":
+        return {
+          name: "cTrader",
+          fullName: "cTrader",
+          description: "Connect your cTrader account to start receiving real-time data"
+        };
+      case "TradingView":
+        return {
+          name: "TradingView",
+          fullName: "TradingView",
+          description: "Connect your TradingView account to start receiving real-time data"
+        };
+      default:
+        return {
+          name: "MT4/MT5",
+          fullName: "MetaTrader 4/5",
+          description: "Connect your MetaTrader account to start receiving real-time data"
+        };
+    }
+  };
+
+  const platformInfo = getPlatformInfo(platform);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -164,7 +199,7 @@ const MT4Connection = () => {
             ) : (
               <WifiOff className="w-5 h-5 text-red-400" />
             )}
-            <span>MT4/MT5 Connection</span>
+            <span>{platformInfo.name} Connection</span>
             <Badge variant={connectionStatus.isConnected ? "default" : "destructive"}>
               {connectionStatus.isConnected ? "Connected" : "Disconnected"}
             </Badge>
@@ -172,7 +207,7 @@ const MT4Connection = () => {
           <CardDescription>
             {connectionStatus.isConnected 
               ? `Connected to ${connectionStatus.server}` 
-              : "Connect your MetaTrader account to start receiving real-time data"
+              : platformInfo.description
             }
           </CardDescription>
         </CardHeader>

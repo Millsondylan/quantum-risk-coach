@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -68,6 +67,21 @@ const App = () => {
                   <MT4Connection />
                 </ProtectedRoute>
               } />
+              <Route path="/connect-mt5" element={
+                <ProtectedRoute>
+                  <MT4Connection platform="MT5" />
+                </ProtectedRoute>
+              } />
+              <Route path="/connect-ctrader" element={
+                <ProtectedRoute>
+                  <MT4Connection platform="cTrader" />
+                </ProtectedRoute>
+              } />
+              <Route path="/connect-tradingview" element={
+                <ProtectedRoute>
+                  <MT4Connection platform="TradingView" />
+                </ProtectedRoute>
+              } />
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <Settings />
@@ -78,9 +92,39 @@ const App = () => {
                   <Journal />
                 </ProtectedRoute>
               } />
+              <Route path="/journal/add" element={
+                <ProtectedRoute>
+                  <Journal defaultTab="add" />
+                </ProtectedRoute>
+              } />
+              <Route path="/journal/analytics" element={
+                <ProtectedRoute>
+                  <Journal defaultTab="analytics" />
+                </ProtectedRoute>
+              } />
+              <Route path="/journal/tags" element={
+                <ProtectedRoute>
+                  <Journal defaultTab="tags" />
+                </ProtectedRoute>
+              } />
+              <Route path="/journal/export" element={
+                <ProtectedRoute>
+                  <Journal defaultTab="export" />
+                </ProtectedRoute>
+              } />
               <Route path="/trade-builder" element={
                 <ProtectedRoute>
                   <TradeBuilder />
+                </ProtectedRoute>
+              } />
+              <Route path="/performance-calendar" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/strategy-analyzer" element={
+                <ProtectedRoute>
+                  <Index />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<NotFound />} />
