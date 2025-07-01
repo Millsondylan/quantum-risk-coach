@@ -179,17 +179,37 @@ const EnhancedTradingJournal = () => {
   });
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5" />
-          Enhanced Trading Journal
-        </CardTitle>
-        <CardDescription>
-          Detailed trading journal with notes, screenshots, emotional tracking, and insights
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full">
+      <div className="journal-container">
+        <div className="journal-header">
+          <div className="journal-header-content">
+            <div className="flex items-center gap-3">
+              <div className="journal-icon">
+                <BookOpen className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="journal-title">Trading Journal</h2>
+                <p className="journal-subtitle">
+                  Track emotions, strategies, and insights
+                </p>
+              </div>
+            </div>
+            <div className="journal-stats">
+              <div className="stat-item">
+                <span className="stat-value">{entries.length}</span>
+                <span className="stat-label">Entries</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-value">
+                  {entries.length > 0 ? (entries.reduce((sum, entry) => sum + entry.rating, 0) / entries.length).toFixed(1) : '0'}
+                </span>
+                <span className="stat-label">Avg Rating</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="journal-content">
         <Tabs defaultValue="entries" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="entries">Journal Entries</TabsTrigger>
@@ -545,8 +565,9 @@ const EnhancedTradingJournal = () => {
             </CardContent>
           </Card>
         )}
-      </CardContent>
-    </Card>
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -27,117 +27,193 @@ import PortfolioManager from './PortfolioManager';
 
 const DashboardGrid = () => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6">
-      {/* Quick Stats Row - Mobile optimized */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
+    <div className="dashboard-container">
+      {/* Quick Stats - Always visible at top */}
+      <section className="dashboard-section priority-high">
         <QuickStats />
-      </div>
+      </section>
 
-      {/* Portfolio Manager - High priority placement */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
+      {/* Portfolio Manager - High priority for trading focus */}
+      <section className="dashboard-section priority-high" data-section="portfolio">
+        <div className="section-header">
+          <h2 className="section-title">Portfolio Overview</h2>
+          <p className="section-subtitle">Real-time portfolio performance</p>
+        </div>
         <PortfolioManager />
-      </div>
+      </section>
 
-      {/* Broker Integration - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <BrokerIntegration />
-      </div>
-
-      {/* Advanced Analytics - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <AdvancedAnalytics />
-      </div>
-
-      {/* Calendar View - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <CalendarView />
-      </div>
-
-      {/* Strategy Analysis - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <StrategyAnalysis />
-      </div>
-
-      {/* Enhanced Trading Journal - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
+      {/* Enhanced Trading Journal - Core feature */}
+      <section className="dashboard-section priority-high">
+        <div className="section-header">
+          <h2 className="section-title">Trading Journal</h2>
+          <p className="section-subtitle">Track and analyze your trades</p>
+        </div>
         <EnhancedTradingJournal />
+      </section>
+
+      {/* Calendar View - Trade journal focus */}
+      <section className="dashboard-section priority-medium">
+        <div className="section-header">
+          <h2 className="section-title">Performance Calendar</h2>
+          <p className="section-subtitle">Visualize your trading patterns</p>
+        </div>
+        <CalendarView />
+      </section>
+
+      {/* AI Coach & Analytics Row */}
+      <div className="dashboard-row">
+        <section className="dashboard-card" data-section="ai-coach">
+          <div className="card-header">
+            <h3 className="card-title">AI Coach</h3>
+          </div>
+          <AICoachCard />
+        </section>
+
+        <section className="dashboard-card">
+          <div className="card-header">
+            <h3 className="card-title">Analytics</h3>
+          </div>
+          <AdvancedAnalytics />
+        </section>
       </div>
 
-      {/* Notifications & Alerts - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <NotificationsAlerts />
+      {/* Strategy Analysis */}
+      <section className="dashboard-section priority-medium">
+        <div className="section-header">
+          <h2 className="section-title">Strategy Analysis</h2>
+          <p className="section-subtitle">Optimize your trading strategies</p>
+        </div>
+        <StrategyAnalysis />
+      </section>
+
+      {/* Risk & Performance Row */}
+      <div className="dashboard-row">
+        <section className="dashboard-card">
+          <div className="card-header">
+            <h3 className="card-title">Risk Analysis</h3>
+          </div>
+          <RiskAnalyzer />
+        </section>
+
+        <section className="dashboard-card">
+          <div className="card-header">
+            <h3 className="card-title">Performance</h3>
+          </div>
+          <PerformanceCalendar />
+        </section>
       </div>
 
-      {/* Market Coverage & Sentiment - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <MarketCoverageSentiment />
-      </div>
-
-      {/* Paper Trading - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <PaperTrading />
-      </div>
-
-      {/* Performance Calendar - Mobile optimized layout */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-8">
-        <PerformanceCalendar />
-      </div>
-
-      {/* AI Coach - Mobile optimized */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-4" data-section="ai-coach">
-        <AICoachCard />
-      </div>
-
-      {/* Trade Builder - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <TradeBuilder />
-      </div>
-
-      {/* Smart Journal and Personal Challenges - Mobile optimized */}
-      <div className="col-span-1 md:col-span-1 lg:col-span-6">
-        <SmartJournal />
-      </div>
-
-      <div className="col-span-1 md:col-span-1 lg:col-span-6">
-        <PersonalChallenges />
-      </div>
-
-      {/* Market Sentiment Overlay - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <MarketSentimentOverlay />
-      </div>
-
-      {/* Strategy Analyzer - Full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <StrategyAnalyzer />
-      </div>
-
-      {/* Economic Calendar and Leaderboard - Mobile optimized */}
-      <div className="col-span-1 md:col-span-1 lg:col-span-6">
-        <EconomicCalendar />
-      </div>
-
-      <div className="col-span-1 md:col-span-1 lg:col-span-6" data-section="leaderboard">
-        <Leaderboard />
-      </div>
-
-      {/* Trade Journal and Risk Analyzer - Mobile optimized */}
-      <div className="col-span-1 md:col-span-1 lg:col-span-7">
-        <TradeJournalCard />
-      </div>
-
-      <div className="col-span-1 md:col-span-1 lg:col-span-5">
-        <RiskAnalyzer />
-      </div>
-
-      {/* Recent Trades */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
+      {/* Recent Activity */}
+      <section className="dashboard-section priority-medium">
+        <div className="section-header">
+          <h2 className="section-title">Recent Activity</h2>
+          <p className="section-subtitle">Latest trades and updates</p>
+        </div>
         <RecentTrades />
+      </section>
+
+      {/* Trade Builder */}
+      <section className="dashboard-section priority-medium">
+        <div className="section-header">
+          <h2 className="section-title">Trade Builder</h2>
+          <p className="section-subtitle">Plan your next trade</p>
+        </div>
+        <TradeBuilder />
+      </section>
+
+      {/* Market Data Row */}
+      <div className="dashboard-row">
+        <section className="dashboard-card">
+          <div className="card-header">
+            <h3 className="card-title">Market Sentiment</h3>
+          </div>
+          <MarketCoverageSentiment />
+        </section>
+
+        <section className="dashboard-card">
+          <div className="card-header">
+            <h3 className="card-title">Economic Calendar</h3>
+          </div>
+          <EconomicCalendar />
+        </section>
       </div>
 
-      {/* Notification System */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12">
-        <NotificationSystem />
+      {/* Paper Trading */}
+      <section className="dashboard-section priority-low">
+        <div className="section-header">
+          <h2 className="section-title">Paper Trading</h2>
+          <p className="section-subtitle">Practice without risk</p>
+        </div>
+        <PaperTrading />
+      </section>
+
+      {/* Community & Social Row */}
+      <div className="dashboard-row">
+        <section className="dashboard-card" data-section="leaderboard">
+          <div className="card-header">
+            <h3 className="card-title">Leaderboard</h3>
+          </div>
+          <Leaderboard />
+        </section>
+
+        <section className="dashboard-card">
+          <div className="card-header">
+            <h3 className="card-title">Challenges</h3>
+          </div>
+          <PersonalChallenges />
+        </section>
+      </div>
+
+      {/* Broker Integration */}
+      <section className="dashboard-section priority-low">
+        <div className="section-header">
+          <h2 className="section-title">Broker Integration</h2>
+          <p className="section-subtitle">Connect your trading accounts</p>
+        </div>
+        <BrokerIntegration />
+      </section>
+
+      {/* Additional Features (Lower Priority) */}
+      <div className="dashboard-expandable">
+        <div className="dashboard-row">
+          <section className="dashboard-card">
+            <div className="card-header">
+              <h3 className="card-title">Smart Journal</h3>
+            </div>
+            <SmartJournal />
+          </section>
+
+          <section className="dashboard-card">
+            <div className="card-header">
+              <h3 className="card-title">Market Sentiment</h3>
+            </div>
+            <MarketSentimentOverlay />
+          </section>
+        </div>
+
+        <section className="dashboard-section priority-low">
+          <div className="section-header">
+            <h2 className="section-title">Strategy Analyzer</h2>
+            <p className="section-subtitle">Advanced strategy metrics</p>
+          </div>
+          <StrategyAnalyzer />
+        </section>
+
+        <section className="dashboard-section priority-low">
+          <div className="section-header">
+            <h2 className="section-title">Notifications & Alerts</h2>
+            <p className="section-subtitle">Stay informed with alerts</p>
+          </div>
+          <NotificationsAlerts />
+        </section>
+
+        <section className="dashboard-section priority-low">
+          <div className="section-header">
+            <h2 className="section-title">Notification System</h2>
+            <p className="section-subtitle">Real-time updates</p>
+          </div>
+          <NotificationSystem />
+        </section>
       </div>
     </div>
   );

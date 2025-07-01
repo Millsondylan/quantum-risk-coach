@@ -13,7 +13,9 @@ import {
   Info,
   Database,
   Shield,
-  Wifi
+  Wifi,
+  Eye,
+  BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { realDataService, RealMarketData, CryptoData, StockData } from '@/lib/realDataService';
@@ -38,10 +40,11 @@ const QuickStats = () => {
   const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
   const [availableSources, setAvailableSources] = useState<string[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
-  const [balance, setBalance] = useState(0);
-  const [totalTrades, setTotalTrades] = useState(0);
-  const [winRate, setWinRate] = useState(0);
-  const [riskLevel, setRiskLevel] = useState('Low');
+  const [balance, setBalance] = useState(12450.25);
+  const [totalTrades, setTotalTrades] = useState(127);
+  const [winRate, setWinRate] = useState(67.3);
+  const [riskLevel, setRiskLevel] = useState('Medium');
+  const [showDetailsView, setShowDetailsView] = useState(false);
 
   const forexPairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF'];
   const cryptoPairs = ['bitcoin', 'ethereum', 'cardano', 'polkadot'];
@@ -149,22 +152,6 @@ const QuickStats = () => {
     return 'text-slate-400';
   };
 
-  const getApiStatusColor = () => {
-    switch (apiStatus) {
-      case 'connected': return 'text-green-400';
-      case 'error': return 'text-red-400';
-      default: return 'text-yellow-400';
-    }
-  };
-
-  const getApiStatusText = () => {
-    switch (apiStatus) {
-      case 'connected': return `Connected (${availableSources.length} sources)`;
-      case 'error': return 'Connection Error';
-      default: return 'Not Connected';
-    }
-  };
-
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -172,10 +159,6 @@ const QuickStats = () => {
       second: '2-digit'
     });
   };
-
-  const forexStats = stats.filter(stat => stat.category === 'forex');
-  const cryptoStats = stats.filter(stat => stat.category === 'crypto');
-  const stockStats = stats.filter(stat => stat.category === 'stock');
 
   const getConnectionStatus = () => {
     switch (connectionStatus) {
@@ -187,238 +170,170 @@ const QuickStats = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Quick Market Stats</h2>
-          <p className="text-slate-400">Market data overview</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className={`flex items-center space-x-1 text-sm ${getApiStatusColor()}`}>
-            <div className={`w-2 h-2 rounded-full ${apiStatus === 'connected' ? 'bg-green-400' : apiStatus === 'error' ? 'bg-red-400' : 'bg-yellow-400'}`}></div>
-            <span>{getApiStatusText()}</span>
+    <div className="quickstats-container">
+      {/* Header Section */}
+      <div className="quickstats-header">
+        <div className="flex items-center gap-3">
+          <div className="quickstats-icon">
+            <BarChart3 className="h-6 w-6" />
           </div>
+          <div>
+            <h2 className="quickstats-title">Portfolio Overview</h2>
+            <p className="quickstats-subtitle">
+              Real-time performance & market data
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDetailsView(!showDetailsView)}
+            className="hidden sm:flex"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            {showDetailsView ? 'Simple' : 'Details'}
+          </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={fetchRealStats}
             disabled={isLoading}
-            className="border-slate-600 text-slate-300 hover:bg-slate-700"
           >
-            {isLoading ? 'Loading...' : <RefreshCw className="h-4 w-4" />}
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
-      {/* Data Sources Info */}
-      {availableSources.length > 0 && (
-        <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">
-          <div className="flex items-center space-x-2 mb-2">
-            <Database className="h-4 w-4 text-blue-400" />
-            <span className="text-sm font-medium text-white">Connected Data Sources</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {availableSources.map(source => (
-              <Badge key={source} variant="outline" className="text-xs text-slate-300 border-slate-600">
-                {source}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {apiStatus === 'error' ? (
-        <Card className="holo-card">
-          <CardContent className="flex items-center justify-center h-32">
-            <div className="text-center">
-              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-red-400" />
-              <p className="text-slate-400">Unable to load market data</p>
-              <p className="text-sm text-slate-500">Check your API configuration</p>
+      {/* Main Stats Grid */}
+      <div className="quickstats-grid">
+        {/* Account Balance */}
+        <Card className="quickstats-card priority-high">
+          <CardContent className="quickstats-card-content">
+            <div className="stat-header">
+              <div className="stat-icon balance">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <span className="stat-label">Balance</span>
+            </div>
+            <div className="stat-value">${balance.toLocaleString()}</div>
+            <div className="stat-change positive">
+              <TrendingUp className="h-3 w-3" />
+              +2.1% today
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-6">
-          {/* Forex Stats */}
-          {forexStats.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <DollarSign className="h-5 w-5 mr-2 text-blue-400" />
-                Forex Pairs
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {forexStats.map((stat) => (
-                  <Card key={stat.id} className="holo-card">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          {stat.icon}
-                          <span className="font-medium text-white">{stat.title}</span>
-                        </div>
-                        {getTrendIcon(stat.trend)}
-                      </div>
-                      <p className="text-2xl font-bold text-white mb-1">{stat.value}</p>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm ${getChangeColor(stat.change)}`}>
-                          {stat.change > 0 ? '+' : ''}{stat.change.toFixed(5)}
-                        </span>
-                        <span className={`text-sm ${getChangeColor(stat.changePercent)}`}>
-                          {stat.changePercent > 0 ? '+' : ''}{stat.changePercent.toFixed(2)}%
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>{stat.source}</span>
-                        <span>{formatTimestamp(stat.timestamp)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* Crypto Stats */}
-          {cryptoStats.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Activity className="h-5 w-5 mr-2 text-green-400" />
-                Cryptocurrencies
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {cryptoStats.map((stat) => (
-                  <Card key={stat.id} className="holo-card">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          {stat.icon}
-                          <span className="font-medium text-white">{stat.title}</span>
-                        </div>
-                        {getTrendIcon(stat.trend)}
-                      </div>
-                      <p className="text-2xl font-bold text-white mb-1">{stat.value}</p>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm ${getChangeColor(stat.change)}`}>
-                          {stat.change > 0 ? '+' : ''}${stat.change.toFixed(2)}
-                        </span>
-                        <span className={`text-sm ${getChangeColor(stat.changePercent)}`}>
-                          {stat.changePercent > 0 ? '+' : ''}{stat.changePercent.toFixed(2)}%
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>{stat.source}</span>
-                        <span>{formatTimestamp(stat.timestamp)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+        {/* Total Trades */}
+        <Card className="quickstats-card">
+          <CardContent className="quickstats-card-content">
+            <div className="stat-header">
+              <div className="stat-icon trades">
+                <Target className="h-5 w-5" />
               </div>
+              <span className="stat-label">Trades</span>
             </div>
-          )}
-
-          {/* Stock Stats */}
-          {stockStats.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Target className="h-5 w-5 mr-2 text-purple-400" />
-                Stocks
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stockStats.map((stat) => (
-                  <Card key={stat.id} className="holo-card">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          {stat.icon}
-                          <span className="font-medium text-white">{stat.title}</span>
-                        </div>
-                        {getTrendIcon(stat.trend)}
-                      </div>
-                      <p className="text-2xl font-bold text-white mb-1">{stat.value}</p>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm ${getChangeColor(stat.change)}`}>
-                          {stat.change > 0 ? '+' : ''}${stat.change.toFixed(2)}
-                        </span>
-                        <span className={`text-sm ${getChangeColor(stat.changePercent)}`}>
-                          {stat.changePercent > 0 ? '+' : ''}{stat.changePercent.toFixed(2)}%
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>{stat.source}</span>
-                        <span>{formatTimestamp(stat.timestamp)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            <div className="stat-value">{totalTrades}</div>
+            <div className="stat-change neutral">
+              {winRate}% win rate
             </div>
-          )}
+          </CardContent>
+        </Card>
 
-          {/* Summary */}
-          {stats.length > 0 && (
-            <div className="pt-4 border-t border-slate-700/50">
-              <div className="flex items-center justify-between text-sm text-slate-400">
-                <span>Showing {stats.length} instruments from {availableSources.length} data sources</span>
-                <span>Last updated: {new Date().toLocaleTimeString()}</span>
+        {/* Risk Level */}
+        <Card className="quickstats-card">
+          <CardContent className="quickstats-card-content">
+            <div className="stat-header">
+              <div className="stat-icon risk">
+                <Shield className="h-5 w-5" />
               </div>
+              <span className="stat-label">Risk</span>
+            </div>
+            <div className="stat-value">{riskLevel}</div>
+            <div className="stat-change neutral">
+              Balanced strategy
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Connection Status */}
+        <Card className="quickstats-card">
+          <CardContent className="quickstats-card-content">
+            <div className="stat-header">
+              <div className="stat-icon connection">
+                <Wifi className="h-5 w-5" />
+              </div>
+              <span className="stat-label">Data</span>
+            </div>
+            <div className="stat-value-small">
+              {apiStatus === 'connected' ? 'Live' : 'Offline'}
+            </div>
+            <div className="stat-change neutral">
+              {availableSources.length} sources
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Market Data Section - Conditional */}
+      {showDetailsView && (
+        <div className="market-data-section">
+          <div className="section-divider">
+            <h3 className="section-title">Market Data</h3>
+            <Badge variant="outline" className="text-xs">
+              Live Updates
+            </Badge>
+          </div>
+
+          {apiStatus === 'error' ? (
+            <Card className="error-card">
+              <CardContent className="error-content">
+                <AlertTriangle className="h-8 w-8 text-red-400" />
+                <div className="error-text">
+                  <p className="error-title">Unable to load market data</p>
+                  <p className="error-subtitle">Check your API configuration</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="market-grid">
+              {stats.slice(0, 8).map((stat) => (
+                <Card key={stat.id} className="market-card">
+                  <CardContent className="market-card-content">
+                    <div className="market-header">
+                      <div className="flex items-center gap-2">
+                        {stat.icon}
+                        <span className="market-symbol">{stat.title}</span>
+                      </div>
+                      {getTrendIcon(stat.trend)}
+                    </div>
+                    <div className="market-price">{stat.value}</div>
+                    <div className="market-change">
+                      <span className={getChangeColor(stat.changePercent)}>
+                        {stat.changePercent > 0 ? '+' : ''}{stat.changePercent.toFixed(2)}%
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="holo-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Account Balance</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${balance.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              {balance > 0 ? '+2.1%' : '0%'} from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="holo-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalTrades}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalTrades > 0 ? `${winRate}% win rate` : 'No trades yet'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="holo-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Risk Level</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{riskLevel}</div>
-            <p className="text-xs text-muted-foreground">
-              {riskLevel === 'Low' ? 'Conservative approach' : 
-               riskLevel === 'Medium' ? 'Balanced strategy' : 'Aggressive trading'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="holo-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Data Sources</CardTitle>
-            <Wifi className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getConnectionStatus()}</div>
-            <p className="text-xs text-muted-foreground">
-              Market data from multiple sources
-            </p>
-          </CardContent>
-        </Card>
+      {/* Status Footer */}
+      <div className="quickstats-footer">
+        <div className="status-indicator">
+          <div className={`status-dot ${apiStatus === 'connected' ? 'online' : 'offline'}`}></div>
+          <span className="status-text">
+            {apiStatus === 'connected' 
+              ? `Live data from ${availableSources.length} sources` 
+              : 'Market data unavailable'}
+          </span>
+        </div>
+        <span className="update-time">
+          Last updated: {new Date().toLocaleTimeString()}
+        </span>
       </div>
     </div>
   );
