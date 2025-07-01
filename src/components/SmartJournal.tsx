@@ -386,9 +386,11 @@ const SmartJournal = () => {
                 <div className="flex items-center space-x-2">
                   {(() => {
                     const state = emotionalStates.find(s => s.value === entry.emotionalState);
-                    return state?.icon ? (
-                      <state.icon className={`w-5 h-5 ${state.color}`} />
-                    ) : null;
+                    if (state?.icon) {
+                      const IconComponent = state.icon;
+                      return <IconComponent className={`w-5 h-5 ${state.color}`} />;
+                    }
+                    return null;
                   })()}
                   <Button
                     variant="ghost"

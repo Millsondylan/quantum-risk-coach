@@ -23,7 +23,9 @@ import {
   Zap,
   Trash2,
   Edit,
-  Plus
+  Plus,
+  MessageSquare,
+  Mail
 } from 'lucide-react';
 import { notificationService, PriceAlert, Notification } from '@/lib/api';
 
@@ -37,6 +39,16 @@ const NotificationsAlerts = () => {
     symbol: '',
     targetPrice: 0,
     condition: 'above' as 'above' | 'below'
+  });
+
+  const [showNewAlert, setShowNewAlert] = useState(false);
+  const [settings, setSettings] = useState({
+    telegramEnabled: true,
+    emailEnabled: true,
+    pushEnabled: false,
+    priceAlerts: true,
+    tradeAlerts: true,
+    newsAlerts: false
   });
 
   // Mock data for demonstration
@@ -177,413 +189,279 @@ const NotificationsAlerts = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const alertTypes = [
+    { value: 'price_alert', label: 'Price Alert', icon: DollarSign },
+    { value: 'trade_alert', label: 'Trade Alert', icon: Zap },
+    { value: 'news_alert', label: 'News Alert', icon: MessageSquare },
+    { value: 'economic_calendar', label: 'Economic Calendar', icon: Clock },
+    { value: 'risk_alert', label: 'Risk Alert', icon: AlertTriangle }
+  ];
+
+  const channels = [
+    { value: 'telegram', label: 'Telegram', icon: MessageSquare },
+    { value: 'email', label: 'Email', icon: Mail },
+    { value: 'push', label: 'Push Notification', icon: Smartphone }
+  ];
+
+  const toggleNotification = (id: string) => {
+    setNotifications(prev => prev.map(notif => 
+      notif.id === id 
+        ? { ...notif, status: notif.status === 'active' ? 'inactive' : 'active' }
+        : notif
+    ));
+  };
+
+  const deleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  };
+
+  const getAlertTypeIcon = (type: string) => {
+    const alertType = alertTypes.find(t => t.value === type);
+    return alertType ? <alertType.icon className="w-4 h-4" /> : <Bell className="w-4 h-4" />;
+  };
+
+  const getChannelIcon = (channel: string) => {
+    const channelInfo = channels.find(c => c.value === channel);
+    return channelInfo ? <channelInfo.icon className="w-4 h-4" /> : <Bell className="w-4 h-4" />;
+  };
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          Notifications & Alerts
-        </CardTitle>
-        <CardDescription>
-          Price alerts, notifications, and communication channels
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="alerts" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="alerts">Price Alerts</TabsTrigger>
-            <TabsTrigger value="notifications">
-              Notifications
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 text-xs">
-                  {unreadCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="channels">Channels</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Notifications & Alerts</h2>
+          <p className="text-slate-400">Manage your trading notifications and alerts</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button onClick={() => setShowNewAlert(true)} className="holo-button">
+            <Plus className="w-4 h-4 mr-2" />
+            New Alert
+          </Button>
+        </div>
+      </div>
 
-          <TabsContent value="alerts" className="space-y-6">
-            {/* Create Alert */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create Price Alert
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <Label htmlFor="symbol">Symbol</Label>
-                    <Input
-                      id="symbol"
-                      placeholder="e.g., EURUSD"
-                      value={newAlert.symbol}
-                      onChange={(e) => setNewAlert(prev => ({ ...prev, symbol: e.target.value.toUpperCase() }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="price">Target Price</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.0001"
-                      placeholder="1.0850"
-                      value={newAlert.targetPrice || ''}
-                      onChange={(e) => setNewAlert(prev => ({ ...prev, targetPrice: parseFloat(e.target.value) || 0 }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="condition">Condition</Label>
-                    <Select
-                      value={newAlert.condition}
-                      onValueChange={(value: 'above' | 'below') => setNewAlert(prev => ({ ...prev, condition: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="above">Above</SelectItem>
-                        <SelectItem value="below">Below</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button 
-                      onClick={handleCreateAlert}
-                      disabled={!newAlert.symbol || !newAlert.targetPrice}
-                      className="w-full"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Alert
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Active Alerts */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Active Price Alerts</h3>
-              {priceAlerts.map((alert) => (
-                <Card key={alert.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full ${getStatusColor(alert.status)}`} />
-                        <div>
-                          <h4 className="font-semibold">{alert.symbol}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {alert.condition === 'above' ? 'Above' : 'Below'} {alert.targetPrice}
-                          </p>
-                        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Bell className="w-5 h-5 text-blue-400" />
+                <span>Active Alerts</span>
+              </CardTitle>
+              <CardDescription>
+                Manage your notification preferences and alerts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {notifications.map(notification => (
+                  <div key={notification.id} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-slate-700/50 rounded-lg">
+                        {getAlertTypeIcon(notification.type)}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={alert.status === 'active' ? 'default' : 'secondary'}>
-                          {alert.status}
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteAlert(alert.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="notifications" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Recent Notifications</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
-              >
-                Mark All Read
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <Card 
-                  key={notification.id} 
-                  className={`cursor-pointer transition-colors ${
-                    !notification.read ? 'bg-blue-50 border-blue-200' : ''
-                  }`}
-                  onClick={() => handleToggleNotification(notification.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`mt-1 ${!notification.read ? 'text-blue-600' : 'text-muted-foreground'}`}>
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className={`font-semibold ${!notification.read ? 'text-blue-900' : ''}`}>
-                            {notification.title}
-                          </h4>
-                          <span className="text-xs text-muted-foreground">
+                      <div>
+                        <h4 className="font-medium text-white">{notification.title}</h4>
+                        <p className="text-sm text-slate-400">{notification.message}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          {getChannelIcon(notification.type)}
+                          <span className="text-xs text-slate-400">{notification.type}</span>
+                          <span className="text-xs text-slate-400">•</span>
+                          <span className="text-xs text-slate-400">
                             {formatDate(notification.createdAt)}
                           </span>
                         </div>
-                        <p className={`text-sm ${!notification.read ? 'text-blue-700' : 'text-muted-foreground'}`}>
-                          {notification.message}
-                        </p>
                       </div>
-                      {!notification.read && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="channels" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Telegram Integration */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5" />
-                    Telegram Integration
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Enable Telegram Notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Receive alerts and notifications via Telegram
-                      </p>
-                    </div>
-                    <Switch
-                      checked={telegramEnabled}
-                      onCheckedChange={setTelegramEnabled}
-                    />
-                  </div>
-                  
-                  {telegramEnabled && (
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="chatId">Chat ID</Label>
-                        <Input
-                          id="chatId"
-                          placeholder="Your Telegram chat ID"
-                          defaultValue="your_chat_id"
-                        />
-                      </div>
-                      <Button onClick={handleSendTelegramTest} variant="outline" size="sm">
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Send Test Message
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={notification.status === 'active'}
+                        onCheckedChange={() => toggleNotification(notification.id)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteNotification(notification.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              {/* Push Notifications */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Smartphone className="h-5 w-5" />
-                    Push Notifications
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Enable Push Notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Receive notifications on your device
-                      </p>
-                    </div>
-                    <Switch
-                      checked={pushEnabled}
-                      onCheckedChange={setPushEnabled}
-                    />
+        <div className="space-y-6">
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="w-5 h-5 text-purple-400" />
+                <span>Notification Settings</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <MessageSquare className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm text-slate-300">Telegram</span>
                   </div>
-                  
-                  {pushEnabled && (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm text-green-800">
-                          Push notifications are enabled. You'll receive alerts for price movements and important events.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Notification Types */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Types</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Price Alerts</p>
-                      <p className="text-sm text-muted-foreground">
-                        When symbols reach target prices
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Trade Entries/Exits</p>
-                      <p className="text-sm text-muted-foreground">
-                        When trades are opened or closed
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Market Events</p>
-                      <p className="text-sm text-muted-foreground">
-                        Economic calendar events and news
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">System Updates</p>
-                      <p className="text-sm text-muted-foreground">
-                        Platform updates and maintenance
-                      </p>
-                    </div>
-                    <Switch />
-                  </div>
+                  <Switch
+                    checked={settings.telegramEnabled}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, telegramEnabled: checked }))}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Alert Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Alert Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Sound Alerts</p>
-                      <p className="text-sm text-muted-foreground">
-                        Play sound for notifications
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Mail className="w-4 h-4 text-green-400" />
+                    <span className="text-sm text-slate-300">Email</span>
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Desktop Notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Show desktop notifications
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Email Notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Send email for important alerts
-                      </p>
-                    </div>
-                    <Switch />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Timing Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Timing Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Quiet Hours</Label>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <Input type="time" defaultValue="22:00" />
-                      <Input type="time" defaultValue="08:00" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      No notifications during these hours
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <Label>Alert Frequency</Label>
-                    <Select defaultValue="immediate">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="immediate">Immediate</SelectItem>
-                        <SelectItem value="5min">Every 5 minutes</SelectItem>
-                        <SelectItem value="15min">Every 15 minutes</SelectItem>
-                        <SelectItem value="1hour">Every hour</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Statistics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Statistics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{priceAlerts.length}</div>
-                    <div className="text-sm text-muted-foreground">Active Alerts</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {priceAlerts.filter(a => a.status === 'triggered').length}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Triggered Today</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{notifications.length}</div>
-                    <div className="text-sm text-muted-foreground">Total Notifications</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{unreadCount}</div>
-                    <div className="text-sm text-muted-foreground">Unread</div>
-                  </div>
+                  <Switch
+                    checked={settings.emailEnabled}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, emailEnabled: checked }))}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Smartphone className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm text-slate-300">Push Notifications</span>
+                  </div>
+                  <Switch
+                    checked={settings.pushEnabled}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, pushEnabled: checked }))}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle>Alert Types</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-300">Price Alerts</span>
+                  <Switch
+                    checked={settings.priceAlerts}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, priceAlerts: checked }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-300">Trade Alerts</span>
+                  <Switch
+                    checked={settings.tradeAlerts}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, tradeAlerts: checked }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-300">News Alerts</span>
+                  <Switch
+                    checked={settings.newsAlerts}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, newsAlerts: checked }))}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle>Quick Stats</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Active Alerts</span>
+                  <span className="text-white font-medium">
+                    {notifications.filter(n => n.status === 'active').length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Total Alerts</span>
+                  <span className="text-white font-medium">{notifications.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Channels Active</span>
+                  <span className="text-white font-medium">
+                    {Object.values(settings).filter(Boolean).length - 3}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {showNewAlert && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-semibold text-white mb-4">Create New Alert</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="alertType">Alert Type</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select alert type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {alertTypes.map(type => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="title">Alert Title</Label>
+                <Input id="title" placeholder="e.g., EURUSD Price Alert" />
+              </div>
+              
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Input id="description" placeholder="Alert description..." />
+              </div>
+              
+              <div>
+                <Label htmlFor="channel">Notification Channel</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {channels.map(channel => (
+                      <SelectItem key={channel.value} value={channel.value}>
+                        {channel.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowNewAlert(false)}
+                className="border-slate-600 text-slate-300"
+              >
+                Cancel
+              </Button>
+              <Button onClick={() => setShowNewAlert(false)} className="holo-button">
+                Create Alert
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

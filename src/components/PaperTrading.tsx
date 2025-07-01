@@ -29,7 +29,9 @@ import {
   Zap,
   RefreshCw,
   Plus,
-  Minus
+  Minus,
+  Pause,
+  Settings
 } from 'lucide-react';
 import { paperTradingService, PaperTrade } from '../lib/api';
 import { toast } from 'sonner';
@@ -50,6 +52,31 @@ export default function PaperTrading() {
   });
   const [currentPrices, setCurrentPrices] = useState<{ [symbol: string]: number }>({});
   const [loading, setLoading] = useState(false);
+  const [isActive, setIsActive] = useState(false);
+  const [balance, setBalance] = useState(10000);
+  const [positions, setPositions] = useState([
+    {
+      id: '1',
+      symbol: 'EURUSD',
+      type: 'buy',
+      size: 0.1,
+      entryPrice: 1.0850,
+      currentPrice: 1.0875,
+      pnl: 25,
+      openTime: '2024-01-15T10:30:00Z'
+    },
+    {
+      id: '2',
+      symbol: 'GBPUSD',
+      type: 'sell',
+      size: 0.05,
+      entryPrice: 1.2650,
+      currentPrice: 1.2620,
+      pnl: 15,
+      openTime: '2024-01-15T09:15:00Z'
+    }
+  ]);
+  const [showNewTrade, setShowNewTrade] = useState(false);
 
   useEffect(() => {
     // Load saved paper trades from localStorage
@@ -144,6 +171,37 @@ export default function PaperTrading() {
 
   const getOpenTrades = () => paperTrades.filter(trade => trade.status === 'open');
   const getClosedTrades = () => paperTrades.filter(trade => trade.status === 'closed');
+
+  const openTrade = () => {
+    if (!newTrade.symbol || !newTrade.size || !newTrade.price) return;
+    
+    const trade = {
+      id: Date.now().toString(),
+      symbol: newTrade.symbol,
+      type: newTrade.type as 'buy' | 'sell',
+      size: parseFloat(newTrade.size),
+      entryPrice: parseFloat(newTrade.price),
+      currentPrice: parseFloat(newTrade.price),
+      pnl: 0,
+      openTime: new Date().toISOString()
+    };
+    
+    setPositions([...positions, trade]);
+    setShowNewTrade(false);
+    setNewTrade({ symbol: '', type: 'buy', size: '', price: '' });
+  };
+
+  const closePosition = (id: string) => {
+    setPositions(positions.filter(pos => pos.id !== id));
+  };
+
+  const getPnLColor = (pnl: number) => {
+    return pnl >= 0 ? 'text-green-400' : 'text-red-400';
+  };
+
+  const getTypeColor = (type: string) => {
+    return type === 'buy' ? 'text-green-400' : 'text-red-400';
+  };
 
   const renderTradeCard = (trade: PaperTrade) => {
     const unrealizedPnL = getUnrealizedPnL(trade);
@@ -260,6 +318,9 @@ export default function PaperTrading() {
       </div>
     );
   };
+
+  const totalPnL = positions.reduce((sum, pos) => sum + pos.pnl, 0);
+  const totalValue = balance + totalPnL;
 
   return (
     <div className="space-y-6">
@@ -482,6 +543,307 @@ export default function PaperTrading() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Paper Trading</h2>
+          <p className="text-slate-400">Risk-free trading simulation with real-time market data</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant={isActive ? 'outline' : 'default'}
+            onClick={() => setIsActive(!isActive)}
+            className={isActive ? 'border-green-500 text-green-400' : ''}
+          >
+            {isActive ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+            {isActive ? 'Pause' : 'Start'} Simulation
+          </Button>
+          <Button variant="outline">
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <Card className="holo-card">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Account Balance</p>
+                    <p className="text-2xl font-bold text-white">
+                      ${balance.toLocaleString()}
+                    </p>
+                  </div>
+                  <DollarSign className="w-8 h-8 text-green-400" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="holo-card">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Total P&L</p>
+                    <p className={`text-2xl font-bold ${getPnLColor(totalPnL)}`}>
+                      ${totalPnL.toFixed(2)}
+                    </p>
+                  </div>
+                  {totalPnL >= 0 ? (
+                    <TrendingUp className="w-8 h-8 text-green-400" />
+                  ) : (
+                    <TrendingDown className="w-8 h-8 text-red-400" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="holo-card">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Total Value</p>
+                    <p className="text-2xl font-bold text-white">
+                      ${totalValue.toFixed(2)}
+                    </p>
+                  </div>
+                  <BarChart className="w-8 h-8 text-blue-400" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Target className="w-5 h-5 text-blue-400" />
+                <span>Open Positions</span>
+              </CardTitle>
+              <CardDescription>
+                Current paper trading positions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {positions.length === 0 ? (
+                <div className="text-center py-12">
+                  <Target className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">No Open Positions</h3>
+                  <p className="text-slate-400 mb-6">
+                    Start paper trading to practice your strategies risk-free
+                  </p>
+                  <Button onClick={() => setShowNewTrade(true)} className="holo-button">
+                    <Play className="w-4 h-4 mr-2" />
+                    Open First Position
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {positions.map(position => (
+                    <div key={position.id} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-2 bg-slate-700/50 rounded-lg">
+                          <Target className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-white">{position.symbol}</h4>
+                          <div className="flex items-center space-x-2 text-sm text-slate-400">
+                            <span className={`font-medium ${getTypeColor(position.type)}`}>
+                              {position.type.toUpperCase()}
+                            </span>
+                            <span>•</span>
+                            <span>{position.size} lots</span>
+                            <span>•</span>
+                            <span>Entry: {position.entryPrice}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <p className="text-sm text-slate-400">Current Price</p>
+                          <p className="text-white font-medium">{position.currentPrice}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-slate-400">P&L</p>
+                          <p className={`font-medium ${getPnLColor(position.pnl)}`}>
+                            ${position.pnl.toFixed(2)}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => closePosition(position.id)}
+                          className="border-red-600 text-red-400 hover:bg-red-600/10"
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => setShowNewTrade(true)} 
+                  className="w-full holo-button"
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  New Position
+                </Button>
+                <Button variant="outline" className="w-full">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Reset Account
+                </Button>
+                <Button variant="outline" className="w-full">
+                  <BarChart className="w-4 h-4 mr-2" />
+                  View History
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle>Simulation Stats</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Total Trades</span>
+                  <span className="text-white font-medium">12</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Win Rate</span>
+                  <span className="text-green-400 font-medium">75%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Avg Trade</span>
+                  <span className="text-white font-medium">$18.50</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Best Trade</span>
+                  <span className="text-green-400 font-medium">$45.20</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Worst Trade</span>
+                  <span className="text-red-400 font-medium">-$12.80</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle>Market Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Simulation</span>
+                  <Badge variant={isActive ? 'default' : 'outline'} className={isActive ? 'bg-green-500' : ''}>
+                    {isActive ? 'Active' : 'Paused'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Market Hours</span>
+                  <Badge variant="outline">24/5</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Data Source</span>
+                  <span className="text-white text-sm">Live Feed</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">Spread</span>
+                  <span className="text-white text-sm">Realistic</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {showNewTrade && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-semibold text-white mb-4">Open New Position</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="symbol">Symbol</Label>
+                <Input
+                  id="symbol"
+                  placeholder="EURUSD"
+                  value={newTrade.symbol}
+                  onChange={(e) => setNewTrade({...newTrade, symbol: e.target.value.toUpperCase()})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="type">Type</Label>
+                <Select value={newTrade.type} onValueChange={(value: 'buy' | 'sell') => setNewTrade({...newTrade, type: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="buy">Buy</SelectItem>
+                    <SelectItem value="sell">Sell</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="size">Size (lots)</Label>
+                <Input
+                  id="size"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.1"
+                  value={newTrade.size}
+                  onChange={(e) => setNewTrade({...newTrade, size: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="price">Entry Price</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.00001"
+                  placeholder="1.0850"
+                  value={newTrade.price}
+                  onChange={(e) => setNewTrade({...newTrade, price: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowNewTrade(false)}
+                className="border-slate-600 text-slate-300"
+              >
+                Cancel
+              </Button>
+              <Button onClick={openTrade} className="holo-button">
+                <Target className="w-4 h-4 mr-2" />
+                Open Position
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

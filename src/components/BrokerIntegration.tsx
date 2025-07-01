@@ -3,249 +3,290 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { 
-  Download, 
+  Wifi, 
+  WifiOff, 
+  Settings, 
   RefreshCw, 
   CheckCircle, 
   XCircle, 
   AlertTriangle,
-  Settings,
-  Clock,
   Database,
-  Shield,
+  Clock,
   Zap
 } from 'lucide-react';
-import { brokerService, BrokerConnection, TradeImportResult } from '@/lib/api';
+import { toast } from 'sonner';
+
+interface BrokerConnection {
+  id: string;
+  name: string;
+  type: 'mt4' | 'mt5' | 'binance' | 'bybit' | 'ctrader' | 'kucoin' | 'okx' | 'mexc';
+  status: 'connected' | 'disconnected' | 'connecting' | 'error';
+  lastSync: Date;
+  accountBalance: number;
+  totalTrades: number;
+  autoSync: boolean;
+  syncInterval: number; // minutes
+}
 
 const BrokerIntegration = () => {
-  const [connections, setConnections] = useState<BrokerConnection[]>([]);
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<TradeImportResult | null>(null);
-  const [autoSync, setAutoSync] = useState(false);
-  const [syncInterval, setSyncInterval] = useState(15);
+  const [connections, setConnections] = useState<BrokerConnection[]>([
+    {
+      id: '1',
+      name: 'IC Markets MT5',
+      type: 'mt5',
+      status: 'connected',
+      lastSync: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+      accountBalance: 25000.00,
+      totalTrades: 156,
+      autoSync: true,
+      syncInterval: 5
+    },
+    {
+      id: '2',
+      name: 'Binance Spot',
+      type: 'binance',
+      status: 'disconnected',
+      lastSync: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      accountBalance: 0,
+      totalTrades: 0,
+      autoSync: false,
+      syncInterval: 15
+    }
+  ]);
+
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const brokerTypes = [
-    { id: 'mt4', name: 'MetaTrader 4', icon: '📊' },
-    { id: 'mt5', name: 'MetaTrader 5', icon: '📈' },
-    { id: 'binance', name: 'Binance', icon: '🪙' },
-    { id: 'bybit', name: 'Bybit', icon: '⚡' },
-    { id: 'ctrader', name: 'cTrader', icon: '💻' },
-    { id: 'kucoin', name: 'KuCoin', icon: '🔵' },
-    { id: 'okx', name: 'OKX', icon: '🟢' },
-    { id: 'mexc', name: 'MEXC', icon: '🟡' }
+    { value: 'mt4', label: 'MetaTrader 4', icon: Database },
+    { value: 'mt5', label: 'MetaTrader 5', icon: Database },
+    { value: 'binance', label: 'Binance', icon: Zap },
+    { value: 'bybit', label: 'Bybit', icon: Zap },
+    { value: 'ctrader', label: 'cTrader', icon: Database },
+    { value: 'kucoin', label: 'KuCoin', icon: Zap },
+    { value: 'okx', label: 'OKX', icon: Zap },
+    { value: 'mexc', label: 'MEXC', icon: Zap }
   ];
 
-  const handleConnect = async (brokerType: string) => {
-    try {
-      const credentials = {
-        apiKey: 'demo_key',
-        secretKey: 'demo_secret',
-        server: 'demo_server'
-      };
-      
-      const connection = await brokerService.connectToBroker(brokerType, credentials);
-      setConnections(prev => [...prev, connection]);
-    } catch (error) {
-      console.error('Connection failed:', error);
-    }
+  const connectBroker = async (connectionId: string) => {
+    setIsConnecting(true);
+    
+    // Simulate connection process
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setConnections(prev => prev.map(conn => 
+      conn.id === connectionId 
+        ? { ...conn, status: 'connected', lastSync: new Date() }
+        : conn
+    ));
+    
+    setIsConnecting(false);
+    toast.success('Broker connected successfully!');
   };
 
-  const handleImport = async (brokerId: string) => {
-    setImporting(true);
-    try {
-      const result = await brokerService.importTrades(brokerId);
-      setImportResult(result);
-      
-      // Update connection last sync time
-      setConnections(prev => 
-        prev.map(conn => 
-          conn.id === brokerId 
-            ? { ...conn, lastSync: result.lastSyncTime }
-            : conn
-        )
-      );
-    } catch (error) {
-      console.error('Import failed:', error);
-    } finally {
-      setImporting(false);
-    }
+  const disconnectBroker = (connectionId: string) => {
+    setConnections(prev => prev.map(conn => 
+      conn.id === connectionId 
+        ? { ...conn, status: 'disconnected' }
+        : conn
+    ));
+    toast.info('Broker disconnected');
   };
 
-  const handleAutoSync = async () => {
-    if (autoSync) {
-      connections.forEach(conn => {
-        brokerService.startAutoSync(conn.id, syncInterval);
-      });
-    }
+  const toggleAutoSync = (connectionId: string) => {
+    setConnections(prev => prev.map(conn => 
+      conn.id === connectionId 
+        ? { ...conn, autoSync: !conn.autoSync }
+        : conn
+    ));
+    toast.success('Auto-sync settings updated');
+  };
+
+  const syncNow = async (connectionId: string) => {
+    const connection = connections.find(c => c.id === connectionId);
+    if (!connection) return;
+
+    // Simulate sync process
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setConnections(prev => prev.map(conn => 
+      conn.id === connectionId 
+        ? { ...conn, lastSync: new Date() }
+        : conn
+    ));
+    
+    toast.success(`Synced ${connection.name} successfully!`);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'connected': return 'bg-green-500';
-      case 'disconnected': return 'bg-gray-500';
-      case 'error': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'connected': return 'text-green-400';
+      case 'disconnected': return 'text-red-400';
+      case 'connecting': return 'text-yellow-400';
+      case 'error': return 'text-red-500';
+      default: return 'text-slate-400';
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'connected': return <Wifi className="w-4 h-4" />;
+      case 'disconnected': return <WifiOff className="w-4 h-4" />;
+      case 'connecting': return <RefreshCw className="w-4 h-4 animate-spin" />;
+      case 'error': return <XCircle className="w-4 h-4" />;
+      default: return <AlertTriangle className="w-4 h-4" />;
+    }
+  };
+
+  const getBrokerIcon = (type: string) => {
+    const broker = brokerTypes.find(b => b.value === type);
+    return broker ? <broker.icon className="w-5 h-5" /> : <Database className="w-5 h-5" />;
+  };
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          Broker Integration
-        </CardTitle>
-        <CardDescription>
-          One-click import from major trading platforms with automatic synchronization
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="connections" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="connections">Connections</TabsTrigger>
-            <TabsTrigger value="import">Import Trades</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Broker Integration</h2>
+          <p className="text-slate-400">Connect and sync with multiple trading platforms</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="text-green-400">
+            <Wifi className="w-3 h-3 mr-1" />
+            {connections.filter(c => c.status === 'connected').length} Connected
+          </Badge>
+        </div>
+      </div>
 
-          <TabsContent value="connections" className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {brokerTypes.map((broker) => (
-                <Card key={broker.id} className="p-4 text-center hover:shadow-md transition-shadow">
-                  <div className="text-2xl mb-2">{broker.icon}</div>
-                  <h3 className="font-medium text-sm">{broker.name}</h3>
-                  <Button 
-                    size="sm" 
-                    className="mt-2 w-full"
-                    onClick={() => handleConnect(broker.id)}
-                  >
-                    Connect
+      <div className="grid gap-6">
+        {connections.map(connection => (
+          <Card key={connection.id} className="holo-card">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-slate-700/50 rounded-lg">
+                    {getBrokerIcon(connection.type)}
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-white">{connection.name}</h3>
+                    <p className="text-sm text-slate-400">
+                      {brokerTypes.find(b => b.value === connection.type)?.label}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline" className={getStatusColor(connection.status)}>
+                    {getStatusIcon(connection.status)}
+                    {connection.status}
+                  </Badge>
+                  <Button variant="ghost" size="sm">
+                    <Settings className="w-4 h-4" />
                   </Button>
-                </Card>
-              ))}
-            </div>
-
-            {connections.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold">Active Connections</h3>
-                {connections.map((connection) => (
-                  <Card key={connection.id} className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${getStatusColor(connection.status)}`} />
-                        <div>
-                          <h4 className="font-medium">{connection.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Last sync: {new Date(connection.lastSync).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={connection.status === 'connected' ? 'default' : 'secondary'}>
-                          {connection.status}
-                        </Badge>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleImport(connection.id)}
-                          disabled={importing}
-                        >
-                          {importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                </div>
               </div>
-            )}
-          </TabsContent>
 
-          <TabsContent value="import" className="space-y-4">
-            {importResult && (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Import completed successfully! 
-                  {importResult.tradesImported} trades imported, 
-                  {importResult.tradesUpdated} trades updated.
-                  {importResult.errors.length > 0 && (
-                    <div className="mt-2 text-red-600">
-                      {importResult.errors.length} errors encountered
-                    </div>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Import Progress</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Processing trades...</span>
-                      <span>{importing ? 'In progress' : 'Ready'}</span>
-                    </div>
-                    <Progress value={importing ? 45 : 0} className="w-full" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Error Reconciliation</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Shield className="h-4 w-4 text-green-500" />
-                    <span>Error-free import with automatic reconciliation</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Auto Sync</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Automatically sync trades every {syncInterval} minutes
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div className="p-3 bg-slate-800/30 rounded-lg">
+                  <p className="text-sm text-slate-400">Account Balance</p>
+                  <p className="text-lg font-semibold text-white">
+                    ${connection.accountBalance.toLocaleString()}
                   </p>
                 </div>
-                <Switch 
-                  checked={autoSync} 
-                  onCheckedChange={setAutoSync}
-                />
+                <div className="p-3 bg-slate-800/30 rounded-lg">
+                  <p className="text-sm text-slate-400">Total Trades</p>
+                  <p className="text-lg font-semibold text-white">
+                    {connection.totalTrades}
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-800/30 rounded-lg">
+                  <p className="text-sm text-slate-400">Last Sync</p>
+                  <p className="text-sm font-medium text-white">
+                    {connection.lastSync.toLocaleTimeString()}
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-800/30 rounded-lg">
+                  <p className="text-sm text-slate-400">Auto-Sync</p>
+                  <p className="text-sm font-medium text-white">
+                    {connection.autoSync ? `${connection.syncInterval}m` : 'Off'}
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Sync Interval (minutes)</Label>
-                <Input 
-                  type="number" 
-                  value={syncInterval}
-                  onChange={(e) => setSyncInterval(Number(e.target.value))}
-                  min={5}
-                  max={60}
-                />
-              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={connection.status === 'connected' ? 'outline' : 'default'}
+                    size="sm"
+                    onClick={() => connection.status === 'connected' 
+                      ? disconnectBroker(connection.id)
+                      : connectBroker(connection.id)
+                    }
+                    disabled={isConnecting}
+                  >
+                    {connection.status === 'connected' ? 'Disconnect' : 'Connect'}
+                  </Button>
+                  
+                  {connection.status === 'connected' && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => syncNow(connection.id)}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Sync Now
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleAutoSync(connection.id)}
+                      >
+                        <Clock className="w-4 h-4 mr-2" />
+                        {connection.autoSync ? 'Disable' : 'Enable'} Auto-Sync
+                      </Button>
+                    </>
+                  )}
+                </div>
 
-              <Button onClick={handleAutoSync} disabled={!autoSync}>
-                <Zap className="h-4 w-4 mr-2" />
-                Start Auto Sync
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+                <div className="text-right text-sm text-slate-400">
+                  <p>Next sync: {connection.autoSync 
+                    ? new Date(Date.now() + connection.syncInterval * 60 * 1000).toLocaleTimeString()
+                    : 'Manual only'
+                  }</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="holo-card">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Database className="w-5 h-5 text-blue-400" />
+            <span>Supported Brokers</span>
+          </CardTitle>
+          <CardDescription>
+            Connect with your preferred trading platform
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {brokerTypes.map(broker => (
+              <div key={broker.value} className="p-4 bg-slate-800/30 rounded-lg text-center">
+                <div className="flex justify-center mb-2">
+                  <broker.icon className="w-8 h-8 text-blue-400" />
+                </div>
+                <p className="text-sm font-medium text-white">{broker.label}</p>
+                <p className="text-xs text-slate-400">Supported</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

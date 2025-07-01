@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Auth = () => {
+  
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -36,6 +37,7 @@ const Auth = () => {
         navigate('/');
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast.error('Login failed. Please try again.');
     } finally {
       setLoading(false);
@@ -68,6 +70,7 @@ const Auth = () => {
         setSignupData({ username: '', email: '', password: '', confirmPassword: '' });
       }
     } catch (error) {
+      console.error('Signup error:', error);
       toast.error('Signup failed. Please try again.');
     } finally {
       setLoading(false);
