@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,14 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, TrendingUp, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-import Header from '@/components/Header';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ 
-    name: '', 
+    username: '', 
     email: '', 
     password: '', 
     confirmPassword: '' 
@@ -27,12 +27,16 @@ const Auth = () => {
     setLoading(true);
     
     try {
-      // Simulate login process
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Login successful!');
-      navigate('/');
+      const { error } = await signIn(loginData.email, loginData.password);
+      
+      if (error) {
+        toast.error(error.message || 'Login failed. Please check your credentials.');
+      } else {
+        toast.success('Login successful!');
+        navigate('/');
+      }
     } catch (error) {
-      toast.error('Login failed. Please check your credentials.');
+      toast.error('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -46,13 +50,23 @@ const Auth = () => {
       return;
     }
     
+    if (signupData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      // Simulate signup process
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Account created successfully!');
-      navigate('/');
+      const { error } = await signUp(signupData.email, signupData.password, signupData.username);
+      
+      if (error) {
+        toast.error(error.message || 'Signup failed. Please try again.');
+      } else {
+        toast.success('Account created successfully! Please check your email to verify your account.');
+        // Reset form
+        setSignupData({ username: '', email: '', password: '', confirmPassword: '' });
+      }
     } catch (error) {
       toast.error('Signup failed. Please try again.');
     } finally {
@@ -62,7 +76,6 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
-      <Header />
       <main className="container mx-auto px-6 py-8">
         <div className="max-w-md mx-auto">
           <Button
@@ -141,15 +154,15 @@ const Auth = () => {
                 <TabsContent value="signup" className="space-y-4">
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="username">Username</Label>
                       <div className="relative">
                         <User className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                         <Input
-                          id="name"
+                          id="username"
                           type="text"
-                          placeholder="Enter your full name"
-                          value={signupData.name}
-                          onChange={(e) => setSignupData({...signupData, name: e.target.value})}
+                          placeholder="Enter your username"
+                          value={signupData.username}
+                          onChange={(e) => setSignupData({...signupData, username: e.target.value})}
                           className="pl-10"
                           required
                         />
@@ -177,7 +190,7 @@ const Auth = () => {
                         <Input
                           id="signup-password"
                           type={showPassword ? "text" : "password"}
-                          placeholder="Create a password"
+                          placeholder="Create a password (min 6 characters)"
                           value={signupData.password}
                           onChange={(e) => setSignupData({...signupData, password: e.target.value})}
                           className="pl-10 pr-10"
@@ -213,13 +226,6 @@ const Auth = () => {
                   </form>
                 </TabsContent>
               </Tabs>
-
-              <div className="mt-6 p-4 bg-slate-800/50 rounded-lg border border-slate-600/30">
-                <h4 className="text-sm font-medium text-white mb-2">Demo Mode</h4>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  You're currently using demo authentication. Connect your Supabase project for full authentication functionality.
-                </p>
-              </div>
             </CardContent>
           </Card>
         </div>

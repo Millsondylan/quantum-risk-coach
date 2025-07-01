@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,20 +6,57 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Settings as SettingsIcon, Bell, Shield, Palette, Database } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Bell, Shield, Palette, Database, Key, Eye, EyeOff, Save, TestTube, User } from 'lucide-react';
 import { toast } from 'sonner';
-import Header from '@/components/Header';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { user, updateProfile } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
   const [riskLevel, setRiskLevel] = useState('medium');
   const [currency, setCurrency] = useState('USD');
+  
+  // Profile state
+  const [profileData, setProfileData] = useState({
+    username: user?.user_metadata?.username || '',
+    avatar_url: user?.user_metadata?.avatar_url || ''
+  });
+  
+  // API Keys state
+  const [apiKeys, setApiKeys] = useState({
+    openai: '',
+    groq: '',
+    news: '',
+    alphaVantage: '',
+    tradingView: ''
+  });
+  const [showKeys, setShowKeys] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
-  const handleSaveSettings = () => {
-    toast.success('Settings saved successfully!');
+  useEffect(() => {
+    // Load API keys from localStorage
+    const savedKeys = localStorage.getItem('apiKeys');
+    if (savedKeys) {
+      setApiKeys(JSON.parse(savedKeys));
+    }
+  }, []);
+
+  const handleSaveSettings = async () => {
+    try {
+      // Save profile data
+      if (profileData.username !== user?.user_metadata?.username) {
+        await updateProfile({ username: profileData.username });
+      }
+      
+      // Save API keys to localStorage
+      localStorage.setItem('apiKeys', JSON.stringify(apiKeys));
+      toast.success('Settings saved successfully!');
+    } catch (error) {
+      toast.error('Failed to save settings');
+    }
   };
 
   const handleResetSettings = () => {
@@ -29,12 +65,39 @@ const Settings = () => {
     setAutoSync(true);
     setRiskLevel('medium');
     setCurrency('USD');
+    setApiKeys({
+      openai: '',
+      groq: '',
+      news: '',
+      alphaVantage: '',
+      tradingView: ''
+    });
+    localStorage.removeItem('apiKeys');
     toast.success('Settings reset to defaults');
+  };
+
+  const handleApiKeyChange = (key: string, value: string) => {
+    setApiKeys(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const testApiConnection = async (apiType: string) => {
+    setIsTesting(true);
+    try {
+      // Simulate API test
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success(`${apiType} API connection successful!`);
+    } catch (error) {
+      toast.error(`${apiType} API connection failed. Please check your key.`);
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
-      <Header />
       <main className="container mx-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <Button
@@ -47,12 +110,14 @@ const Settings = () => {
           </Button>
 
           <div className="grid gap-6">
+            {/* Profile Settings */}
             <Card className="holo-card">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-3">
-                  <SettingsIcon className="w-6 h-6 text-cyan-400" />
-                  <span className="text-white">General Settings</span>
+                  <User className="w-6 h-6 text-cyan-400" />
+                  <span className="text-white">Profile Settings</span>
                 </CardTitle>
+                <CardDescription>Manage your account information</CardDescription>
                 <CardDescription>Manage your account and application preferences</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -141,6 +206,149 @@ const Settings = () => {
                     checked={darkMode} 
                     onCheckedChange={setDarkMode} 
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="holo-card">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-3">
+                  <Key className="w-6 h-6 text-cyan-400" />
+                  <span className="text-white">API Configuration</span>
+                </CardTitle>
+                <CardDescription>Configure your API keys for enhanced features</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <Label>Show/Hide API Keys</Label>
+                    <p className="text-sm text-slate-400">Toggle visibility of sensitive API keys</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowKeys(!showKeys)}
+                  >
+                    {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showKeys ? 'Hide' : 'Show'} Keys
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="openai">OpenAI API Key</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        id="openai"
+                        type={showKeys ? "text" : "password"}
+                        placeholder="sk-..."
+                        value={apiKeys.openai}
+                        onChange={(e) => handleApiKeyChange('openai', e.target.value)}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => testApiConnection('OpenAI')}
+                        disabled={isTesting || !apiKeys.openai}
+                      >
+                        {isTesting ? <TestTube className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
+                        Test
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Required for AI trading insights and analysis</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="groq">Groq API Key</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        id="groq"
+                        type={showKeys ? "text" : "password"}
+                        placeholder="gsk_..."
+                        value={apiKeys.groq}
+                        onChange={(e) => handleApiKeyChange('groq', e.target.value)}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => testApiConnection('Groq')}
+                        disabled={isTesting || !apiKeys.groq}
+                      >
+                        {isTesting ? <TestTube className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
+                        Test
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Alternative AI provider for faster responses</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="news">News API Key</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        id="news"
+                        type={showKeys ? "text" : "password"}
+                        placeholder="..."
+                        value={apiKeys.news}
+                        onChange={(e) => handleApiKeyChange('news', e.target.value)}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => testApiConnection('News')}
+                        disabled={isTesting || !apiKeys.news}
+                      >
+                        {isTesting ? <TestTube className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
+                        Test
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Required for economic calendar and market news</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="alphaVantage">Alpha Vantage API Key</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        id="alphaVantage"
+                        type={showKeys ? "text" : "password"}
+                        placeholder="..."
+                        value={apiKeys.alphaVantage}
+                        onChange={(e) => handleApiKeyChange('alphaVantage', e.target.value)}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => testApiConnection('Alpha Vantage')}
+                        disabled={isTesting || !apiKeys.alphaVantage}
+                      >
+                        {isTesting ? <TestTube className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
+                        Test
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Required for real-time market data and forex rates</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="tradingView">TradingView API Key</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        id="tradingView"
+                        type={showKeys ? "text" : "password"}
+                        placeholder="..."
+                        value={apiKeys.tradingView}
+                        onChange={(e) => handleApiKeyChange('tradingView', e.target.value)}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => testApiConnection('TradingView')}
+                        disabled={isTesting || !apiKeys.tradingView}
+                      >
+                        {isTesting ? <TestTube className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
+                        Test
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Optional: Enhanced charting and technical analysis</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

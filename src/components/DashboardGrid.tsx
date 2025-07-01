@@ -1,4 +1,3 @@
-
 import React from 'react';
 import PerformanceCalendar from './PerformanceCalendar';
 import AICoachCard from './AICoachCard';
@@ -6,6 +5,24 @@ import TradeJournalCard from './TradeJournalCard';
 import RiskAnalyzer from './RiskAnalyzer';
 import QuickStats from './QuickStats';
 import RecentTrades from './RecentTrades';
+import EconomicCalendar from './EconomicCalendar';
+import Leaderboard from './Leaderboard';
+import StrategyAnalyzer from './StrategyAnalyzer';
+import NotificationSystem from './NotificationSystem';
+import TradeBuilder from './TradeBuilder';
+import SmartJournal from './SmartJournal';
+import PersonalChallenges from './PersonalChallenges';
+import MarketSentimentOverlay from './MarketSentimentOverlay';
+
+// Import comprehensive feature components
+import BrokerIntegration from './BrokerIntegration';
+import AdvancedAnalytics from './AdvancedAnalytics';
+import CalendarView from './CalendarView';
+import StrategyAnalysis from './StrategyAnalysis';
+import EnhancedTradingJournal from './EnhancedTradingJournal';
+import NotificationsAlerts from './NotificationsAlerts';
+import MarketCoverageSentiment from './MarketCoverageSentiment';
+import PaperTrading from './PaperTrading';
 
 const DashboardGrid = () => {
   return (
@@ -15,22 +32,94 @@ const DashboardGrid = () => {
         <QuickStats />
       </div>
 
+      {/* Broker Integration - Full width */}
+      <div className="lg:col-span-12">
+        <BrokerIntegration />
+      </div>
+
+      {/* Advanced Analytics - Full width */}
+      <div className="lg:col-span-12">
+        <AdvancedAnalytics />
+      </div>
+
+      {/* Calendar View - Full width */}
+      <div className="lg:col-span-12">
+        <CalendarView />
+      </div>
+
+      {/* Strategy Analysis - Full width */}
+      <div className="lg:col-span-12">
+        <StrategyAnalysis />
+      </div>
+
+      {/* Enhanced Trading Journal - Full width */}
+      <div className="lg:col-span-12">
+        <EnhancedTradingJournal />
+      </div>
+
+      {/* Notifications & Alerts - Full width */}
+      <div className="lg:col-span-12">
+        <NotificationsAlerts />
+      </div>
+
+      {/* Market Coverage & Sentiment - Full width */}
+      <div className="lg:col-span-12">
+        <MarketCoverageSentiment />
+      </div>
+
+      {/* Paper Trading - Full width */}
+      <div className="lg:col-span-12">
+        <PaperTrading />
+      </div>
+
       {/* Performance Calendar - Takes up most space */}
       <div className="lg:col-span-8">
         <PerformanceCalendar />
       </div>
 
       {/* AI Coach - Right sidebar */}
-      <div className="lg:col-span-4">
+      <div className="lg:col-span-4" data-section="ai-coach">
         <AICoachCard />
       </div>
 
-      {/* Trade Journal */}
+      {/* Trade Builder - Full width */}
+      <div className="lg:col-span-12">
+        <TradeBuilder />
+      </div>
+
+      {/* Smart Journal and Personal Challenges */}
+      <div className="lg:col-span-6">
+        <SmartJournal />
+      </div>
+
+      <div className="lg:col-span-6">
+        <PersonalChallenges />
+      </div>
+
+      {/* Market Sentiment Overlay - Full width */}
+      <div className="lg:col-span-12">
+        <MarketSentimentOverlay />
+      </div>
+
+      {/* Strategy Analyzer - Full width */}
+      <div className="lg:col-span-12">
+        <StrategyAnalyzer />
+      </div>
+
+      {/* Economic Calendar and Leaderboard */}
+      <div className="lg:col-span-6">
+        <EconomicCalendar />
+      </div>
+
+      <div className="lg:col-span-6" data-section="leaderboard">
+        <Leaderboard />
+      </div>
+
+      {/* Trade Journal and Risk Analyzer */}
       <div className="lg:col-span-7">
         <TradeJournalCard />
       </div>
 
-      {/* Risk Analyzer */}
       <div className="lg:col-span-5">
         <RiskAnalyzer />
       </div>
@@ -38,6 +127,11 @@ const DashboardGrid = () => {
       {/* Recent Trades */}
       <div className="lg:col-span-12">
         <RecentTrades />
+      </div>
+
+      {/* Notification System */}
+      <div className="lg:col-span-12">
+        <NotificationSystem />
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,57 +7,123 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, BookOpen, Plus, Search, Filter, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, BookOpen, Plus, Search, Filter, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import Header from '@/components/Header';
+import { useTrades } from '@/hooks/useTrades';
+import { formatCurrency } from '@/lib/utils';
 
 const Journal = () => {
   const navigate = useNavigate();
+  const { trades, addTrade, updateTrade, deleteTrade, loading } = useTrades();
   const [showNewEntry, setShowNewEntry] = useState(false);
+  const [editingTrade, setEditingTrade] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState('all');
   const [newEntry, setNewEntry] = useState({
-    symbol: '',
-    type: 'buy',
-    entry: '',
-    exit: '',
-    quantity: '',
-    pnl: '',
-    notes: ''
+    instrument: '',
+    trade_type: 'buy',
+    entry_price: '',
+    exit_price: '',
+    lot_size: '',
+    profit_loss: '',
+    stop_loss: '',
+    take_profit: '',
+    status: 'closed',
+    source: 'manual'
   });
 
-  const handleCreateEntry = () => {
-    // Simulate creating entry
-    toast.success('Journal entry created successfully!');
-    setShowNewEntry(false);
-    setNewEntry({
-      symbol: '',
-      type: 'buy',
-      entry: '',
-      exit: '',
-      quantity: '',
-      pnl: '',
-      notes: ''
+  const handleCreateEntry = async () => {
+    if (!newEntry.instrument || !newEntry.entry_price) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+
+    try {
+      await addTrade({
+        instrument: newEntry.instrument,
+        trade_type: newEntry.trade_type as 'buy' | 'sell',
+        entry_price: parseFloat(newEntry.entry_price),
+        exit_price: newEntry.exit_price ? parseFloat(newEntry.exit_price) : null,
+        lot_size: newEntry.lot_size ? parseFloat(newEntry.lot_size) : null,
+        profit_loss: newEntry.profit_loss ? parseFloat(newEntry.profit_loss) : null,
+        stop_loss: newEntry.stop_loss ? parseFloat(newEntry.stop_loss) : null,
+        take_profit: newEntry.take_profit ? parseFloat(newEntry.take_profit) : null,
+        status: newEntry.status as 'open' | 'closed',
+        source: newEntry.source,
+        opened_at: new Date().toISOString(),
+        closed_at: newEntry.status === 'closed' ? new Date().toISOString() : null,
+        mt5_ticket_id: null,
+      });
+
+      toast.success('Trade added successfully!');
+      setShowNewEntry(false);
+      setNewEntry({
+        instrument: '',
+        trade_type: 'buy',
+        entry_price: '',
+        exit_price: '',
+        lot_size: '',
+        profit_loss: '',
+        stop_loss: '',
+        take_profit: '',
+        status: 'closed',
+        source: 'manual'
+      });
+    } catch (error) {
+      toast.error('Failed to add trade');
+    }
+  };
+
+  const handleDeleteTrade = async (tradeId: string) => {
+    if (confirm('Are you sure you want to delete this trade?')) {
+      try {
+        await deleteTrade(tradeId);
+        toast.success('Trade deleted successfully!');
+      } catch (error) {
+        toast.error('Failed to delete trade');
+      }
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
-  const sampleEntries = [
-    {
-      id: 1,
-      date: '2024-01-15',
-      symbol: 'EURUSD',
-      type: 'buy',
-      entry: 1.0850,
-      exit: 1.0890,
-      quantity: 10000,
-      pnl: 40,
-      notes: 'Strong bullish momentum, good entry at support level'
-    }
-  ];
+  const getTradeStatusColor = (status: string | null, profitLoss: number | null) => {
+    if (status === 'open') return 'text-yellow-400';
+    if (profitLoss && profitLoss > 0) return 'text-green-400';
+    if (profitLoss && profitLoss < 0) return 'text-red-400';
+    return 'text-slate-400';
+  };
+
+  const getTradeTypeIcon = (tradeType: string | null) => {
+    return tradeType === 'buy' ? (
+      <ArrowUpRight className="w-4 h-4 text-green-400" />
+    ) : (
+      <ArrowDownRight className="w-4 h-4 text-red-400" />
+    );
+  };
+
+  const filteredTrades = trades.filter(trade => {
+    const matchesSearch = trade.instrument.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterBy === 'all' || 
+      (filterBy === 'profitable' && (trade.profit_loss || 0) > 0) ||
+      (filterBy === 'losses' && (trade.profit_loss || 0) < 0) ||
+      (filterBy === 'buy' && trade.trade_type === 'buy') ||
+      (filterBy === 'sell' && trade.trade_type === 'sell');
+    
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
-      <Header />
       <main className="container mx-auto px-6 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -75,12 +140,12 @@ const Journal = () => {
               <DialogTrigger asChild>
                 <Button className="holo-button">
                   <Plus className="w-4 h-4 mr-2" />
-                  New Entry
+                  Add Trade
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Create Journal Entry</DialogTitle>
+                  <DialogTitle>Add New Trade</DialogTitle>
                   <DialogDescription>
                     Document your trade details and analysis
                   </DialogDescription>
@@ -88,17 +153,18 @@ const Journal = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="symbol">Symbol</Label>
+                      <Label htmlFor="instrument">Instrument</Label>
                       <Input
-                        id="symbol"
+                        id="instrument"
                         placeholder="e.g., EURUSD"
-                        value={newEntry.symbol}
-                        onChange={(e) => setNewEntry({...newEntry, symbol: e.target.value})}
+                        value={newEntry.instrument}
+                        onChange={(e) => setNewEntry({...newEntry, instrument: e.target.value})}
+                        required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="type">Type</Label>
-                      <Select value={newEntry.type} onValueChange={(value) => setNewEntry({...newEntry, type: value})}>
+                      <Label htmlFor="trade_type">Type</Label>
+                      <Select value={newEntry.trade_type} onValueChange={(value) => setNewEntry({...newEntry, trade_type: value})}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -111,58 +177,91 @@ const Journal = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="entry">Entry Price</Label>
+                      <Label htmlFor="entry_price">Entry Price</Label>
                       <Input
-                        id="entry"
+                        id="entry_price"
                         type="number"
                         step="0.00001"
-                        value={newEntry.entry}
-                        onChange={(e) => setNewEntry({...newEntry, entry: e.target.value})}
+                        placeholder="1.0850"
+                        value={newEntry.entry_price}
+                        onChange={(e) => setNewEntry({...newEntry, entry_price: e.target.value})}
+                        required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="exit">Exit Price</Label>
+                      <Label htmlFor="exit_price">Exit Price</Label>
                       <Input
-                        id="exit"
+                        id="exit_price"
                         type="number"
                         step="0.00001"
-                        value={newEntry.exit}
-                        onChange={(e) => setNewEntry({...newEntry, exit: e.target.value})}
+                        placeholder="1.0890"
+                        value={newEntry.exit_price}
+                        onChange={(e) => setNewEntry({...newEntry, exit_price: e.target.value})}
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantity</Label>
+                      <Label htmlFor="lot_size">Lot Size</Label>
                       <Input
-                        id="quantity"
+                        id="lot_size"
                         type="number"
-                        value={newEntry.quantity}
-                        onChange={(e) => setNewEntry({...newEntry, quantity: e.target.value})}
+                        step="0.01"
+                        placeholder="0.1"
+                        value={newEntry.lot_size}
+                        onChange={(e) => setNewEntry({...newEntry, lot_size: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="pnl">P&L</Label>
+                      <Label htmlFor="profit_loss">P&L</Label>
                       <Input
-                        id="pnl"
+                        id="profit_loss"
                         type="number"
                         step="0.01"
-                        value={newEntry.pnl}
-                        onChange={(e) => setNewEntry({...newEntry, pnl: e.target.value})}
+                        placeholder="40.00"
+                        value={newEntry.profit_loss}
+                        onChange={(e) => setNewEntry({...newEntry, profit_loss: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="stop_loss">Stop Loss</Label>
+                      <Input
+                        id="stop_loss"
+                        type="number"
+                        step="0.00001"
+                        placeholder="1.0800"
+                        value={newEntry.stop_loss}
+                        onChange={(e) => setNewEntry({...newEntry, stop_loss: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="take_profit">Take Profit</Label>
+                      <Input
+                        id="take_profit"
+                        type="number"
+                        step="0.00001"
+                        placeholder="1.0900"
+                        value={newEntry.take_profit}
+                        onChange={(e) => setNewEntry({...newEntry, take_profit: e.target.value})}
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Trade analysis, market conditions, lessons learned..."
-                      value={newEntry.notes}
-                      onChange={(e) => setNewEntry({...newEntry, notes: e.target.value})}
-                    />
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={newEntry.status} onValueChange={(value) => setNewEntry({...newEntry, status: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Button onClick={handleCreateEntry} className="w-full holo-button">
-                    Create Entry
+                    Add Trade
                   </Button>
                 </div>
               </DialogContent>
@@ -181,7 +280,7 @@ const Journal = () => {
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                   <Input
-                    placeholder="Search entries..."
+                    placeholder="Search trades..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -203,62 +302,75 @@ const Journal = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {sampleEntries.length === 0 ? (
+              {loading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, index) => (
+                    <div key={index} className="animate-pulse">
+                      <div className="h-20 bg-slate-500/20 rounded-lg"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredTrades.length === 0 ? (
                 <div className="text-center py-12">
                   <BookOpen className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">No Journal Entries</h3>
-                  <p className="text-slate-400 mb-6 max-w-md mx-auto">
-                    Start documenting your trades to build a comprehensive trading history and receive AI-powered insights.
+                  <h3 className="text-xl font-semibold text-white mb-2">No Trades Found</h3>
+                  <p className="text-slate-400 mb-6">
+                    {trades.length === 0 ? 'Start by adding your first trade' : 'No trades match your search criteria'}
                   </p>
-                  <Button onClick={() => setShowNewEntry(true)} className="holo-button">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create First Entry
-                  </Button>
+                  {trades.length === 0 && (
+                    <Button onClick={() => setShowNewEntry(true)} className="holo-button">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add First Trade
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {sampleEntries.map((entry) => (
-                    <Card key={entry.id} className="bg-slate-800/50 border border-slate-600/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-3">
-                            <div className={`p-2 rounded-lg ${entry.type === 'buy' ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-                              {entry.type === 'buy' ? 
-                                <TrendingUp className="w-4 h-4 text-green-400" /> : 
-                                <TrendingDown className="w-4 h-4 text-red-400" />
-                              }
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-white">{entry.symbol}</h4>
-                              <p className="text-sm text-slate-400">{entry.date}</p>
-                            </div>
-                          </div>
-                          <div className={`text-right ${entry.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            <p className="font-semibold">{entry.pnl >= 0 ? '+' : ''}${entry.pnl}</p>
-                            <p className="text-sm text-slate-400">{entry.type.toUpperCase()}</p>
+                  {filteredTrades.map((trade) => (
+                    <div key={trade.id} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700/30 hover:border-slate-600/50 transition-all">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          {getTradeTypeIcon(trade.trade_type)}
+                          <div>
+                            <p className="font-medium text-white">{trade.instrument}</p>
+                            <p className="text-sm text-slate-400">
+                              {trade.lot_size ? `${trade.lot_size} lots` : 'N/A'} • {trade.status || 'Unknown'}
+                            </p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <p className="text-slate-400">Entry</p>
-                            <p className="text-white font-medium">{entry.entry}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-400">Exit</p>
-                            <p className="text-white font-medium">{entry.exit}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-400">Quantity</p>
-                            <p className="text-white font-medium">{entry.quantity.toLocaleString()}</p>
-                          </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <p className={`font-medium ${getTradeStatusColor(trade.status, trade.profit_loss)}`}>
+                            {trade.profit_loss ? formatCurrency(trade.profit_loss) : '--'}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            {trade.entry_price ? `@${trade.entry_price}` : '--'}
+                          </p>
                         </div>
-                        {entry.notes && (
-                          <div className="mt-3 p-3 bg-slate-700/30 rounded-lg">
-                            <p className="text-slate-300 text-sm">{entry.notes}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                        
+                        <div className="text-right">
+                          <p className="text-sm text-slate-400">
+                            {formatDate(trade.opened_at)}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {trade.source || 'Manual'}
+                          </p>
+                        </div>
+
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteTrade(trade.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
