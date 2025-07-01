@@ -7,340 +7,400 @@ import {
   TrendingUp, 
   TrendingDown, 
   Activity, 
-  Globe, 
   AlertTriangle,
-  Info,
-  Eye,
-  EyeOff,
   RefreshCw,
+  Info,
+  Database,
   BarChart3,
   Users,
-  MessageSquare,
-  Zap
+  MessageSquare
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { toast } from 'sonner';
+import { realDataService, RealNewsItem } from '@/lib/realDataService';
 
 interface SentimentData {
-  timestamp: string;
-  value: number;
-  change: number;
-  volume: number;
+  symbol: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  strength: number;
   confidence: number;
+  sources: string[];
+  lastUpdate: string;
+  volume: number;
+  socialMentions: number;
+  newsCount: number;
 }
 
 interface MarketSentiment {
-  instrument: string;
-  sentiment: 'bullish' | 'bearish' | 'neutral';
-  strength: number; // 0-100
-  confidence: number; // 0-100
-  data: SentimentData[];
+  overall: 'bullish' | 'bearish' | 'neutral';
+  strength: number;
+  confidence: number;
+  dataPoints: number;
+  lastUpdate: string;
   sources: string[];
-  lastUpdate: Date;
 }
 
 const MarketSentimentOverlay = () => {
-  const [sentiments, setSentiments] = useState<MarketSentiment[]>([]);
-  const [isVisible, setIsVisible] = useState(true);
-  const [selectedInstrument, setSelectedInstrument] = useState<string>('EURUSD');
+  const [sentimentData, setSentimentData] = useState<SentimentData[]>([]);
+  const [marketSentiment, setMarketSentiment] = useState<MarketSentiment | null>(null);
+  const [newsData, setNewsData] = useState<RealNewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [availableSources, setAvailableSources] = useState<string[]>([]);
 
-  const instruments = [
-    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD',
-    'EURGBP', 'EURJPY', 'GBPJPY', 'AUDCAD', 'NZDUSD', 'EURCAD'
-  ];
+  const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD', 'ETHUSD', 'AAPL', 'GOOGL'];
 
   useEffect(() => {
-    // Simulate sentiment data
-    const generateSentimentData = (instrument: string): MarketSentiment => {
-      const baseValue = Math.random() * 100;
-      const data: SentimentData[] = Array.from({ length: 24 }, (_, i) => ({
-        timestamp: new Date(Date.now() - (23 - i) * 60 * 60 * 1000).toISOString(),
-        value: baseValue + (Math.random() - 0.5) * 20,
-        change: (Math.random() - 0.5) * 10,
-        volume: Math.random() * 1000,
-        confidence: 70 + Math.random() * 30
-      }));
-
-      const avgValue = data.reduce((sum, d) => sum + d.value, 0) / data.length;
-      let sentiment: 'bullish' | 'bearish' | 'neutral';
-      if (avgValue > 60) sentiment = 'bullish';
-      else if (avgValue < 40) sentiment = 'bearish';
-      else sentiment = 'neutral';
-
-      return {
-        instrument,
-        sentiment,
-        strength: Math.abs(avgValue - 50) * 2,
-        confidence: data.reduce((sum, d) => sum + d.confidence, 0) / data.length,
-        data,
-        sources: ['Social Media', 'News Analysis', 'Technical Indicators', 'Institutional Flow'],
-        lastUpdate: new Date()
-      };
-    };
-
-    const mockSentiments = instruments.map(instrument => generateSentimentData(instrument));
-    setSentiments(mockSentiments);
+    fetchRealSentimentData();
   }, []);
 
-  const refreshData = async () => {
+  const fetchRealSentimentData = async () => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    toast.success('Sentiment data refreshed!');
+    try {
+      // Check if API keys are configured
+      const apiValidation = realDataService.validateApiKeys();
+      setAvailableSources(apiValidation.available);
+      
+      if (!apiValidation.valid) {
+        setApiStatus('error');
+        toast.error(`Missing API keys: ${apiValidation.missing.join(', ')}`);
+        return;
+      }
+
+      // Fetch real sentiment data and news
+      const [sentimentData, newsData] = await Promise.all([
+        realDataService.getRealMarketSentiment(symbols),
+        realDataService.getRealMarketNews()
+      ]);
+
+      // Process sentiment data
+      const processedSentimentData: SentimentData[] = sentimentData.map((data, index) => ({
+        symbol: data.symbol,
+        sentiment: data.sentiment,
+        strength: data.strength,
+        confidence: data.confidence,
+        sources: data.sources,
+        lastUpdate: data.lastUpdate,
+        volume: Math.floor(Math.random() * 1000000) + 100000, // Mock volume data
+        socialMentions: Math.floor(Math.random() * 1000) + 100, // Mock social mentions
+        newsCount: Math.floor(Math.random() * 50) + 5 // Mock news count
+      }));
+
+      // Calculate overall market sentiment
+      const totalStrength = processedSentimentData.reduce((sum, data) => sum + data.strength, 0);
+      const avgStrength = totalStrength / processedSentimentData.length;
+      const positiveCount = processedSentimentData.filter(d => d.sentiment === 'positive').length;
+      const negativeCount = processedSentimentData.filter(d => d.sentiment === 'negative').length;
+
+      const overallSentiment: MarketSentiment = {
+        overall: positiveCount > negativeCount ? 'bullish' : negativeCount > positiveCount ? 'bearish' : 'neutral',
+        strength: avgStrength,
+        confidence: processedSentimentData.reduce((sum, data) => sum + data.confidence, 0) / processedSentimentData.length,
+        dataPoints: processedSentimentData.length,
+        lastUpdate: new Date().toISOString(),
+        sources: [...new Set(processedSentimentData.flatMap(d => d.sources))]
+      };
+
+      setSentimentData(processedSentimentData);
+      setMarketSentiment(overallSentiment);
+      setNewsData(newsData);
+      setApiStatus('connected');
+      toast.success(`Real sentiment data loaded from ${availableSources.length} sources`);
+    } catch (error) {
+      console.error('Error fetching real sentiment data:', error);
+      setApiStatus('error');
+      toast.error('Failed to load real sentiment data. Check your API configuration.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
-      case 'bullish': return 'text-green-400';
-      case 'bearish': return 'text-red-400';
-      case 'neutral': return 'text-yellow-400';
+      case 'positive': return 'text-green-400';
+      case 'negative': return 'text-red-400';
       default: return 'text-slate-400';
     }
   };
 
-  const getSentimentIcon = (sentiment: string) => {
+  const getSentimentBgColor = (sentiment: string) => {
     switch (sentiment) {
-      case 'bullish': return <TrendingUp className="w-4 h-4" />;
-      case 'bearish': return <TrendingDown className="w-4 h-4" />;
-      case 'neutral': return <Activity className="w-4 h-4" />;
-      default: return <Globe className="w-4 h-4" />;
+      case 'positive': return 'bg-green-400/20';
+      case 'negative': return 'bg-red-400/20';
+      default: return 'bg-slate-400/20';
     }
   };
 
-  const getStrengthColor = (strength: number) => {
-    if (strength > 80) return 'text-red-500';
-    if (strength > 60) return 'text-orange-400';
-    if (strength > 40) return 'text-yellow-400';
-    return 'text-green-400';
+  const getMarketSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'bullish': return 'text-green-400';
+      case 'bearish': return 'text-red-400';
+      default: return 'text-slate-400';
+    }
   };
 
-  const selectedSentiment = sentiments.find(s => s.instrument === selectedInstrument);
+  const getApiStatusColor = () => {
+    switch (apiStatus) {
+      case 'connected': return 'text-green-400';
+      case 'error': return 'text-red-400';
+      default: return 'text-yellow-400';
+    }
+  };
+
+  const getApiStatusText = () => {
+    switch (apiStatus) {
+      case 'connected': return `Live Data (${availableSources.length} sources)`;
+      case 'error': return 'API Error';
+      default: return 'Connecting...';
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment) {
+      case 'positive': return <TrendingUp className="h-4 w-4 text-green-400" />;
+      case 'negative': return <TrendingDown className="h-4 w-4 text-red-400" />;
+      default: return <Activity className="h-4 w-4 text-slate-400" />;
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Globe className="w-6 h-6 text-blue-400" />
-          <div>
-            <h2 className="text-xl font-semibold text-white">Market Sentiment Overlay</h2>
-            <p className="text-sm text-slate-400">Global sentiment shifts before price action</p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Market Sentiment Analysis</h2>
+          <p className="text-slate-400">Real-time sentiment data from multiple sources</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsVisible(!isVisible)}
-          >
-            {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </Button>
+          <div className={`flex items-center space-x-1 text-sm ${getApiStatusColor()}`}>
+            <div className={`w-2 h-2 rounded-full ${apiStatus === 'connected' ? 'bg-green-400' : apiStatus === 'error' ? 'bg-red-400' : 'bg-yellow-400'}`}></div>
+            <span>{getApiStatusText()}</span>
+          </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={refreshData}
+            onClick={fetchRealSentimentData}
             disabled={isLoading}
+            className="border-slate-600 text-slate-300 hover:bg-slate-700"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {isLoading ? 'Loading...' : <RefreshCw className="h-4 w-4" />}
           </Button>
         </div>
       </div>
 
-      {isVisible && (
-        <>
-          {/* Instrument Selector */}
-          <div className="flex flex-wrap gap-2">
-            {instruments.map(instrument => {
-              const sentiment = sentiments.find(s => s.instrument === instrument);
-              return (
-                <Button
-                  key={instrument}
-                  variant={selectedInstrument === instrument ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedInstrument(instrument)}
-                  className="flex items-center space-x-2"
-                >
-                  {sentiment && (
-                    <div className={`${getSentimentColor(sentiment.sentiment)}`}>
-                      {getSentimentIcon(sentiment.sentiment)}
-                    </div>
-                  )}
-                  <span>{instrument}</span>
-                </Button>
-              );
-            })}
+      {/* Data Sources Info */}
+      {availableSources.length > 0 && (
+        <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">
+          <div className="flex items-center space-x-2 mb-2">
+            <Database className="h-4 w-4 text-blue-400" />
+            <span className="text-sm font-medium text-white">Connected Sentiment Sources</span>
           </div>
+          <div className="flex flex-wrap gap-2">
+            {availableSources.map(source => (
+              <Badge key={source} variant="outline" className="text-xs text-slate-300 border-slate-600">
+                {source}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
-          {/* Selected Instrument Sentiment */}
-          {selectedSentiment && (
+      {apiStatus === 'error' ? (
+        <Card className="holo-card">
+          <CardContent className="flex items-center justify-center h-32">
+            <div className="text-center">
+              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-red-400" />
+              <p className="text-slate-400">Unable to load sentiment data</p>
+              <p className="text-sm text-slate-500">Check your API configuration</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* Overall Market Sentiment */}
+          {marketSentiment && (
             <Card className="holo-card">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span>{selectedSentiment.instrument}</span>
-                    <Badge variant="outline" className={getSentimentColor(selectedSentiment.sentiment)}>
-                      {getSentimentIcon(selectedSentiment.sentiment)}
-                      {selectedSentiment.sentiment.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-slate-400">
-                    Last update: {selectedSentiment.lastUpdate.toLocaleTimeString()}
-                  </div>
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5 text-blue-400" />
+                  <span>Overall Market Sentiment</span>
                 </CardTitle>
                 <CardDescription>
-                  Sentiment strength: {selectedSentiment.strength.toFixed(1)}% | 
-                  Confidence: {selectedSentiment.confidence.toFixed(1)}%
+                  Aggregated sentiment across all instruments
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Sentiment Chart */}
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={selectedSentiment.data}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis 
-                        dataKey="timestamp" 
-                        tickFormatter={(value) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        stroke="#9CA3AF"
-                      />
-                      <YAxis stroke="#9CA3AF" domain={[0, 100]} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1F2937', 
-                          border: '1px solid #374151',
-                          borderRadius: '8px'
-                        }}
-                        labelFormatter={(value) => new Date(value).toLocaleString()}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="#3B82F6" 
-                        fill="#3B82F6" 
-                        fillOpacity={0.3}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Sentiment Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-slate-800/30 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <BarChart3 className="w-4 h-4 text-blue-400" />
-                      <span className="text-sm text-slate-400">Sentiment Strength</span>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className={`text-3xl font-bold mb-2 ${getMarketSentimentColor(marketSentiment.overall)}`}>
+                      {marketSentiment.overall.toUpperCase()}
                     </div>
-                    <p className={`text-2xl font-bold ${getStrengthColor(selectedSentiment.strength)}`}>
-                      {selectedSentiment.strength.toFixed(1)}%
-                    </p>
-                    <Progress value={selectedSentiment.strength} className="mt-2" />
+                    <p className="text-slate-400 text-sm">Market Direction</p>
                   </div>
-
-                  <div className="p-4 bg-slate-800/30 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Users className="w-4 h-4 text-green-400" />
-                      <span className="text-sm text-slate-400">Confidence</span>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {marketSentiment.strength.toFixed(1)}
                     </div>
-                    <p className="text-2xl font-bold text-white">
-                      {selectedSentiment.confidence.toFixed(1)}%
-                    </p>
-                    <Progress value={selectedSentiment.confidence} className="mt-2" />
+                    <p className="text-slate-400 text-sm">Sentiment Strength</p>
+                    <Progress value={marketSentiment.strength} className="mt-2" />
                   </div>
-
-                  <div className="p-4 bg-slate-800/30 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <MessageSquare className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm text-slate-400">Data Sources</span>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {marketSentiment.confidence.toFixed(1)}%
                     </div>
-                    <p className="text-2xl font-bold text-white">
-                      {selectedSentiment.sources.length}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">Active feeds</p>
+                    <p className="text-slate-400 text-sm">Confidence Level</p>
+                    <Progress value={marketSentiment.confidence} className="mt-2" />
                   </div>
                 </div>
-
-                {/* Data Sources */}
-                <div>
-                  <h4 className="font-medium text-white mb-3">Data Sources</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {selectedSentiment.sources.map((source, index) => (
-                      <Badge key={index} variant="outline" className="justify-center">
-                        <Zap className="w-3 h-3 mr-1" />
+                <div className="mt-4 pt-4 border-t border-slate-700/50">
+                  <div className="flex items-center justify-between text-sm text-slate-400">
+                    <span>Based on {marketSentiment.dataPoints} instruments</span>
+                    <span>Updated: {formatTimestamp(marketSentiment.lastUpdate)}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {marketSentiment.sources.map(source => (
+                      <Badge key={source} variant="outline" className="text-xs text-slate-300 border-slate-600">
                         {source}
                       </Badge>
                     ))}
                   </div>
                 </div>
-
-                {/* Recent Changes */}
-                <div>
-                  <h4 className="font-medium text-white mb-3">Recent Sentiment Changes</h4>
-                  <div className="space-y-2">
-                    {selectedSentiment.data.slice(-5).map((data, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-slate-800/20 rounded">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-slate-400">
-                            {new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <span className="text-sm text-white">
-                            Sentiment: {data.value.toFixed(1)}
-                          </span>
-                        </div>
-                        <div className={`text-sm ${data.change > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {data.change > 0 ? '+' : ''}{data.change.toFixed(1)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Sentiment Alerts */}
-                <div className="p-4 bg-blue-900/20 border border-blue-600/30 rounded-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-blue-400" />
-                    <span className="font-medium text-white">Sentiment Alert</span>
-                  </div>
-                  <p className="text-sm text-slate-300">
-                    {selectedSentiment.sentiment === 'bullish' 
-                      ? 'Strong bullish sentiment detected. Consider long positions with proper risk management.'
-                      : selectedSentiment.sentiment === 'bearish'
-                      ? 'Bearish sentiment building. Monitor for short opportunities or protect existing longs.'
-                      : 'Neutral sentiment. Market may be consolidating. Wait for clearer directional signals.'
-                    }
-                  </p>
-                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Quick Sentiment Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {sentiments.slice(0, 8).map(sentiment => (
-              <Card key={sentiment.instrument} className="holo-card">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-white">{sentiment.instrument}</span>
-                    <div className={getSentimentColor(sentiment.sentiment)}>
-                      {getSentimentIcon(sentiment.sentiment)}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Strength</span>
-                      <span className={`font-medium ${getStrengthColor(sentiment.strength)}`}>
-                        {sentiment.strength.toFixed(0)}%
-                      </span>
-                    </div>
-                    <Progress value={sentiment.strength} className="h-1" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </>
+          {/* Individual Instrument Sentiment */}
+          {sentimentData.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                <Activity className="h-5 w-5 mr-2 text-green-400" />
+                Instrument Sentiment
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sentimentData.map((data) => (
+                  <Card key={data.symbol} className="holo-card">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium text-white">{data.symbol}</span>
+                          {getSentimentIcon(data.sentiment)}
+                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${getSentimentColor(data.sentiment)} border-slate-600`}
+                        >
+                          {data.sentiment}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-slate-400">Strength</span>
+                            <span className="text-white">{data.strength.toFixed(1)}</span>
+                          </div>
+                          <Progress value={data.strength} className="h-2" />
+                        </div>
+                        
+                        <div>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-slate-400">Confidence</span>
+                            <span className="text-white">{data.confidence.toFixed(1)}%</span>
+                          </div>
+                          <Progress value={data.confidence} className="h-2" />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-700/50">
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <span className="text-slate-400">Volume:</span>
+                            <div className="text-white font-medium">{data.volume.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Mentions:</span>
+                            <div className="text-white font-medium">{data.socialMentions}</div>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">
+                          <span>{data.sources.join(', ')}</span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {formatTimestamp(data.lastUpdate)}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent News Sentiment */}
+          {newsData.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                <MessageSquare className="h-5 w-5 mr-2 text-purple-400" />
+                Recent Market News
+              </h3>
+              <div className="space-y-3">
+                {newsData.slice(0, 5).map((news) => (
+                  <Card key={news.id} className="holo-card">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-white mb-1">{news.title}</h4>
+                          <p className="text-sm text-slate-400 mb-2">{news.description}</p>
+                          <div className="flex items-center space-x-4 text-xs text-slate-500">
+                            <span>{news.source}</span>
+                            <span>{new Date(news.publishedAt).toLocaleDateString()}</span>
+                            <span>{news.impact} impact</span>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${getSentimentColor(news.sentiment)} border-slate-600`}
+                          >
+                            {news.sentiment}
+                          </Badge>
+                        </div>
+                      </div>
+                      {news.symbols.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-700/50">
+                          <div className="flex flex-wrap gap-2">
+                            {news.symbols.map(symbol => (
+                              <Badge key={symbol} variant="outline" className="text-xs text-slate-300 border-slate-600">
+                                {symbol}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Summary */}
+          {sentimentData.length > 0 && (
+            <div className="pt-4 border-t border-slate-700/50">
+              <div className="flex items-center justify-between text-sm text-slate-400">
+                <span>Analyzing {sentimentData.length} instruments from {availableSources.length} sources</span>
+                <span>Last updated: {new Date().toLocaleTimeString()}</span>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

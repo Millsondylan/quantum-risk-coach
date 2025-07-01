@@ -10,6 +10,18 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import OnboardingFlow from '@/components/OnboardingFlow';
 
+interface OnboardingData {
+  name: string;
+  tradingExperience: string;
+  preferredMarkets: string[];
+  riskTolerance: number;
+  tradingGoals: string[];
+  timeHorizon: string;
+  accountSize: string;
+  tradingStyle: string;
+  motivation: string;
+}
+
 const Auth = () => {
   
   const navigate = useNavigate();
@@ -24,7 +36,7 @@ const Auth = () => {
   });
   const [loading, setLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingData, setOnboardingData] = useState(null);
+  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +91,7 @@ const Auth = () => {
     }
   };
 
-  const handleOnboardingComplete = (data: any) => {
+  const handleOnboardingComplete = (data: OnboardingData) => {
     setOnboardingData(data);
     toast.success(`Welcome ${data.name}! Your profile has been personalized.`);
     // Reset form

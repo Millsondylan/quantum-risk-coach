@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, TrendingUp, Users, Crown, Star, Target, Award, Medal } from 'lucide-react';
+import { Trophy, TrendingUp, Users, Crown, Star, Target, Award, Medal, AlertTriangle, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 interface Trader {
   id: string;
@@ -21,15 +22,44 @@ interface Trader {
   experience: string;
   badges: string[];
   isOnline: boolean;
+  isRealData: boolean;
 }
 
 const Leaderboard = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>('monthly');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [traders, setTraders] = useState<Trader[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [dataMode, setDataMode] = useState<'simulated' | 'real'>('simulated');
 
-  // Generate simulated trader data
-  const generateTraders = (): Trader[] => {
+  const timeframes = ['weekly', 'monthly', 'quarterly', 'yearly'];
+  const categories = ['all', 'forex', 'crypto', 'stocks', 'futures'];
+
+  useEffect(() => {
+    loadLeaderboardData();
+  }, [selectedTimeframe, selectedCategory, dataMode]);
+
+  const loadLeaderboardData = async () => {
+    setIsLoading(true);
+    try {
+      if (dataMode === 'real') {
+        // TODO: Integrate with real trading community API
+        // For now, we'll show simulated data with clear indication
+        toast.info('Real community data integration coming soon');
+        setDataMode('simulated');
+      }
+      
+      const simulatedTraders = generateSimulatedTraders();
+      setTraders(simulatedTraders);
+    } catch (error) {
+      console.error('Error loading leaderboard data:', error);
+      toast.error('Failed to load leaderboard data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateSimulatedTraders = (): Trader[] => {
     const names = [
       'Alex Thompson', 'Sarah Chen', 'Marcus Rodriguez', 'Emma Wilson', 'David Kim',
       'Lisa Anderson', 'James Miller', 'Maria Garcia', 'Robert Johnson', 'Jennifer Lee'
@@ -61,259 +91,194 @@ const Leaderboard = () => {
         strategy: strategies[Math.floor(Math.random() * strategies.length)],
         experience: experiences[Math.floor(Math.random() * experiences.length)],
         badges: badges.slice(0, Math.floor(Math.random() * 3) + 1),
-        isOnline: Math.random() > 0.7
+        isOnline: Math.random() > 0.7,
+        isRealData: false
       };
     }).sort((a, b) => b.totalPnL - a.totalPnL);
   };
 
-  useEffect(() => {
-    setTraders(generateTraders());
-  }, [selectedTimeframe]);
-
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1: return <Crown className="w-5 h-5 text-yellow-400" />;
-      case 2: return <Medal className="w-5 h-5 text-gray-400" />;
-      case 3: return <Award className="w-5 h-5 text-amber-600" />;
-      default: return <span className="text-lg font-bold text-slate-400">{rank}</span>;
-    }
-  };
-
-  const getRankColor = (rank: number) => {
-    switch (rank) {
-      case 1: return 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-yellow-500/30';
-      case 2: return 'bg-gradient-to-r from-gray-500/20 to-gray-600/20 border-gray-500/30';
-      case 3: return 'bg-gradient-to-r from-amber-600/20 to-amber-700/20 border-amber-600/30';
-      default: return 'bg-slate-700/30 border-slate-600/30';
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
+      maximumFractionDigits: 0,
+    }).format(value);
   };
 
-  const timeframes = [
-    { value: 'weekly', label: 'This Week' },
-    { value: 'monthly', label: 'This Month' },
-    { value: 'quarterly', label: 'This Quarter' },
-    { value: 'yearly', label: 'This Year' }
-  ];
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return <Crown className="h-5 w-5 text-yellow-400" />;
+    if (rank === 2) return <Trophy className="h-5 w-5 text-gray-400" />;
+    if (rank === 3) return <Star className="h-5 w-5 text-orange-400" />;
+    return null;
+  };
 
-  const categories = [
-    { value: 'all', label: 'All Traders' },
-    { value: 'scalping', label: 'Scalping' },
-    { value: 'swing', label: 'Swing Trading' },
-    { value: 'day', label: 'Day Trading' },
-    { value: 'position', label: 'Position Trading' }
-  ];
+  const getBadgeColor = (badge: string) => {
+    switch (badge) {
+      case 'Top Performer': return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
+      case 'Consistent': return 'text-green-400 bg-green-500/20 border-green-500/30';
+      case 'Risk Manager': return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
+      case 'High Volume': return 'text-purple-400 bg-purple-500/20 border-purple-500/30';
+      case 'Innovator': return 'text-pink-400 bg-pink-500/20 border-pink-500/30';
+      default: return 'text-slate-400 bg-slate-500/20 border-slate-500/30';
+    }
+  };
+
+  const filteredTraders = traders.filter(trader => {
+    if (selectedCategory === 'all') return true;
+    // In a real implementation, you'd filter by actual trading categories
+    return true;
+  });
 
   return (
-    <div className="holo-card p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <Trophy className="w-6 h-6 text-yellow-400" />
-          <h2 className="text-xl font-semibold text-white">Trading Leaderboard</h2>
+    <Card className="holo-card">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-white">Trading Leaderboard</CardTitle>
+            <CardDescription className="text-slate-400">
+              Top performing traders in the community
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="text-orange-400 border-orange-400/30">
+              <Info className="h-3 w-3 mr-1" />
+              Simulated Data
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadLeaderboardData}
+              disabled={isLoading}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              {isLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Users className="w-4 h-4 text-slate-400" />
-          <span className="text-sm text-slate-400">{traders.length} traders</span>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="flex items-center space-x-2">
-          <TrendingUp className="w-4 h-4 text-slate-400" />
-          <Select value={selectedTimeframe} onValueChange={setSelectedTimeframe}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Timeframe" />
-            </SelectTrigger>
-            <SelectContent>
-              {timeframes.map(timeframe => (
-                <SelectItem key={timeframe.value} value={timeframe.value}>
-                  {timeframe.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Target className="w-4 h-4 text-slate-400" />
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map(category => (
-                <SelectItem key={category.value} value={category.value}>
-                  {category.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button variant="outline" size="sm">
-          <Star className="w-4 h-4 mr-2" />
-          My Ranking
-        </Button>
-      </div>
-
-      {/* Top 3 Podium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {traders.slice(0, 3).map((trader, index) => (
-          <div
-            key={trader.id}
-            className={`p-4 rounded-lg border ${getRankColor(trader.rank)} relative`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={trader.avatar} />
-                  <AvatarFallback>{trader.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-medium text-white">{trader.name}</h3>
-                  <p className="text-sm text-slate-400">{trader.strategy}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                {getRankIcon(trader.rank)}
-                <div className={`text-lg font-bold ${trader.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatCurrency(trader.totalPnL)}
-                </div>
-              </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {/* Data Mode Notice */}
+          <div className="p-4 bg-orange-900/20 border border-orange-600/30 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <AlertTriangle className="h-4 w-4 text-orange-400" />
+              <span className="font-medium text-white">Simulated Data</span>
             </div>
-            
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-slate-400">Win Rate:</span>
-                <span className="text-white ml-1">{trader.winRate}%</span>
-              </div>
-              <div>
-                <span className="text-slate-400">Trades:</span>
-                <span className="text-white ml-1">{trader.totalTrades}</span>
-              </div>
-            </div>
+            <p className="text-sm text-slate-300">
+              This leaderboard currently shows simulated trader data for demonstration purposes. 
+              Real community data integration is planned for future updates.
+            </p>
+          </div>
 
-            {trader.badges.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {trader.badges.map((badge, badgeIndex) => (
-                  <Badge key={badgeIndex} variant="outline" className="text-xs">
-                    {badge}
-                  </Badge>
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2">
+            <Select value={selectedTimeframe} onValueChange={setSelectedTimeframe}>
+              <SelectTrigger className="w-32 bg-slate-800 border-slate-600 text-slate-300">
+                <SelectValue placeholder="Timeframe" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-600">
+                {timeframes.map(timeframe => (
+                  <SelectItem key={timeframe} value={timeframe} className="text-slate-300">
+                    {timeframe.charAt(0).toUpperCase() + timeframe.slice(1)}
+                  </SelectItem>
                 ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+              </SelectContent>
+            </Select>
 
-      {/* Full Leaderboard */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {traders.slice(3).map((trader) => (
-          <div
-            key={trader.id}
-            className="p-4 rounded-lg border border-slate-600/30 bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg font-bold text-slate-400 w-8">{trader.rank}</span>
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage src={trader.avatar} />
-                    <AvatarFallback>{trader.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div className="relative">
-                    <h3 className="font-medium text-white">{trader.name}</h3>
-                    <p className="text-sm text-slate-400">{trader.strategy} • {trader.experience}</p>
-                    {trader.isOnline && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full"></div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-6">
-                <div className="text-right">
-                  <div className={`font-semibold ${trader.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {formatCurrency(trader.totalPnL)}
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {trader.winRate}% WR • {trader.totalTrades} trades
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-sm text-white">
-                    PF: {trader.profitFactor.toFixed(2)}
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    DD: {trader.maxDrawdown.toFixed(1)}%
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm">
-                    <Star className="w-4 h-4 mr-1" />
-                    Follow
-                  </Button>
-                  <Badge variant="outline" className="text-xs">
-                    {trader.followers}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            {trader.badges.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-3">
-                {trader.badges.map((badge, badgeIndex) => (
-                  <Badge key={badgeIndex} variant="outline" className="text-xs">
-                    {badge}
-                  </Badge>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-32 bg-slate-800 border-slate-600 text-slate-300">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-600">
+                {categories.map(category => (
+                  <SelectItem key={category} value={category} className="text-slate-300">
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </SelectItem>
                 ))}
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
-        ))}
-      </div>
 
-      {/* Leaderboard Stats */}
-      <div className="mt-6 pt-4 border-t border-slate-600/30">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-400">
-              {formatCurrency(traders[0]?.totalPnL || 0)}
-            </div>
-            <div className="text-sm text-slate-400">Top Performer</div>
+          {/* Leaderboard */}
+          <div className="space-y-3">
+            {filteredTraders.map((trader) => (
+              <div
+                key={trader.id}
+                className="p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      {getRankIcon(trader.rank)}
+                      <span className="text-lg font-bold text-white">#{trader.rank}</span>
+                    </div>
+                    
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={trader.avatar} alt={trader.name} />
+                      <AvatarFallback>{trader.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
+                    
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-medium text-white">{trader.name}</h4>
+                        <div className={`w-2 h-2 rounded-full ${trader.isOnline ? 'bg-green-400' : 'bg-slate-500'}`}></div>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm text-slate-400">
+                        <span>{trader.strategy}</span>
+                        <span>•</span>
+                        <span>{trader.experience}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-6">
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${trader.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {formatCurrency(trader.totalPnL)}
+                      </p>
+                      <p className="text-sm text-slate-400">Total P&L</p>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-white">{trader.winRate}%</p>
+                      <p className="text-sm text-slate-400">Win Rate</p>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-white">{trader.totalTrades}</p>
+                      <p className="text-sm text-slate-400">Trades</p>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-white">{trader.followers}</p>
+                      <p className="text-sm text-slate-400">Followers</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Badges */}
+                <div className="flex items-center space-x-2 mt-3">
+                  {trader.badges.map((badge, index) => (
+                    <Badge key={index} className={getBadgeColor(badge)}>
+                      {badge}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">
-              {Math.round(traders.reduce((sum, t) => sum + t.winRate, 0) / traders.length)}%
+
+          {/* Summary */}
+          <div className="pt-4 border-t border-slate-700/50">
+            <div className="flex items-center justify-between text-sm text-slate-400">
+              <span>Showing {filteredTraders.length} traders</span>
+              <span>Last updated: {new Date().toLocaleTimeString()}</span>
             </div>
-            <div className="text-sm text-slate-400">Avg Win Rate</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400">
-              {traders.reduce((sum, t) => sum + t.totalTrades, 0)}
-            </div>
-            <div className="text-sm text-slate-400">Total Trades</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-400">
-              {traders.filter(t => t.isOnline).length}
-            </div>
-            <div className="text-sm text-slate-400">Online Now</div>
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

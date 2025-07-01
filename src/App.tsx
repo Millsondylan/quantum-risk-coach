@@ -12,6 +12,7 @@ import Settings from "./pages/Settings";
 import Journal from "./pages/Journal";
 import TradeBuilder from "./pages/TradeBuilder";
 import NotFound from "./pages/NotFound";
+import MobileBottomNav from "./components/MobileBottomNav";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,80 +56,83 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              <Route path="/connect-mt4" element={
-                <ProtectedRoute>
-                  <MT4Connection />
-                </ProtectedRoute>
-              } />
-              <Route path="/connect-mt5" element={
-                <ProtectedRoute>
-                  <MT4Connection platform="MT5" />
-                </ProtectedRoute>
-              } />
-              <Route path="/connect-ctrader" element={
-                <ProtectedRoute>
-                  <MT4Connection platform="cTrader" />
-                </ProtectedRoute>
-              } />
-              <Route path="/connect-tradingview" element={
-                <ProtectedRoute>
-                  <MT4Connection platform="TradingView" />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              <Route path="/journal" element={
-                <ProtectedRoute>
-                  <Journal />
-                </ProtectedRoute>
-              } />
-              <Route path="/journal/add" element={
-                <ProtectedRoute>
-                  <Journal defaultTab="add" />
-                </ProtectedRoute>
-              } />
-              <Route path="/journal/analytics" element={
-                <ProtectedRoute>
-                  <Journal defaultTab="analytics" />
-                </ProtectedRoute>
-              } />
-              <Route path="/journal/tags" element={
-                <ProtectedRoute>
-                  <Journal defaultTab="tags" />
-                </ProtectedRoute>
-              } />
-              <Route path="/journal/export" element={
-                <ProtectedRoute>
-                  <Journal defaultTab="export" />
-                </ProtectedRoute>
-              } />
-              <Route path="/trade-builder" element={
-                <ProtectedRoute>
-                  <TradeBuilder />
-                </ProtectedRoute>
-              } />
-              <Route path="/performance-calendar" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              <Route path="/strategy-analyzer" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <div className="flex flex-col min-h-screen">
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                <Route path="/connect-mt4" element={
+                  <ProtectedRoute>
+                    <MT4Connection />
+                  </ProtectedRoute>
+                } />
+                <Route path="/connect-mt5" element={
+                  <ProtectedRoute>
+                    <MT4Connection platform="MT5" />
+                  </ProtectedRoute>
+                } />
+                <Route path="/connect-ctrader" element={
+                  <ProtectedRoute>
+                    <MT4Connection platform="cTrader" />
+                  </ProtectedRoute>
+                } />
+                <Route path="/connect-tradingview" element={
+                  <ProtectedRoute>
+                    <MT4Connection platform="TradingView" />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/journal" element={
+                  <ProtectedRoute>
+                    <Journal />
+                  </ProtectedRoute>
+                } />
+                <Route path="/journal/add" element={
+                  <ProtectedRoute>
+                    <Journal defaultTab="add" />
+                  </ProtectedRoute>
+                } />
+                <Route path="/journal/analytics" element={
+                  <ProtectedRoute>
+                    <Journal defaultTab="analytics" />
+                  </ProtectedRoute>
+                } />
+                <Route path="/journal/tags" element={
+                  <ProtectedRoute>
+                    <Journal defaultTab="tags" />
+                  </ProtectedRoute>
+                } />
+                <Route path="/journal/export" element={
+                  <ProtectedRoute>
+                    <Journal defaultTab="export" />
+                  </ProtectedRoute>
+                } />
+                <Route path="/trade-builder" element={
+                  <ProtectedRoute>
+                    <TradeBuilder />
+                  </ProtectedRoute>
+                } />
+                <Route path="/performance-calendar" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                <Route path="/strategy-analyzer" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <MobileBottomNav />
+            </div>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
