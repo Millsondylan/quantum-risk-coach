@@ -26,111 +26,111 @@ import PaperTrading from './PaperTrading';
 
 const DashboardGrid = () => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Quick Stats Row */}
-      <div className="lg:col-span-12">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6">
+      {/* Quick Stats Row - Mobile optimized */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <QuickStats />
       </div>
 
       {/* Broker Integration - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <BrokerIntegration />
       </div>
 
       {/* Advanced Analytics - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <AdvancedAnalytics />
       </div>
 
       {/* Calendar View - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <CalendarView />
       </div>
 
       {/* Strategy Analysis - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <StrategyAnalysis />
       </div>
 
       {/* Enhanced Trading Journal - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <EnhancedTradingJournal />
       </div>
 
       {/* Notifications & Alerts - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <NotificationsAlerts />
       </div>
 
       {/* Market Coverage & Sentiment - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <MarketCoverageSentiment />
       </div>
 
       {/* Paper Trading - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <PaperTrading />
       </div>
 
-      {/* Performance Calendar - Takes up most space */}
-      <div className="lg:col-span-8">
+      {/* Performance Calendar - Mobile optimized layout */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-8">
         <PerformanceCalendar />
       </div>
 
-      {/* AI Coach - Right sidebar */}
-      <div className="lg:col-span-4" data-section="ai-coach">
+      {/* AI Coach - Mobile optimized */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-4" data-section="ai-coach">
         <AICoachCard />
       </div>
 
       {/* Trade Builder - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <TradeBuilder />
       </div>
 
-      {/* Smart Journal and Personal Challenges */}
-      <div className="lg:col-span-6">
+      {/* Smart Journal and Personal Challenges - Mobile optimized */}
+      <div className="col-span-1 md:col-span-1 lg:col-span-6">
         <SmartJournal />
       </div>
 
-      <div className="lg:col-span-6">
+      <div className="col-span-1 md:col-span-1 lg:col-span-6">
         <PersonalChallenges />
       </div>
 
       {/* Market Sentiment Overlay - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <MarketSentimentOverlay />
       </div>
 
       {/* Strategy Analyzer - Full width */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <StrategyAnalyzer />
       </div>
 
-      {/* Economic Calendar and Leaderboard */}
-      <div className="lg:col-span-6">
+      {/* Economic Calendar and Leaderboard - Mobile optimized */}
+      <div className="col-span-1 md:col-span-1 lg:col-span-6">
         <EconomicCalendar />
       </div>
 
-      <div className="lg:col-span-6" data-section="leaderboard">
+      <div className="col-span-1 md:col-span-1 lg:col-span-6" data-section="leaderboard">
         <Leaderboard />
       </div>
 
-      {/* Trade Journal and Risk Analyzer */}
-      <div className="lg:col-span-7">
+      {/* Trade Journal and Risk Analyzer - Mobile optimized */}
+      <div className="col-span-1 md:col-span-1 lg:col-span-7">
         <TradeJournalCard />
       </div>
 
-      <div className="lg:col-span-5">
+      <div className="col-span-1 md:col-span-1 lg:col-span-5">
         <RiskAnalyzer />
       </div>
 
       {/* Recent Trades */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <RecentTrades />
       </div>
 
       {/* Notification System */}
-      <div className="lg:col-span-12">
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <NotificationSystem />
       </div>
     </div>

@@ -3,21 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#00d9ff" />
     <meta name="description" content="Quantum Risk Coach - Next-Gen Trading Intelligence with AI-powered insights, real-time data, and comprehensive analytics" />
     <meta name="keywords" content="trading, forex, AI, analytics, MT4, MT5, trading platform" />
     <meta name="author" content="Quantum Risk Coach" />
     
-    <!-- PWA Meta Tags -->
+    <!-- Enhanced PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Quantum Risk Coach" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="msapplication-TileColor" content="#00d9ff" />
+    <meta name="msapplication-TileImage" content="/icon-144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    
+    <!-- Mobile-specific meta tags -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+    <meta name="apple-mobile-web-app-orientations" content="portrait" />
     
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="72x72" href="/icon-72.png" />
+    <link rel="apple-touch-icon" sizes="96x96" href="/icon-96.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/icon-128.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/icon-144.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="384x384" href="/icon-384.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
     
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json" />
@@ -26,6 +41,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     
+    <!-- Mobile-optimized font loading -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" /></noscript>
+    
     <title>Quantum Risk Coach - Next-Gen Trading Intelligence</title>
   </head>
 
@@ -33,19 +52,47 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Service Worker Registration -->
+    <!-- Enhanced Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
               console.log('SW registered: ', registration);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New content is available, show update notification
+                    if (confirm('New version available! Reload to update?')) {
+                      window.location.reload();
+                    }
+                  }
+                });
+              });
             })
             .catch((registrationError) => {
               console.log('SW registration failed: ', registrationError);
             });
         });
       }
+      
+      // Mobile-specific optimizations
+      if ('standalone' in window.navigator && window.navigator.standalone) {
+        document.documentElement.classList.add('standalone');
+      }
+      
+      // Prevent zoom on double tap
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function (event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+          event.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, false);
     </script>
   </body>
 </html>
