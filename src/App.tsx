@@ -14,6 +14,7 @@ import TradeBuilder from "./pages/TradeBuilder";
 import PerformanceCalendar from "./pages/PerformanceCalendar";
 import StrategyAnalyzer from "./pages/StrategyAnalyzer";
 import NotFound from "./pages/NotFound";
+import AuthDebug from "./pages/AuthDebug";
 import MobileBottomNav from "./components/MobileBottomNav";
 
 const queryClient = new QueryClient({
@@ -131,6 +132,7 @@ const App = () => {
                     <StrategyAnalyzer />
                   </ProtectedRoute>
                 } />
+                <Route path="/debug" element={<AuthDebug />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <MobileBottomNav />

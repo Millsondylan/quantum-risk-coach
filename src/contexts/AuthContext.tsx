@@ -84,8 +84,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth state change:', event, session?.user?.email);
       
       if (mounted) {
-        setSession(session);
-        setUser(session?.user ?? null);
+        // Only update state if it's not a demo session
+        if (!session || session.user?.email !== 'demo@quantumrisk.coach') {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
         setLoading(false);
       }
     });
@@ -123,6 +126,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Check if this is a demo login attempt
+      if (email === 'demo@quantumrisk.coach' && password === 'demo123') {
+        // Create a demo user session
+        const demoUser: User = {
+          id: 'demo-user-id',
+          email: 'demo@quantumrisk.coach',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          aud: 'authenticated',
+          role: 'authenticated',
+          email_confirmed_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          app_metadata: {
+            provider: 'email',
+            providers: ['email']
+          },
+          user_metadata: {
+            username: 'Demo User',
+            demo: true
+          },
+          identities: [],
+          factors: []
+        };
+
+        const demoSession: Session = {
+          access_token: 'demo-access-token',
+          refresh_token: 'demo-refresh-token',
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          token_type: 'bearer',
+          user: demoUser
+        };
+
+        // Set demo session
+        setSession(demoSession);
+        setUser(demoUser);
+        
+        console.log('Demo login successful');
+        return { error: null };
+      }
+
       // Clean up existing state first
       cleanupAuthState();
       
@@ -204,8 +248,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async (callback?: () => void) => {
     try {
-      cleanupAuthState();
-      await supabase.auth.signOut({ scope: 'global' });
+      // Check if this is a demo session
+      if (user?.email === 'demo@quantumrisk.coach') {
+        // Clear demo session
+        setSession(null);
+        setUser(null);
+        console.log('Demo session ended');
+      } else {
+        // Regular Supabase sign out
+        cleanupAuthState();
+        await supabase.auth.signOut({ scope: 'global' });
+      }
+      
       // Let React Router handle navigation instead of hard redirect
       if (callback) {
         callback();

@@ -1,6 +1,8 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import './lib/loginTest.ts' // Import for debugging
+import './lib/supabaseTest.ts' // Import for comprehensive testing
 
 try {
   const rootElement = document.getElementById("root");
