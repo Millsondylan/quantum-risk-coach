@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, TrendingUp, Mail, Lock, User, Eye, EyeOff, Key } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import OnboardingFlow from '@/components/OnboardingFlow';
@@ -37,8 +37,6 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
-  const [demoAccessCode, setDemoAccessCode] = useState('');
-  const [demoAccessGranted, setDemoAccessGranted] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,39 +106,6 @@ const Auth = () => {
     setSignupData({ username: '', email: '', password: '', confirmPassword: '' });
     setShowOnboarding(false);
     navigate('/');
-  };
-
-  const handleDemoAccess = () => {
-    if (demoAccessCode === 'pine 5125') {
-      setDemoAccessGranted(true);
-      toast.success('Demo access granted! You can now use the demo account.');
-    } else {
-      toast.error('Invalid demo access code. Please enter "pine 5125" to access demo features.');
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    if (!demoAccessGranted) {
-      toast.error('Please enter the correct demo access code first.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await signIn('demo@quantumrisk.coach', 'demo123');
-      
-      if (error) {
-        toast.error(error.message || 'Demo login failed.');
-      } else {
-        toast.success('Demo login successful! Welcome to Quantum Risk Coach.');
-        navigate('/');
-      }
-    } catch (error) {
-      console.error('Demo login error:', error);
-      toast.error('Demo login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   if (showOnboarding) {
@@ -226,73 +191,6 @@ const Auth = () => {
                     <Button type="submit" className="w-full holo-button" disabled={loading}>
                       {loading ? 'Signing In...' : 'Sign In'}
                     </Button>
-                    
-                    {/* Demo account for testing */}
-                    <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
-                      <p className="text-sm text-slate-400 mb-3">Demo Account Access:</p>
-                      
-                      {!demoAccessGranted ? (
-                        <div className="space-y-3">
-                          <div className="space-y-2">
-                            <Label htmlFor="demo-code" className="text-xs text-slate-400">Demo Access Code</Label>
-                            <div className="relative">
-                              <Key className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                              <Input
-                                id="demo-code"
-                                type="password"
-                                placeholder="Enter demo access code"
-                                value={demoAccessCode}
-                                onChange={(e) => setDemoAccessCode(e.target.value)}
-                                className="pl-10 text-xs"
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleDemoAccess();
-                                  }
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-xs"
-                            onClick={handleDemoAccess}
-                          >
-                            Verify Demo Access
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-green-400 text-xs">
-                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                            Demo access granted
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-xs"
-                            onClick={handleDemoLogin}
-                            disabled={loading}
-                          >
-                            {loading ? 'Signing In...' : 'Use Demo Account'}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="w-full text-xs text-slate-400"
-                            onClick={() => {
-                              setDemoAccessGranted(false);
-                              setDemoAccessCode('');
-                            }}
-                          >
-                            Reset Demo Access
-                          </Button>
-                        </div>
-                      )}
-                    </div>
                   </form>
                 </TabsContent>
                 

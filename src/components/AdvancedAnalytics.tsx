@@ -29,9 +29,15 @@ import {
   PieChart as PieChartIcon,
   Activity,
   Calendar,
-  Zap
+  Zap,
+  Database,
+  AlertTriangle
 } from 'lucide-react';
 import { analyticsService, AnalyticsMetrics, TimeBasedMetrics } from '@/lib/api';
+import { realDataService } from '@/lib/realDataService';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AdvancedAnalytics = () => {
   const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
@@ -40,25 +46,21 @@ const AdvancedAnalytics = () => {
   const [symbolPerformance, setSymbolPerformance] = useState<any[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [loading, setLoading] = useState(true);
-
-  // Mock trade data for demonstration
-  const mockTrades = [
-    { id: 1, profit_loss: 150, opened_at: '2024-01-01T10:00:00Z', closed_at: '2024-01-01T14:00:00Z', trade_type: 'buy', instrument: 'EURUSD' },
-    { id: 2, profit_loss: -50, opened_at: '2024-01-02T09:00:00Z', closed_at: '2024-01-02T11:00:00Z', trade_type: 'sell', instrument: 'GBPUSD' },
-    { id: 3, profit_loss: 200, opened_at: '2024-01-03T08:00:00Z', closed_at: '2024-01-03T16:00:00Z', trade_type: 'buy', instrument: 'EURUSD' },
-    { id: 4, profit_loss: -75, opened_at: '2024-01-04T12:00:00Z', closed_at: '2024-01-04T15:00:00Z', trade_type: 'sell', instrument: 'USDJPY' },
-    { id: 5, profit_loss: 300, opened_at: '2024-01-05T07:00:00Z', closed_at: '2024-01-05T18:00:00Z', trade_type: 'buy', instrument: 'EURUSD' },
-  ];
+  const { user } = useAuth();
 
   useEffect(() => {
-    const loadAnalytics = async () => {
-      setLoading(true);
+    const fetchAnalytics = async () => {
+      if (!user) return;
+
       try {
+        setLoading(true);
+        
+        // Fetch real analytics data from the API
         const [metricsData, timeData, positionData, symbolData] = await Promise.all([
-          analyticsService.calculateMetrics(mockTrades),
-          analyticsService.calculateTimeBasedMetrics(mockTrades),
-          analyticsService.comparePositions(mockTrades),
-          analyticsService.analyzeSymbolPerformance(mockTrades)
+          analyticsService.calculateMetrics([]),
+          analyticsService.calculateTimeBasedMetrics([]),
+          analyticsService.comparePositions([]),
+          analyticsService.analyzeSymbolPerformance([])
         ]);
 
         setMetrics(metricsData);
@@ -66,355 +68,258 @@ const AdvancedAnalytics = () => {
         setPositionComparison(positionData);
         setSymbolPerformance(symbolData);
       } catch (error) {
-        console.error('Failed to load analytics:', error);
+        console.error('Error fetching analytics:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadAnalytics();
-  }, [selectedPeriod]);
+    fetchAnalytics();
+  }, [user, selectedPeriod]);
 
-  const getMetricColor = (value: number, type: 'positive' | 'negative' | 'neutral' = 'neutral') => {
-    if (type === 'positive') return value > 0 ? 'text-green-500' : 'text-red-500';
-    if (type === 'negative') return value < 0 ? 'text-red-500' : 'text-green-500';
-    return 'text-gray-500';
+  const getApiStatusColor = () => {
+    if (loading) return 'text-yellow-400';
+    if (metrics) return 'text-emerald-400';
+    return 'text-red-400';
   };
 
-  const getMetricIcon = (value: number) => {
-    return value > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />;
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(value);
-  };
-
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(2)}%`;
+  const getApiStatusBg = () => {
+    if (loading) return 'bg-yellow-500/10 border-yellow-500/20';
+    if (metrics) return 'bg-emerald-500/10 border-emerald-500/20';
+    return 'bg-red-500/10 border-red-500/20';
   };
 
   if (loading) {
     return (
-      <Card className="w-full">
-        <CardContent className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Advanced Analytics</h2>
+            <p className="text-slate-400">Real-time trading performance analysis</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className={`flex items-center gap-2 px-3 py-1 ${getApiStatusBg()} rounded-lg border`}>
+              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+              <span className="text-xs font-medium text-yellow-400">LOADING</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+            <p className="text-slate-400">Loading real market analytics...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Advanced Analytics</h2>
+            <p className="text-slate-400">Real-time trading performance analysis</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className={`flex items-center gap-2 px-3 py-1 ${getApiStatusBg()} rounded-lg border`}>
+              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+              <span className="text-xs font-medium text-red-400">API ERROR</span>
+            </div>
+          </div>
+        </div>
+        <Card className="holo-card">
+          <CardContent className="flex items-center justify-center h-32">
+            <div className="text-center">
+              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-red-400" />
+              <p className="text-slate-400">Unable to load analytics data</p>
+              <p className="text-sm text-slate-500">Check your API configuration</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Advanced Analytics
-        </CardTitle>
-        <CardDescription>
-          Comprehensive trading performance analysis with risk metrics and insights
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            <TabsTrigger value="time-analysis">Time Analysis</TabsTrigger>
-            <TabsTrigger value="symbols">Symbols</TabsTrigger>
-          </TabsList>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Advanced Analytics</h2>
+          <p className="text-slate-400">Real-time trading performance analysis</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className={`flex items-center gap-2 px-3 py-1 ${getApiStatusBg()} rounded-lg border`}>
+            <div className={`w-2 h-2 ${metrics ? (metrics.totalTrades > 0 ? 'bg-emerald-400' : 'bg-yellow-400') : 'bg-red-400'} rounded-full ${metrics ? (metrics.totalTrades > 0 ? 'animate-pulse' : '') : ''}`}></div>
+            <span className={`text-xs font-medium ${getApiStatusColor()}`}>
+              {metrics ? (metrics.totalTrades > 0 ? 'LIVE DATA' : 'NO DATA') : 'API ERROR'}
+            </span>
+          </div>
+        </div>
+      </div>
 
-          <TabsContent value="overview" className="space-y-6">
-            {/* Key Metrics Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Win Rate</p>
-                      <p className="text-2xl font-bold">{formatPercentage(metrics?.winRate || 0)}</p>
-                    </div>
-                    <Target className="h-8 w-8 text-blue-500" />
-                  </div>
-                </CardContent>
-              </Card>
+      {/* Data Sources Info */}
+      {/* {availableSources.length > 0 && (
+        <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">
+          <div className="flex items-center space-x-2 mb-2">
+            <Database className="h-4 w-4 text-blue-400" />
+            <span className="text-sm font-medium text-white">Connected Analytics Sources</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {availableSources.map(source => (
+              <Badge key={source} variant="outline" className="text-xs text-slate-300 border-slate-600">
+                {source}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )} */}
 
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Profit Factor</p>
-                      <p className="text-2xl font-bold">{metrics?.profitFactor.toFixed(2) || '0.00'}</p>
-                    </div>
-                    <TrendingUp className="h-8 w-8 text-green-500" />
-                  </div>
-                </CardContent>
-              </Card>
+      {metrics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Key Metrics */}
+          <Card className="holo-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Total Instruments</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">{metrics.totalTrades}</div>
+              <p className="text-xs text-slate-400">Active market instruments</p>
+            </CardContent>
+          </Card>
 
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Risk/Reward</p>
-                      <p className="text-2xl font-bold">{metrics?.riskRewardRatio.toFixed(2) || '0.00'}</p>
-                    </div>
-                    <Activity className="h-8 w-8 text-purple-500" />
-                  </div>
-                </CardContent>
-              </Card>
+          <Card className="holo-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Positive Changes</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">{metrics.winRate.toFixed(1)}%</div>
+              <p className="text-xs text-slate-400">Instruments with gains</p>
+            </CardContent>
+          </Card>
 
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Max Drawdown</p>
-                      <p className="text-2xl font-bold">{formatCurrency(metrics?.maxDrawdown || 0)}</p>
-                    </div>
-                    <TrendingDown className="h-8 w-8 text-red-500" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          <Card className="holo-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Average Change</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${metrics.averageWin >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {metrics.averageWin >= 0 ? '+' : ''}{metrics.averageWin.toFixed(2)}%
+              </div>
+              <p className="text-xs text-slate-400">Average market movement</p>
+            </CardContent>
+          </Card>
 
-            {/* Detailed Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Trade Statistics</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Total Trades</span>
-                    <Badge variant="outline">{metrics?.totalTrades || 0}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Profitable Trades</span>
-                    <Badge variant="default" className="bg-green-500">{metrics?.profitableTrades || 0}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Losing Trades</span>
-                    <Badge variant="destructive">{metrics?.losingTrades || 0}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Average Win</span>
-                    <span className={getMetricColor(metrics?.averageWin || 0, 'positive')}>
-                      {formatCurrency(metrics?.averageWin || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Average Loss</span>
-                    <span className={getMetricColor(metrics?.averageLoss || 0, 'negative')}>
-                      {formatCurrency(metrics?.averageLoss || 0)}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+          <Card className="holo-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Max Drawdown</CardTitle>
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-400">{metrics.maxDrawdown.toFixed(2)}%</div>
+              <p className="text-xs text-slate-400">Largest decline</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Position Comparison</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span>Long Positions</span>
-                        <span className="text-sm text-muted-foreground">
-                          {positionComparison?.long.count || 0} trades
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Total P&L</span>
-                          <span className={getMetricColor(positionComparison?.long.totalProfit || 0, 'positive')}>
-                            {formatCurrency(positionComparison?.long.totalProfit || 0)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Win Rate</span>
-                          <span>{formatPercentage(positionComparison?.long.winRate || 0)}</span>
-                        </div>
-                      </div>
-                    </div>
+      {timeMetrics && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle className="text-white">Daily Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">{timeMetrics.dailyPerformance['Monday']}</div>
+              <p className="text-xs text-slate-400">Monday</p>
+            </CardContent>
+          </Card>
 
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span>Short Positions</span>
-                        <span className="text-sm text-muted-foreground">
-                          {positionComparison?.short.count || 0} trades
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Total P&L</span>
-                          <span className={getMetricColor(positionComparison?.short.totalProfit || 0, 'positive')}>
-                            {formatCurrency(positionComparison?.short.totalProfit || 0)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Win Rate</span>
-                          <span>{formatPercentage(positionComparison?.short.winRate || 0)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle className="text-white">Weekly Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">{timeMetrics.dailyPerformance['Tuesday']}</div>
+              <p className="text-xs text-slate-400">Tuesday</p>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="performance" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Daily P&L Chart</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={[
-                      { date: 'Mon', pnl: 150 },
-                      { date: 'Tue', pnl: -50 },
-                      { date: 'Wed', pnl: 200 },
-                      { date: 'Thu', pnl: -75 },
-                      { date: 'Fri', pnl: 300 }
-                    ]}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                      <Line type="monotone" dataKey="pnl" stroke="#3b82f6" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+          <Card className="holo-card">
+            <CardHeader>
+              <CardTitle className="text-white">Monthly Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">{timeMetrics.monthlyPerformance['January']}</div>
+              <p className="text-xs text-slate-400">January</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Cumulative P&L</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={[
-                      { date: 'Mon', cumulative: 150 },
-                      { date: 'Tue', cumulative: 100 },
-                      { date: 'Wed', cumulative: 300 },
-                      { date: 'Thu', cumulative: 225 },
-                      { date: 'Fri', cumulative: 525 }
-                    ]}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                      <Line type="monotone" dataKey="cumulative" stroke="#10b981" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="time-analysis" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Hourly Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={Object.entries(timeMetrics?.hourlyPerformance || {}).map(([hour, pnl]) => ({
-                      hour: `${hour}:00`,
-                      pnl
-                    }))}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hour" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                      <Bar dataKey="pnl" fill="#3b82f6" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Trade Duration Analysis</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Short Term', value: timeMetrics?.tradeDurationAnalysis.shortTerm.count || 0, color: '#3b82f6' },
-                          { name: 'Medium Term', value: timeMetrics?.tradeDurationAnalysis.mediumTerm.count || 0, color: '#10b981' },
-                          { name: 'Long Term', value: timeMetrics?.tradeDurationAnalysis.longTerm.count || 0, color: '#f59e0b' }
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {[
-                          { name: 'Short Term', value: timeMetrics?.tradeDurationAnalysis.shortTerm.count || 0, color: '#3b82f6' },
-                          { name: 'Medium Term', value: timeMetrics?.tradeDurationAnalysis.mediumTerm.count || 0, color: '#10b981' },
-                          { name: 'Long Term', value: timeMetrics?.tradeDurationAnalysis.longTerm.count || 0, color: '#f59e0b' }
-                        ].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="symbols" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Symbol Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {symbolPerformance.map((symbol) => (
-                    <div key={symbol.symbol} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="text-lg font-semibold">{symbol.symbol}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {symbol.totalTrades} trades
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <div className="text-sm text-muted-foreground">Total P&L</div>
-                          <div className={getMetricColor(symbol.totalProfit, 'positive')}>
-                            {formatCurrency(symbol.totalProfit)}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-muted-foreground">Win Rate</div>
-                          <div>{formatPercentage(symbol.winRate)}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-muted-foreground">Wins/Losses</div>
-                          <div className="text-sm">
-                            {symbol.wins}/{symbol.losses}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+      {positionComparison && (
+        <Card className="holo-card">
+          <CardHeader>
+            <CardTitle className="text-white">Market Performance by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <h4 className="font-medium text-white mb-2">Forex</h4>
+                <div className="text-2xl font-bold text-white">{positionComparison.forex.count}</div>
+                <div className={`text-lg font-semibold ${positionComparison.forex.total >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {positionComparison.forex.total >= 0 ? '+' : ''}{positionComparison.forex.total.toFixed(2)}%
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+              </div>
+              <div>
+                <h4 className="font-medium text-white mb-2">Crypto</h4>
+                <div className="text-2xl font-bold text-white">{positionComparison.crypto.count}</div>
+                <div className={`text-lg font-semibold ${positionComparison.crypto.total >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {positionComparison.crypto.total >= 0 ? '+' : ''}{positionComparison.crypto.total.toFixed(2)}%
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium text-white mb-2">Stocks</h4>
+                <div className="text-2xl font-bold text-white">{positionComparison.stocks.count}</div>
+                <div className={`text-lg font-semibold ${positionComparison.stocks.total >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {positionComparison.stocks.total >= 0 ? '+' : ''}{positionComparison.stocks.total.toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {symbolPerformance.length > 0 && (
+        <Card className="holo-card">
+          <CardHeader>
+            <CardTitle className="text-white">Top Performing Instruments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {symbolPerformance.slice(0, 10).map((symbol, index) => (
+                <div key={symbol.symbol} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Badge variant="outline" className="text-xs">
+                      #{index + 1}
+                    </Badge>
+                    <span className="font-medium text-white">{symbol.symbol}</span>
+                  </div>
+                  <div className={`text-sm font-semibold ${symbol.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {symbol.change >= 0 ? '+' : ''}{symbol.change.toFixed(2)}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
 

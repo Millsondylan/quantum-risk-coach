@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { runSupabaseTest, testSpecificLogin, testSpecificSignup } from '@/lib/supabaseTest';
+import { runComprehensiveSupabaseTest, testSpecificLogin, testSpecificSignup } from '@/lib/supabaseTest';
 
 const AuthDebug = () => {
   const [testResults, setTestResults] = useState<any>(null);
-  const [loginEmail, setLoginEmail] = useState('demo@quantumrisk.coach');
-  const [loginPassword, setLoginPassword] = useState('demo123');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [signupEmail, setSignupEmail] = useState('test@example.com');
   const [signupPassword, setSignupPassword] = useState('password123');
   const [signupUsername, setSignupUsername] = useState('testuser');
@@ -16,7 +16,7 @@ const AuthDebug = () => {
   const runFullTest = async () => {
     setLoading(true);
     try {
-      const results = await runSupabaseTest();
+      const results = await runComprehensiveSupabaseTest();
       setTestResults(results);
     } catch (error) {
       console.error('Test failed:', error);

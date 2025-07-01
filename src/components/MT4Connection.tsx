@@ -219,7 +219,7 @@ const MT4Connection: React.FC<MT4ConnectionProps> = ({ platform = "MT4/MT5" }) =
                   <Label htmlFor="server">Server *</Label>
                   <Input 
                     id="server" 
-                    placeholder="e.g., ICMarkets-Demo01" 
+                    placeholder="e.g., ICMarkets-Account01" 
                     value={formData.server}
                     onChange={(e) => handleInputChange('server', e.target.value)}
                   />

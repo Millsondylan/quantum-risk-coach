@@ -81,6 +81,10 @@ export const createUserProfile = async (userId: string, userData: {
         id: userId,
         username: userData.username || 'New User',
         email: userData.email,
+        subscription_status: 'unlimited',
+        subscription_expires_at: '2099-12-31 23:59:59+00',
+        posts_remaining: 999999,
+        trial_used: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -92,7 +96,7 @@ export const createUserProfile = async (userId: string, userData: {
       return { success: false, error };
     }
 
-    console.log('✅ User profile created:', data);
+    console.log('✅ User profile created with unlimited access:', data);
     return { success: true, data };
   } catch (error) {
     console.error('Profile creation error:', error);

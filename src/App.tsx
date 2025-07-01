@@ -16,6 +16,7 @@ import StrategyAnalyzer from "./pages/StrategyAnalyzer";
 import NotFound from "./pages/NotFound";
 import AuthDebug from "./pages/AuthDebug";
 import MobileBottomNav from "./components/MobileBottomNav";
+import { authDebug } from "@/lib/authDebug";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,16 +29,23 @@ const queryClient = new QueryClient({
 
 // Protected Route Component with improved error handling
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, initialized } = useAuth();
   
-  console.log('ProtectedRoute - loading:', loading, 'user:', user?.email);
+  console.log('ProtectedRoute - loading:', loading, 'initialized:', initialized, 'user:', user?.email);
   
-  if (loading) {
+  if (loading || !initialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading...</p>
+          <p className="text-slate-400">
+            {!initialized ? 'Initializing Quantum Risk Coach...' : 'Loading...'}
+          </p>
+          {!initialized && (
+            <p className="text-slate-500 text-sm mt-2">
+              Setting up database and authentication
+            </p>
+          )}
         </div>
       </div>
     );
@@ -52,6 +60,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
+  // Make debug functions globally available
+  if (typeof window !== 'undefined') {
+    (window as any).authDebug = authDebug;
+    (window as any).runAuthDiagnostic = authDebug.runFullDiagnostic;
+    (window as any).testSignup = authDebug.testSpecificSignup;
+    (window as any).testSignin = authDebug.testSpecificSignin;
+    (window as any).checkCurrentUser = authDebug.checkCurrentUser;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

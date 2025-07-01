@@ -55,13 +55,24 @@ const QuickStats = () => {
     loadBrokerData();
   }, [user?.id]);
 
-  // Calculate stats with real and simulated data
+  // Calculate stats with real data only
   const totalTrades = trades.length;
   const winRate = totalTrades > 0 ? ((metrics.winningTrades / totalTrades) * 100) : 0;
   const totalProfit = realTimeBalance > 0 ? realTimeBalance : metrics.totalProfit;
-  const dailyPnL = (Math.random() - 0.5) * 500; // Simulated daily P&L for demo
-  const weeklyPnL = (Math.random() - 0.5) * 2000; // Simulated weekly P&L for demo
   const activeTrades = trades.filter(trade => trade.status === 'open').length;
+  
+  // Calculate real daily and weekly P&L from actual trades
+  const calculateRealPnL = (days: number) => {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    
+    return trades
+      .filter(trade => new Date(trade.closed_at || trade.opened_at) >= cutoffDate)
+      .reduce((sum, trade) => sum + (trade.profit_loss || 0), 0);
+  };
+  
+  const dailyPnL = calculateRealPnL(1);
+  const weeklyPnL = calculateRealPnL(7);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

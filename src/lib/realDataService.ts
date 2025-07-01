@@ -168,7 +168,7 @@ class RealDataService {
       'forex_rates'
     ).catch(error => {
       console.error('Error fetching forex rates:', error);
-      return this.getFallbackForexRates();
+      throw error;
     });
   }
 
@@ -206,7 +206,7 @@ class RealDataService {
       'crypto_prices'
     ).catch(error => {
       console.error('Error fetching crypto prices:', error);
-      return this.getFallbackCryptoPrices();
+      throw error;
     });
   }
 
@@ -275,7 +275,7 @@ class RealDataService {
       return quotes;
     } catch (error) {
       console.error('Error fetching stock quotes:', error);
-      return this.getFallbackStockQuotes(symbols);
+      throw error;
     }
   }
 
@@ -311,7 +311,7 @@ class RealDataService {
       return events;
     } catch (error) {
       console.error('Error fetching economic calendar:', error);
-      return this.getFallbackEconomicCalendar();
+      throw error;
     }
   }
 
@@ -355,7 +355,7 @@ class RealDataService {
       'financial_news'
     ).catch(error => {
       console.error('Error fetching financial news:', error);
-      return this.getFallbackNews();
+      throw error;
     });
   }
 
@@ -413,7 +413,7 @@ class RealDataService {
       };
     } catch (error) {
       console.error('Error calculating market sentiment:', error);
-      return { sentiment: 'neutral', score: 0, confidence: 50 };
+      throw error;
     }
   }
 
@@ -502,44 +502,12 @@ class RealDataService {
       }
     } catch (error) {
       console.error('Error getting AI analysis:', error);
-      return 'Market analysis temporarily unavailable. Please check market data manually.';
+      throw error;
     }
   }
 
-  // Save data to Supabase
-  async saveMarketData(type: string, data: any): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('market_data')
-        .insert({
-          type,
-          data,
-          timestamp: new Date().toISOString()
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error saving market data:', error);
-    }
-  }
-
-  // Get historical data from Supabase
-  async getHistoricalData(type: string, limit: number = 100): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('market_data')
-        .select('*')
-        .eq('type', type)
-        .order('timestamp', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching historical data:', error);
-      return [];
-    }
-  }
+  // Note: Market data storage removed - only real-time data from APIs is used
+  // Historical data should be stored in user-specific trade records
 
   // Utility methods
   private mapImpact(impact: string): 'high' | 'medium' | 'low' {
@@ -558,73 +526,6 @@ class RealDataService {
     if (highImpactWords.some(word => text.includes(word))) return 'high';
     if (mediumImpactWords.some(word => text.includes(word))) return 'medium';
     return 'low';
-  }
-
-  // Fallback data methods
-  private getFallbackForexRates(): ForexRate[] {
-    return [
-      { base: 'USD', target: 'EUR', rate: 0.85, timestamp: Date.now() },
-      { base: 'USD', target: 'GBP', rate: 0.75, timestamp: Date.now() },
-      { base: 'USD', target: 'JPY', rate: 110, timestamp: Date.now() },
-      { base: 'USD', target: 'CHF', rate: 0.92, timestamp: Date.now() }
-    ];
-  }
-
-  private getFallbackCryptoPrices(): CryptoPrice[] {
-    return [
-      {
-        id: 'bitcoin',
-        symbol: 'BTC',
-        name: 'Bitcoin',
-        current_price: 45000,
-        price_change_24h: 1200,
-        price_change_percentage_24h: 2.7,
-        market_cap: 850000000000,
-        volume_24h: 25000000000,
-        last_updated: new Date().toISOString()
-      }
-    ];
-  }
-
-  private getFallbackStockQuotes(symbols: string[]): MarketDataPoint[] {
-    return symbols.map(symbol => ({
-      symbol,
-      price: 100 + Math.random() * 200,
-      change: (Math.random() - 0.5) * 10,
-      changePercent: (Math.random() - 0.5) * 5,
-      timestamp: Date.now(),
-      source: 'Fallback'
-    }));
-  }
-
-  private getFallbackEconomicCalendar(): EconomicEvent[] {
-    return [
-      {
-        title: 'Federal Reserve Meeting',
-        country: 'United States',
-        date: new Date().toISOString().split('T')[0],
-        time: '14:00',
-        currency: 'USD',
-        impact: 'high',
-        forecast: 'TBD',
-        previous: '',
-        actual: ''
-      }
-    ];
-  }
-
-  private getFallbackNews(): NewsItem[] {
-    return [
-      {
-        title: 'Market Update: Trading Continues',
-        description: 'Financial markets show mixed signals as traders assess economic data.',
-        url: 'https://example.com',
-        publishedAt: new Date().toISOString(),
-        source: 'Financial News',
-        category: 'financial',
-        impact: 'medium'
-      }
-    ];
   }
 
   // Health check for all APIs

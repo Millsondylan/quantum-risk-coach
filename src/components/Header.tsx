@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Settings, User, LogOut, TrendingUp, Activity } from 'lucide-react';
+import { Bell, Settings, User, LogOut, TrendingUp, Activity, Database } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { 
@@ -12,41 +12,98 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
+import { realDataService } from '@/lib/realDataService';
+import { toast } from 'sonner';
 
-// Real-time market data (simplified for demo)
+// Real-time market data from live APIs
 const useRealTimeData = () => {
   const [marketData, setMarketData] = useState({
-    BTCUSDT: { price: 0, change: 0 },
-    EURUSD: { price: 0, change: 0 },
-    GBPUSD: { price: 0, change: 0 },
-    USDJPY: { price: 0, change: 0 }
+    BTCUSDT: { price: 0, change: 0, source: '', status: 'loading' as 'loading' | 'connected' | 'error' },
+    EURUSD: { price: 0, change: 0, source: '', status: 'loading' as 'loading' | 'connected' | 'error' },
+    GBPUSD: { price: 0, change: 0, source: '', status: 'loading' as 'loading' | 'connected' | 'error' },
+    USDJPY: { price: 0, change: 0, source: '', status: 'loading' as 'loading' | 'connected' | 'error' }
   });
 
   useEffect(() => {
-    // Simulate real-time data updates
-    const updateData = () => {
-      setMarketData({
-        BTCUSDT: { 
-          price: 43000 + Math.random() * 2000, 
-          change: (Math.random() - 0.5) * 5 
-        },
-        EURUSD: { 
-          price: 1.0850 + Math.random() * 0.01, 
-          change: (Math.random() - 0.5) * 0.5 
-        },
-        GBPUSD: { 
-          price: 1.2650 + Math.random() * 0.01, 
-          change: (Math.random() - 0.5) * 0.5 
-        },
-        USDJPY: { 
-          price: 148.50 + Math.random() * 2, 
-          change: (Math.random() - 0.5) * 1 
+    const fetchRealData = async () => {
+      try {
+        // Check API health first
+        const healthCheck = await realDataService.healthCheck();
+        const hasWorkingApis = Object.values(healthCheck).some(status => status);
+        
+        if (!hasWorkingApis) {
+          setMarketData(prev => ({
+            ...prev,
+            BTCUSDT: { ...prev.BTCUSDT, status: 'error' },
+            EURUSD: { ...prev.EURUSD, status: 'error' },
+            GBPUSD: { ...prev.GBPUSD, status: 'error' },
+            USDJPY: { ...prev.USDJPY, status: 'error' }
+          }));
+          return;
         }
-      });
+
+        // Fetch real data from multiple sources
+        const [cryptoData, forexData] = await Promise.all([
+          realDataService.getCryptoPrices(),
+          realDataService.getForexRates()
+        ]);
+
+        const updatedData = { ...marketData };
+
+        // Update crypto data
+        if (cryptoData.length > 0) {
+          const btcData = cryptoData.find(d => d.symbol === 'BTC');
+          if (btcData) {
+            updatedData.BTCUSDT = {
+              price: btcData.current_price,
+              change: btcData.price_change_percentage_24h,
+              source: 'CoinGecko',
+              status: 'connected'
+            };
+          }
+        }
+
+        // Update forex data
+        forexData.forEach(data => {
+          if (data.target === 'EUR') {
+            updatedData.EURUSD = {
+              price: data.rate,
+              change: data.change_24h || 0,
+              source: 'ExchangeRate API',
+              status: 'connected'
+            };
+          } else if (data.target === 'GBP') {
+            updatedData.GBPUSD = {
+              price: data.rate,
+              change: data.change_24h || 0,
+              source: 'ExchangeRate API',
+              status: 'connected'
+            };
+          } else if (data.target === 'JPY') {
+            updatedData.USDJPY = {
+              price: data.rate,
+              change: data.change_24h || 0,
+              source: 'ExchangeRate API',
+              status: 'connected'
+            };
+          }
+        });
+
+        setMarketData(updatedData);
+      } catch (error) {
+        console.error('Error fetching real market data:', error);
+        setMarketData(prev => ({
+          ...prev,
+          BTCUSDT: { ...prev.BTCUSDT, status: 'error' },
+          EURUSD: { ...prev.EURUSD, status: 'error' },
+          GBPUSD: { ...prev.GBPUSD, status: 'error' },
+          USDJPY: { ...prev.USDJPY, status: 'error' }
+        }));
+      }
     };
 
-    updateData();
-    const interval = setInterval(updateData, 5000); // Update every 5 seconds
+    fetchRealData();
+    const interval = setInterval(fetchRealData, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -60,6 +117,33 @@ const Header = () => {
   const navigate = useNavigate();
   const marketData = useRealTimeData();
   const [notifications, setNotifications] = useState(3);
+  const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [availableSources, setAvailableSources] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Check overall API status
+    const checkApiStatus = async () => {
+      try {
+        const healthCheck = await realDataService.healthCheck();
+        const workingApis = Object.entries(healthCheck)
+          .filter(([_, status]) => status)
+          .map(([api, _]) => api);
+        
+        setAvailableSources(workingApis);
+        
+        if (workingApis.length > 0) {
+          const hasConnectedData = Object.values(marketData).some(data => data.status === 'connected');
+          setApiStatus(hasConnectedData ? 'connected' : 'error');
+        } else {
+          setApiStatus('error');
+        }
+      } catch (error) {
+        setApiStatus('error');
+      }
+    };
+
+    checkApiStatus();
+  }, [marketData]);
 
   const getPageTitle = () => {
     const path = location.pathname;
@@ -83,17 +167,44 @@ const Header = () => {
     }
   };
 
-  const MarketTicker = ({ symbol, data }: { symbol: string; data: { price: number; change: number } }) => (
+  const MarketTicker = ({ symbol, data }: { symbol: string; data: { price: number; change: number; source: string; status: string } }) => (
     <div className="flex items-center gap-2 px-3 py-1 bg-slate-900/50 rounded-lg border border-slate-700/50 backdrop-blur-sm">
       <span className="text-xs font-medium text-slate-300">{symbol}</span>
       <span className="text-sm font-semibold text-white">
-        {symbol === 'BTCUSDT' ? `$${data.price.toFixed(0)}` : data.price.toFixed(4)}
+        {symbol === 'BTC' ? `$${data.price.toFixed(0)}` : data.price.toFixed(4)}
       </span>
       <span className={`text-xs font-medium ${data.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
         {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)}%
       </span>
+      {data.status === 'connected' && (
+        <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
+      )}
     </div>
   );
+
+  const getStatusColor = () => {
+    switch (apiStatus) {
+      case 'connected': return 'text-emerald-400';
+      case 'error': return 'text-red-400';
+      default: return 'text-yellow-400';
+    }
+  };
+
+  const getStatusBg = () => {
+    switch (apiStatus) {
+      case 'connected': return 'bg-emerald-500/10 border-emerald-500/20';
+      case 'error': return 'bg-red-500/10 border-red-500/20';
+      default: return 'bg-yellow-500/10 border-yellow-500/20';
+    }
+  };
+
+  const getStatusText = () => {
+    switch (apiStatus) {
+      case 'connected': return 'LIVE DATA';
+      case 'error': return 'API ERROR';
+      default: return 'CONNECTING';
+    }
+  };
 
   return (
     <header className="header sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl">
@@ -126,11 +237,28 @@ const Header = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          {/* Live Status Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-            <span className="text-xs font-medium text-emerald-400">LIVE</span>
+          {/* API Status Indicator */}
+          <div className={`hidden sm:flex items-center gap-2 px-3 py-1 ${getStatusBg()} rounded-lg border`}>
+            <div className={`w-2 h-2 ${apiStatus === 'connected' ? 'bg-emerald-400' : apiStatus === 'error' ? 'bg-red-400' : 'bg-yellow-400'} rounded-full ${apiStatus === 'connected' ? 'animate-pulse' : ''}`}></div>
+            <span className={`text-xs font-medium ${getStatusColor()}`}>{getStatusText()}</span>
           </div>
+
+          {/* Data Sources Info */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="hidden md:flex items-center gap-1 text-slate-400 hover:text-white"
+            onClick={() => {
+              if (availableSources.length > 0) {
+                toast.success(`Connected to ${availableSources.length} data sources: ${availableSources.join(', ')}`);
+              } else {
+                toast.error('No data sources available. Check your API configuration.');
+              }
+            }}
+          >
+            <Database className="w-4 h-4" />
+            <span className="text-xs">Sources</span>
+          </Button>
 
           {/* Notifications */}
           <Button variant="ghost" size="sm" className="relative" onClick={() => setNotifications(0)}>
