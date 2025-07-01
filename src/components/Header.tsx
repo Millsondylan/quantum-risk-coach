@@ -25,6 +25,7 @@ import {
   SheetTrigger,
 } from './ui/sheet';
 import { Input } from './ui/input';
+import { toast } from 'sonner';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -36,31 +37,36 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const metrics = getPerformanceMetrics();
-  const balance = metrics.totalProfit; // Using total profit as balance for demo
+  const balance = metrics.totalProfit || 0; // Show actual profit or 0 if no data
 
   const handleConnectMT4 = () => {
     navigate('/connect-mt4');
     setIsMenuOpen(false);
+    toast.success('Navigating to MT4 connection');
   };
 
   const handleConnectMT5 = () => {
     navigate('/connect-mt5');
     setIsMenuOpen(false);
+    toast.success('Navigating to MT5 connection');
   };
 
   const handleConnectCTrader = () => {
     navigate('/connect-ctrader');
     setIsMenuOpen(false);
+    toast.success('Navigating to cTrader connection');
   };
 
   const handleConnectTradingView = () => {
     navigate('/connect-tradingview');
     setIsMenuOpen(false);
+    toast.success('Navigating to TradingView connection');
   };
 
   const handleSignOut = async () => {
     try {
       await signOut(() => navigate('/auth'));
+      toast.success('Signed out successfully');
     } catch (error) {
       console.error('Sign out error:', error);
       navigate('/auth');
@@ -69,75 +75,102 @@ const Header = () => {
 
   const handleProfile = () => {
     navigate('/settings');
+    toast.success('Navigating to settings');
   };
 
   const handleDashboard = () => {
     navigate('/');
     setIsMenuOpen(false);
+    toast.success('Navigating to dashboard');
   };
 
   const handleJournal = () => {
     navigate('/journal');
     setIsMenuOpen(false);
+    toast.success('Navigating to journal');
   };
 
   const handleJournalView = () => {
     navigate('/journal');
+    toast.success('Navigating to journal');
   };
 
   const handleJournalAdd = () => {
     navigate('/journal/add');
+    toast.success('Navigating to add journal entry');
   };
 
   const handleJournalAnalytics = () => {
     navigate('/journal/analytics');
+    toast.success('Navigating to journal analytics');
   };
 
   const handleJournalTags = () => {
     navigate('/journal/tags');
+    toast.success('Navigating to journal tags');
   };
 
   const handleJournalExport = () => {
     navigate('/journal/export');
+    toast.success('Navigating to journal export');
   };
 
   const handleLeaderboard = () => {
     navigate('/');
     // Scroll to leaderboard section
-    const leaderboardSection = document.querySelector('[data-section="leaderboard"]');
-    if (leaderboardSection) {
-      leaderboardSection.scrollIntoView({ behavior: 'smooth' });
-    }
+    setTimeout(() => {
+      const leaderboardSection = document.querySelector('[data-section="leaderboard"]');
+      if (leaderboardSection) {
+        leaderboardSection.scrollIntoView({ behavior: 'smooth' });
+        toast.success('Scrolled to leaderboard section');
+      } else {
+        toast.info('Leaderboard section not found on this page');
+      }
+    }, 100);
     setIsMenuOpen(false);
   };
 
   const handleAICoach = () => {
     navigate('/');
     // Scroll to AI coach section
-    const aiCoachSection = document.querySelector('[data-section="ai-coach"]');
-    if (aiCoachSection) {
-      aiCoachSection.scrollIntoView({ behavior: 'smooth' });
-    }
+    setTimeout(() => {
+      const aiCoachSection = document.querySelector('[data-section="ai-coach"]');
+      if (aiCoachSection) {
+        aiCoachSection.scrollIntoView({ behavior: 'smooth' });
+        toast.success('Scrolled to AI coach section');
+      } else {
+        toast.info('AI coach section not found on this page');
+      }
+    }, 100);
     setIsMenuOpen(false);
   };
 
   const handleTradeBuilder = () => {
     navigate('/trade-builder');
     setIsMenuOpen(false);
+    toast.success('Navigating to trade builder');
   };
 
   const handlePerformanceCalendar = () => {
     navigate('/performance-calendar');
     setIsMenuOpen(false);
+    toast.success('Navigating to performance calendar');
   };
 
   const handleStrategyAnalyzer = () => {
     navigate('/strategy-analyzer');
     setIsMenuOpen(false);
+    toast.success('Navigating to strategy analyzer');
   };
 
   const markNotificationsAsRead = () => {
     setNotificationCount(0);
+    toast.success('Notifications marked as read');
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast.info('Search functionality coming soon');
   };
 
   return (
@@ -272,7 +305,7 @@ const Header = () => {
                     </Button>
                     <Button 
                       variant="ghost" 
-                      className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                      className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-400/10"
                       onClick={handleSignOut}
                     >
                       <LogOut className="w-4 h-4 mr-3" />
@@ -286,132 +319,167 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           {!isMobile && (
-            <>
-              {/* Search Bar */}
-              <div className="flex-1 max-w-md mx-8">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search trades, strategies..."
-                    className="pl-10 bg-slate-800 border-slate-700 text-slate-300 placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
+            <div className="flex items-center space-x-4">
+              {/* Search */}
+              <form onSubmit={handleSearch} className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  className="pl-10 w-64 bg-slate-800 border-slate-600 text-slate-300 placeholder:text-slate-400"
+                />
+              </form>
 
-              {/* Desktop Navigation Menu */}
-              <div className="hidden md:flex items-center space-x-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                      Dashboard
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleDashboard}>
-                      <Home className="w-4 h-4 mr-2" />
-                      Overview
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleLeaderboard}>
-                      <Trophy className="w-4 h-4 mr-2" />
-                      Leaderboard
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleAICoach}>
-                      <Brain className="w-4 h-4 mr-2" />
-                      AI Coach
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              {/* Trading Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                    Trading
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600">
+                  <DropdownMenuItem onClick={handleTradeBuilder}>
+                    <Target className="w-4 h-4 mr-2" />
+                    Trade Builder
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handlePerformanceCalendar}>
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Performance Calendar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleStrategyAnalyzer}>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Strategy Analyzer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                      Trading
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleTradeBuilder}>
-                      <Target className="w-4 h-4 mr-2" />
-                      Trade Builder
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handlePerformanceCalendar}>
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Performance Calendar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleStrategyAnalyzer}>
-                      <Zap className="w-4 h-4 mr-2" />
-                      Strategy Analyzer
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              {/* Journal Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                    Journal
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600">
+                  <DropdownMenuItem onClick={handleJournalView}>
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    View Journal
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleJournalAdd}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Entry
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleJournalAnalytics}>
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Analytics
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleJournalTags}>
+                    <Tag className="w-4 h-4 mr-2" />
+                    Tags
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleJournalExport}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                      Connect
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleConnectMT4}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      MT4
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleConnectMT5}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      MT5
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleConnectCTrader}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      cTrader
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleConnectTradingView}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      TradingView
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              {/* Connect Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                    Connect
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600">
+                  <DropdownMenuItem onClick={handleConnectMT4}>
+                    <Shield className="w-4 h-4 mr-2" />
+                    MT4
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleConnectMT5}>
+                    <Shield className="w-4 h-4 mr-2" />
+                    MT5
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleConnectCTrader}>
+                    <Shield className="w-4 h-4 mr-2" />
+                    cTrader
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Notifications */}
-              <div className="hidden md:flex items-center space-x-4">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5 text-slate-400" />
-                  {notificationCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
-                      {notificationCount}
-                    </Badge>
-                  )}
-                </Button>
-
-                {/* User Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center space-x-2">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-                        <User className="h-4 w-4 text-white" />
-                      </div>
-                      <span className="text-slate-300 hidden lg:block">{user?.email}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5 text-slate-400" />
+                    {notificationCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
+                        {notificationCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600 w-80">
+                  <DropdownMenuLabel className="text-white">Notifications</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <div className="p-4 text-center text-slate-400">
+                    <Bell className="h-8 w-8 mx-auto mb-2 text-slate-500" />
+                    <p className="text-sm">No new notifications</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={markNotificationsAsRead}
+                      className="mt-2"
+                    >
+                      Mark all as read
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleProfile}>
-                      <Settings className="w-4 h-4 mr-2" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <HelpCircle className="w-4 h-4 mr-2" />
-                      Help & Support
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="text-red-400">
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                    <UserCircle className="h-5 w-5 mr-2" />
+                    {user?.email?.split('@')[0] || 'User'}
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600">
+                  <DropdownMenuLabel className="text-white">
+                    <div className="flex items-center space-x-2">
+                      <UserCircle className="h-5 w-5" />
+                      <div>
+                        <p className="text-sm font-medium">{user?.email}</p>
+                        <p className="text-xs text-slate-400">Balance: ${balance.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleProfile}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleAICoach}>
+                    <Brain className="w-4 h-4 mr-2" />
+                    AI Coach
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLeaderboard}>
+                    <Trophy className="w-4 h-4 mr-2" />
+                    Leaderboard
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-400">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
         </div>
       </div>

@@ -6,11 +6,18 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    cleartext: true
+    cleartext: true,
+    allowNavigation: [
+      'https://api.telegram.org',
+      'https://api.binance.com',
+      'https://api.alpaca.markets',
+      'https://api.openai.com',
+      'https://api.groq.com'
+    ]
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 3000,
       backgroundColor: '#0a0a0a',
       showSpinner: true,
       spinnerColor: '#00d9ff',
@@ -37,19 +44,77 @@ const config: CapacitorConfig = {
       urlOpen: {
         appId: 'com.quantumriskcoach.app'
       }
+    },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"]
+    },
+    LocalNotifications: {
+      smallIcon: "ic_stat_icon_config_sample",
+      iconColor: "#00d9ff",
+      sound: "beep.wav"
+    },
+    Geolocation: {
+      permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    Camera: {
+      permissions: ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+    },
+    Device: {
+      permissions: ["ACCESS_NETWORK_STATE", "ACCESS_WIFI_STATE"]
     }
   },
   android: {
     backgroundColor: '#0a0a0a',
     allowMixedContent: true,
     captureInput: true,
-    webContentsDebuggingEnabled: false
+    webContentsDebuggingEnabled: false,
+    appendUserAgent: 'QuantumRiskCoach/1.0.0',
+    buildOptions: {
+      keystorePath: undefined,
+      keystoreAlias: undefined,
+      keystorePassword: undefined,
+      keystoreAliasPassword: undefined,
+      releaseType: 'APK',
+      signingType: 'apksigner'
+    }
   },
   ios: {
     backgroundColor: '#0a0a0a',
     contentInset: 'automatic',
     allowsLinkPreview: false,
-    scrollEnabled: true
+    scrollEnabled: true,
+    appendUserAgent: 'QuantumRiskCoach/1.0.0',
+    preferredContentMode: 'mobile'
+  },
+  cordova: {
+    preferences: {
+      ScrollEnabled: 'false',
+      BackupWebStorage: 'none',
+      SplashMaintainAspectRatio: 'true',
+      FadeSplashScreenDuration: '300',
+      SplashShowOnlyFirstTime: 'false',
+      SplashScreen: 'screen',
+      SplashScreenDelay: '3000',
+      AutoHideSplashScreen: 'false',
+      orientation: 'portrait',
+      loadUrlTimeoutValue: '60000',
+      WKWebViewOnly: 'true',
+      CordovaWebViewEngine: 'CDVWKWebViewEngine',
+      webviewbounce: 'false',
+      UIWebViewBounce: 'false',
+      DisallowOverscroll: 'true',
+      EnableViewportScale: 'false',
+      MediaPlaybackRequiresUserAction: 'false',
+      AllowInlineMediaPlayback: 'true',
+      BackgroundColorByHexString: '#0a0a0a',
+      TopActivityIndicator: 'gray',
+      GapBetweenPages: '0',
+      PageLength: '0',
+      PaginationBreakingMode: '0',
+      PaginationMode: '0',
+      SupportsTabBar: 'true',
+      Fullscreen: 'false'
+    }
   }
 };
 

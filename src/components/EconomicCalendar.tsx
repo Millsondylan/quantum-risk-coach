@@ -131,9 +131,9 @@ const EconomicCalendar = () => {
 
   const getApiStatusText = () => {
     switch (apiStatus) {
-      case 'connected': return `Live Data (${availableSources.length} sources)`;
-      case 'error': return 'API Error';
-      default: return 'Connecting...';
+      case 'connected': return `Connected (${availableSources.length} sources)`;
+      case 'error': return 'Connection Error';
+      default: return 'Not Connected';
     }
   };
 
@@ -162,7 +162,7 @@ const EconomicCalendar = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Economic Calendar</h2>
-          <p className="text-slate-400">Real-time economic events and market-moving data</p>
+          <p className="text-slate-400">Economic events and market-moving data</p>
         </div>
         <div className="flex items-center space-x-2">
           <div className={`flex items-center space-x-1 text-sm ${getApiStatusColor()}`}>

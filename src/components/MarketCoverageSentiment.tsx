@@ -193,7 +193,7 @@ const MarketCoverageSentiment = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Market Coverage & Sentiment</h2>
-          <p className="text-slate-400">Real-time market news and sentiment analysis</p>
+          <p className="text-slate-400">Market news and sentiment analysis</p>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className="text-blue-400">
@@ -306,7 +306,7 @@ const MarketCoverageSentiment = () => {
                 <span>Latest News</span>
               </CardTitle>
               <CardDescription>
-                Real-time market news with sentiment analysis
+                Market news with sentiment analysis
               </CardDescription>
             </CardHeader>
             <CardContent>

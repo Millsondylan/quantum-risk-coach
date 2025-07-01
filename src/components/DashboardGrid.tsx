@@ -23,6 +23,7 @@ import EnhancedTradingJournal from './EnhancedTradingJournal';
 import NotificationsAlerts from './NotificationsAlerts';
 import MarketCoverageSentiment from './MarketCoverageSentiment';
 import PaperTrading from './PaperTrading';
+import PortfolioManager from './PortfolioManager';
 
 const DashboardGrid = () => {
   return (
@@ -30,6 +31,11 @@ const DashboardGrid = () => {
       {/* Quick Stats Row - Mobile optimized */}
       <div className="col-span-1 md:col-span-2 lg:col-span-12">
         <QuickStats />
+      </div>
+
+      {/* Portfolio Manager - High priority placement */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-12">
+        <PortfolioManager />
       </div>
 
       {/* Broker Integration - Full width */}

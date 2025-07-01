@@ -11,6 +11,8 @@ import MT4Connection from "./pages/MT4Connection";
 import Settings from "./pages/Settings";
 import Journal from "./pages/Journal";
 import TradeBuilder from "./pages/TradeBuilder";
+import PerformanceCalendar from "./pages/PerformanceCalendar";
+import StrategyAnalyzer from "./pages/StrategyAnalyzer";
 import NotFound from "./pages/NotFound";
 import MobileBottomNav from "./components/MobileBottomNav";
 
@@ -121,12 +123,12 @@ const App = () => {
                 } />
                 <Route path="/performance-calendar" element={
                   <ProtectedRoute>
-                    <Index />
+                    <PerformanceCalendar />
                   </ProtectedRoute>
                 } />
                 <Route path="/strategy-analyzer" element={
                   <ProtectedRoute>
-                    <Index />
+                    <StrategyAnalyzer />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />

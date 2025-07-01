@@ -11,7 +11,9 @@ import {
   AlertTriangle,
   RefreshCw,
   Info,
-  Database
+  Database,
+  Shield,
+  Wifi
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { realDataService, RealMarketData, CryptoData, StockData } from '@/lib/realDataService';
@@ -35,6 +37,11 @@ const QuickStats = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
   const [availableSources, setAvailableSources] = useState<string[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const [balance, setBalance] = useState(0);
+  const [totalTrades, setTotalTrades] = useState(0);
+  const [winRate, setWinRate] = useState(0);
+  const [riskLevel, setRiskLevel] = useState('Low');
 
   const forexPairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF'];
   const cryptoPairs = ['bitcoin', 'ethereum', 'cardano', 'polkadot'];
@@ -152,9 +159,9 @@ const QuickStats = () => {
 
   const getApiStatusText = () => {
     switch (apiStatus) {
-      case 'connected': return `Live Data (${availableSources.length} sources)`;
-      case 'error': return 'API Error';
-      default: return 'Connecting...';
+      case 'connected': return `Connected (${availableSources.length} sources)`;
+      case 'error': return 'Connection Error';
+      default: return 'Not Connected';
     }
   };
 
@@ -170,13 +177,22 @@ const QuickStats = () => {
   const cryptoStats = stats.filter(stat => stat.category === 'crypto');
   const stockStats = stats.filter(stat => stat.category === 'stock');
 
+  const getConnectionStatus = () => {
+    switch (connectionStatus) {
+      case 'disconnected': return 'Not Connected';
+      case 'connecting': return 'Connecting...';
+      case 'connected': return `Connected (${availableSources.length} sources)`;
+      default: return 'Unknown';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Quick Market Stats</h2>
-          <p className="text-slate-400">Real-time market data from multiple sources</p>
+          <p className="text-slate-400">Market data overview</p>
         </div>
         <div className="flex items-center space-x-2">
           <div className={`flex items-center space-x-1 text-sm ${getApiStatusColor()}`}>
@@ -349,6 +365,61 @@ const QuickStats = () => {
           )}
         </div>
       )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="holo-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Account Balance</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${balance.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              {balance > 0 ? '+2.1%' : '0%'} from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="holo-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalTrades}</div>
+            <p className="text-xs text-muted-foreground">
+              {totalTrades > 0 ? `${winRate}% win rate` : 'No trades yet'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="holo-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Risk Level</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{riskLevel}</div>
+            <p className="text-xs text-muted-foreground">
+              {riskLevel === 'Low' ? 'Conservative approach' : 
+               riskLevel === 'Medium' ? 'Balanced strategy' : 'Aggressive trading'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="holo-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Data Sources</CardTitle>
+            <Wifi className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{getConnectionStatus()}</div>
+            <p className="text-xs text-muted-foreground">
+              Market data from multiple sources
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

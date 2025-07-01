@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Target, BookOpen, Brain, Settings } from 'lucide-react';
+import { Home, Target, BookOpen, Brain, Settings, Wallet, BarChart3 } from 'lucide-react';
 import { useIsMobile } from '../hooks/use-mobile';
 
 const MobileBottomNav = () => {
@@ -18,8 +18,41 @@ const MobileBottomNav = () => {
       onClick: () => navigate('/')
     },
     {
+      icon: Wallet,
+      label: 'Portfolio',
+      path: '/portfolio',
+      onClick: () => {
+        navigate('/');
+        // Scroll to portfolio section
+        setTimeout(() => {
+          const portfolioSection = document.querySelector('[data-section="portfolio"]');
+          if (portfolioSection) {
+            portfolioSection.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            // If no specific section, scroll to top where portfolio is shown
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    },
+    {
+      icon: BarChart3,
+      label: 'Analytics',
+      path: '/analytics',
+      onClick: () => {
+        navigate('/');
+        // Scroll to analytics section
+        setTimeout(() => {
+          const analyticsSection = document.querySelector('[data-section="analytics"]');
+          if (analyticsSection) {
+            analyticsSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    },
+    {
       icon: Target,
-      label: 'Trade Builder',
+      label: 'Trade',
       path: '/trade-builder',
       onClick: () => navigate('/trade-builder')
     },
@@ -59,7 +92,9 @@ const MobileBottomNav = () => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path || 
             (item.path === '/' && location.pathname === '/') ||
-            (item.path === '/ai-coach' && location.pathname === '/' && location.hash === '#ai-coach');
+            (item.path === '/ai-coach' && location.pathname === '/' && location.hash === '#ai-coach') ||
+            (item.path === '/portfolio' && location.pathname === '/' && location.hash === '#portfolio') ||
+            (item.path === '/analytics' && location.pathname === '/' && location.hash === '#analytics');
           
           return (
             <button

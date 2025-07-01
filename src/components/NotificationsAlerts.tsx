@@ -150,44 +150,21 @@ const NotificationsAlerts = () => {
     }
   };
 
-  const checkPriceAlerts = async () => {
-    // Simulate price checking - in production, this would use real market data
-    const mockPrices = {
-      'EURUSD': 1.0850 + (Math.random() - 0.5) * 0.01,
-      'GBPUSD': 1.2650 + (Math.random() - 0.5) * 0.02,
-      'USDJPY': 149.50 + (Math.random() - 0.5) * 2,
-      'BTCUSD': 43000 + (Math.random() - 0.5) * 1000,
-      'ETHUSD': 2300 + (Math.random() - 0.5) * 200,
-      'XAUUSD': 2050 + (Math.random() - 0.5) * 50
-    };
-
-    for (const alert of alerts) {
-      if (!alert.isActive) continue;
-
-      const currentPrice = mockPrices[alert.symbol as keyof typeof mockPrices];
-      if (!currentPrice) continue;
-
-      let shouldTrigger = false;
-
-      switch (alert.condition) {
-        case 'above':
-          shouldTrigger = currentPrice > alert.value;
-          break;
-        case 'below':
-          shouldTrigger = currentPrice < alert.value;
-          break;
-        case 'crosses_up':
-          // This would require historical data to detect crossing
-          shouldTrigger = Math.random() > 0.99; // Simulate rare crossing
-          break;
-        case 'crosses_down':
-          shouldTrigger = Math.random() > 0.99;
-          break;
-      }
-
+  const checkPriceAlerts = () => {
+    // Check if any price alerts should be triggered
+    const triggeredAlerts = alerts.filter(alert => {
+      // For now, we'll use placeholder logic instead of real price checking
+      const shouldTrigger = false; // Disabled live price checking
+      
       if (shouldTrigger) {
-        await triggerAlert(alert, currentPrice);
+        toast.info(`Price alert: ${alert.symbol} ${alert.condition} ${alert.value}`);
+        return true;
       }
+      return false;
+    });
+
+    if (triggeredAlerts.length > 0) {
+      setAlerts(prev => prev.filter(alert => !triggeredAlerts.includes(alert)));
     }
   };
 
@@ -387,7 +364,7 @@ const NotificationsAlerts = () => {
             <Bell className="w-6 h-6 text-cyan-400" />
             <span>Notifications & Alerts</span>
           </h2>
-          <p className="text-slate-400">Stay informed with real-time notifications and price alerts</p>
+          <p className="text-slate-400">Stay informed with notifications and price alerts</p>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant={notificationPermission === 'granted' ? 'default' : 'destructive'}>
