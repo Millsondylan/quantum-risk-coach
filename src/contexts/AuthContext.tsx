@@ -1,19 +1,27 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { setupTradingTables } from '@/lib/databaseSetup';
-import { testAuthFlow, createUserProfile } from '@/lib/authTest';
 
 interface AuthError {
   message: string;
   status?: number;
 }
 
+interface LocalUser {
+  id: string;
+  email: string;
+  username: string;
+  created_at: string;
+  subscription_status: string;
+  posts_remaining: number;
+}
+
 interface AuthContextType {
-  user: User | null;
+  user: User | LocalUser | null;
   session: Session | null;
   loading: boolean;
   initialized: boolean;
+  isOnline: boolean;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signUp: (email: string, password: string, username: string) => Promise<{ error: AuthError | null }>;
   signOut: (callback?: () => void) => Promise<void>;
@@ -22,233 +30,351 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Auth state cleanup utility
-const cleanupAuthState = () => {
-  try {
-    // Remove all Supabase auth keys from localStorage
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
+// Local storage keys
+const LOCAL_USER_KEY = 'quantum_risk_coach_user';
+const LOCAL_SETTINGS_KEY = 'quantum_risk_coach_settings';
+
+// Local user management
+const localUserManager = {
+  getUser(): LocalUser | null {
+    try {
+      const stored = localStorage.getItem(LOCAL_USER_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  setUser(user: LocalUser): void {
+    try {
+      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.error('Failed to save user locally:', error);
+    }
+  },
+
+  clearUser(): void {
+    try {
+      localStorage.removeItem(LOCAL_USER_KEY);
+      localStorage.removeItem(LOCAL_SETTINGS_KEY);
+    } catch (error) {
+      console.error('Failed to clear local user:', error);
+    }
+  },
+
+  createUser(email: string, password: string, username: string): LocalUser {
+    const userId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return {
+      id: userId,
+      email,
+      username: username || 'New User',
+      created_at: new Date().toISOString(),
+      subscription_status: 'unlimited',
+      posts_remaining: 999999
+    };
+  },
+
+  validateCredentials(email: string, password: string): boolean {
+    // Simple validation - in a real app, you'd hash passwords
+    const users = this.getAllUsers();
+    return users.some(user => 
+      user.email.toLowerCase() === email.toLowerCase() && 
+      this.getStoredPassword(user.id) === password
+    );
+  },
+
+  getAllUsers(): LocalUser[] {
+    try {
+      const stored = localStorage.getItem('quantum_risk_coach_all_users');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveUserToRegistry(user: LocalUser, password: string): void {
+    try {
+      const users = this.getAllUsers();
+      const existingIndex = users.findIndex(u => u.email === user.email);
+      
+      if (existingIndex >= 0) {
+        users[existingIndex] = user;
+      } else {
+        users.push(user);
       }
-    });
-    // Remove from sessionStorage if in use
-    Object.keys(sessionStorage || {}).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        sessionStorage.removeItem(key);
-      }
-    });
-  } catch (error) {
-    console.error('Error cleaning up auth state:', error);
+      
+      localStorage.setItem('quantum_risk_coach_all_users', JSON.stringify(users));
+      localStorage.setItem(`quantum_risk_coach_password_${user.id}`, password);
+    } catch (error) {
+      console.error('Failed to save user to registry:', error);
+    }
+  },
+
+  getStoredPassword(userId: string): string | null {
+    try {
+      return localStorage.getItem(`quantum_risk_coach_password_${userId}`);
+    } catch {
+      return null;
+    }
+  },
+
+  findUserByEmail(email: string): LocalUser | null {
+    const users = this.getAllUsers();
+    return users.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
   }
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+// Supabase sync utilities
+const supabaseSync = {
+  async syncUserToSupabase(localUser: LocalUser): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: localUser.id,
+          username: localUser.username,
+          email: localUser.email,
+          subscription_status: 'unlimited',
+          subscription_expires_at: '2099-12-31 23:59:59+00',
+          posts_remaining: 999999,
+          trial_used: false,
+          created_at: localUser.created_at,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.warn('Supabase sync failed:', error);
+        return false;
+      }
+
+      console.log('✅ User synced to Supabase successfully');
+      return true;
+    } catch (error) {
+      console.warn('Supabase sync error:', error);
+      return false;
+    }
+  },
+
+  async isOnline(): Promise<boolean> {
+    try {
+      const { error } = await supabase.from('profiles').select('count').limit(1);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+};
+
+const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | LocalUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
 
-  // Initialize app function
+  // Check online status
+  const checkOnlineStatus = useCallback(async () => {
+    const online = await supabaseSync.isOnline();
+    setIsOnline(online);
+    return online;
+  }, []);
+
+  // Initialize app
   const initializeApp = useCallback(async () => {
     if (initialized) return;
     
     try {
       console.log('🚀 Initializing Quantum Risk Coach...');
       
-      // Test authentication first
-      const authTest = await testAuthFlow();
-      if (authTest.errors.length > 0) {
-        console.warn('⚠️ Auth setup issues:', authTest.errors);
-      } else {
-        console.log('✅ Auth test passed');
+      // Check if we have a local user
+      const localUser = localUserManager.getUser();
+      if (localUser) {
+        setUser(localUser);
+        console.log('✅ Local user found:', localUser.email);
       }
-      
-      // Then test database
-      const dbSetup = await setupTradingTables();
-      if (dbSetup) {
-        console.log('✅ Database setup verified');
-      } else {
-        console.warn('⚠️ Database setup issues detected');
+
+      // Check online status
+      await checkOnlineStatus();
+
+      // Try to get Supabase session if online
+      if (isOnline) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            setSession(session);
+            setUser(session.user);
+            console.log('✅ Supabase session found:', session.user.email);
+          }
+        } catch (error) {
+          console.warn('Supabase session check failed:', error);
+        }
       }
-      
+
       setInitialized(true);
       console.log('✅ App initialization complete');
     } catch (error) {
       console.error('❌ App initialization error:', error);
-      setInitialized(true); // Still mark as initialized to prevent infinite loops
+      setInitialized(true);
+    } finally {
+      setLoading(false);
     }
-  }, [initialized]);
+  }, [initialized, isOnline, checkOnlineStatus]);
 
   useEffect(() => {
-    let mounted = true;
+    initializeApp();
+  }, [initializeApp]);
 
-    // Set up auth state listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state change:', event, session?.user?.email || 'No user');
+  // Set up Supabase auth listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Supabase auth state change:', event);
       
-      if (mounted) {
+      if (session) {
         setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        setUser(session.user);
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        // Keep local user if available
+        const localUser = localUserManager.getUser();
+        if (!localUser) {
+          setUser(null);
+        }
       }
     });
 
-    // Get initial session and initialize app
-    const getInitialSession = async () => {
-      try {
-        // Initialize database first
-        await initializeApp();
-        
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-        } else {
-          console.log('📋 Initial session:', session?.user?.email || 'No active session');
-        }
-        
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('AuthProvider: Error getting session', error);
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    getInitialSession();
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [initializeApp]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
       console.log('🔑 Attempting sign in for:', email);
       
-      // Clean up existing state first
-      cleanupAuthState();
-      
-      // Attempt global sign out first
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        console.log('Sign out before sign in failed, continuing...');
+      // First try local authentication
+      const localUser = localUserManager.findUserByEmail(email);
+      if (localUser && localUserManager.validateCredentials(email, password)) {
+        localUserManager.setUser(localUser);
+        setUser(localUser);
+        console.log('✅ Local sign in successful:', email);
+        
+        // Try to sync with Supabase in background
+        if (await checkOnlineStatus()) {
+          supabaseSync.syncUserToSupabase(localUser);
+        }
+        
+        return { error: null };
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // If online, try Supabase authentication
+      if (await checkOnlineStatus()) {
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
-      if (error) {
-        console.error('❌ Sign in error:', error);
-        return { error };
+          if (error) {
+            console.error('❌ Supabase sign in error:', error);
+            return { error };
+          }
+
+          if (data.user) {
+            setSession(data.session);
+            setUser(data.user);
+            console.log('✅ Supabase sign in successful:', email);
+            return { error: null };
+          }
+        } catch (error) {
+          console.error('❌ Supabase sign in failed:', error);
+        }
       }
 
-      console.log('✅ Sign in successful:', data.user?.email);
-      return { error: null };
+      return { error: { message: 'Invalid email or password' } };
     } catch (error) {
-      console.error('❌ Sign in catch error:', error);
+      console.error('❌ Sign in error:', error);
       return { error: error as AuthError };
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [checkOnlineStatus]);
 
   const signUp = useCallback(async (email: string, password: string, username: string) => {
     try {
       setLoading(true);
       console.log('📝 Attempting sign up for:', email);
       
-      // Clean up existing state first
-      cleanupAuthState();
+      // Check if user already exists locally
+      const existingUser = localUserManager.findUserByEmail(email);
+      if (existingUser) {
+        return { error: { message: 'User already exists' } };
+      }
 
-      const redirectUrl = `${window.location.origin}/`;
+      // Create local user first (always works)
+      const localUser = localUserManager.createUser(email, password, username);
+      localUserManager.setUser(localUser);
+      localUserManager.saveUserToRegistry(localUser, password);
+      setUser(localUser);
       
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            username: username,
-          }
-        }
-      });
+      console.log('✅ Local user created:', email);
 
-      if (signUpError) {
-        console.error('❌ Sign up error:', signUpError);
-        return { error: signUpError };
-      }
-
-      // Create user profile after successful signup
-      if (data.user) {
+      // Try to sync with Supabase if online
+      if (await checkOnlineStatus()) {
         try {
-          const profileResult = await createUserProfile(data.user.id, {
-            username,
-            email
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { username }
+            }
           });
-          
-          if (profileResult.success) {
-            console.log('✅ User profile created automatically');
-          } else {
-            console.warn('⚠️ Profile creation failed, but signup successful');
+
+          if (!error && data.user) {
+            console.log('✅ Supabase account created:', email);
+            await supabaseSync.syncUserToSupabase(localUser);
           }
-        } catch (profileError) {
-          console.warn('Profile creation error:', profileError);
-          // Don't fail the signup if profile creation fails
+        } catch (error) {
+          console.warn('Supabase signup failed, but local account created:', error);
         }
       }
 
-      console.log('✅ Sign up successful:', data.user?.email);
       return { error: null };
     } catch (error) {
-      console.error('❌ Sign up catch error:', error);
+      console.error('❌ Sign up error:', error);
       return { error: error as AuthError };
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [checkOnlineStatus]);
 
   const signOut = useCallback(async (callback?: () => void) => {
     try {
       setLoading(true);
       console.log('🚪 Signing out...');
       
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      // Clear local storage
+      localUserManager.clearUser();
       
-      if (error) {
-        console.error('Sign out error:', error);
-      } else {
-        console.log('✅ Sign out successful');
+      // Sign out from Supabase if online
+      if (isOnline) {
+        try {
+          await supabase.auth.signOut();
+        } catch (error) {
+          console.warn('Supabase sign out failed:', error);
+        }
       }
       
-      // Clean up auth state
-      cleanupAuthState();
-      
-      // Reset state
       setUser(null);
       setSession(null);
       
-      // Execute callback if provided
-      if (callback) {
-        callback();
-      }
+      if (callback) callback();
+      
+      console.log('✅ Sign out successful');
     } catch (error) {
-      console.error('Sign out catch error:', error);
+      console.error('Sign out error:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isOnline]);
 
   const updateProfile = useCallback(async (updates: { username?: string; avatar_url?: string }) => {
     try {
@@ -256,52 +382,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: { message: 'No user logged in' } };
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Profile update error:', error);
-        return { error };
+      // Update local user
+      const currentUser = localUserManager.getUser();
+      if (currentUser) {
+        const updatedUser = { ...currentUser, ...updates };
+        localUserManager.setUser(updatedUser);
+        setUser(updatedUser);
       }
 
-      console.log('✅ Profile updated successfully:', data);
+      // Try to update Supabase if online
+      if (isOnline) {
+        try {
+          await supabase
+            .from('profiles')
+            .update(updates)
+            .eq('id', user.id);
+        } catch (error) {
+          console.warn('Supabase profile update failed:', error);
+        }
+      }
+
+      console.log('✅ Profile updated');
       return { error: null };
     } catch (error) {
-      console.error('Profile update catch error:', error);
+      console.error('Profile update error:', error);
       return { error: error as AuthError };
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   const value: AuthContextType = {
     user,
     session,
     loading,
     initialized,
+    isOnline,
     signIn,
     signUp,
     signOut,
     updateProfile,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Custom hook with better error handling
-export function useAuth() {
+const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
+
+export { AuthProvider, useAuth };
