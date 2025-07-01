@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trademind-ai-v1';
+const CACHE_NAME = 'quantum-risk-coach-v1';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -88,7 +88,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('TradeMind AI', options)
+    self.registration.showNotification('Quantum Risk Coach', options)
   );
 });
 

@@ -142,7 +142,7 @@ const NotificationsAlerts = () => {
   const handleSendTelegramTest = async () => {
     try {
       await notificationService.sendTelegramNotification(
-        '🔔 Test notification from TradeMind AI\n\nThis is a test message to verify Telegram integration is working correctly.',
+        '🔔 Test notification from Quantum Risk Coach\n\nThis is a test message to verify Telegram integration is working correctly.',
         'your_chat_id'
       );
     } catch (error) {

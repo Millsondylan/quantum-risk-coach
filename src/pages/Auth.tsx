@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, TrendingUp, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import OnboardingFlow from '@/components/OnboardingFlow';
 
 const Auth = () => {
   
@@ -22,6 +23,8 @@ const Auth = () => {
     confirmPassword: '' 
   });
   const [loading, setLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingData, setOnboardingData] = useState(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,9 +68,8 @@ const Auth = () => {
       if (error) {
         toast.error(error.message || 'Signup failed. Please try again.');
       } else {
-        toast.success('Account created successfully! Please check your email to verify your account.');
-        // Reset form
-        setSignupData({ username: '', email: '', password: '', confirmPassword: '' });
+        toast.success('Account created successfully! Let\'s personalize your experience.');
+        setShowOnboarding(true);
       }
     } catch (error) {
       console.error('Signup error:', error);
@@ -76,6 +78,32 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handleOnboardingComplete = (data: any) => {
+    setOnboardingData(data);
+    toast.success(`Welcome ${data.name}! Your profile has been personalized.`);
+    // Reset form
+    setSignupData({ username: '', email: '', password: '', confirmPassword: '' });
+    setShowOnboarding(false);
+    navigate('/');
+  };
+
+  const handleOnboardingSkip = () => {
+    toast.success('Account created successfully! You can personalize your profile later.');
+    // Reset form
+    setSignupData({ username: '', email: '', password: '', confirmPassword: '' });
+    setShowOnboarding(false);
+    navigate('/');
+  };
+
+  if (showOnboarding) {
+    return (
+      <OnboardingFlow
+        onComplete={handleOnboardingComplete}
+        onSkip={handleOnboardingSkip}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
@@ -97,7 +125,7 @@ const Auth = () => {
                   <TrendingUp className="w-8 h-8 text-white" />
                 </div>
               </div>
-              <CardTitle className="text-2xl gradient-text">Welcome to TradeMind AI</CardTitle>
+              <CardTitle className="text-2xl gradient-text">Welcome to Quantum Risk Coach</CardTitle>
               <CardDescription>
                 Sign in to your account or create a new one to get started
               </CardDescription>

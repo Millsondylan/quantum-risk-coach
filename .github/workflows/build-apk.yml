@@ -40,47 +40,53 @@ jobs:
     - name: Build APK
       run: |
         cd android
-        ./gradlew assembleDebug
-      env:
-        ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
-        
-    - name: Upload APK
+        ./gradlew assembleDebug --no-daemon
+      
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: quantum-risk-coach-apk
         path: android/app/build/outputs/apk/debug/app-debug.apk
         
     - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: android/app/build/outputs/apk/debug/app-debug.apk
-        tag_name: v1.0.0
-        name: Quantum Risk Coach APK
-        body: |
-          🚀 **Quantum Risk Coach APK v1.0.0**
-          
-          ### 📱 Features:
-          - 🎨 Holographic UI Design
-          - 🤖 AI-Powered Trading Features
-          - 📊 Advanced Analytics
-          - 🔗 Multi-Broker Support
-          - 📝 Smart Journal
-          - 🎯 Trade Builder
-          - 🌙 Dark Theme
-          - ⚡ Mobile Optimized
-          
-          ### 📥 Installation:
-          1. Download the APK
-          2. Enable "Unknown Sources" in Android Settings
-          3. Install the APK
-          4. Configure API keys in Settings
-          5. Start trading with AI insights!
-          
-          ### 🔧 Requirements:
-          - Android 6.0+ (API 23+)
-          - Internet connection
-          - API keys for full functionality
-          
-          **Repository:** https://github.com/Millsondylan/quantum-risk-coach
+      id: create_release
+      uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Quantum Risk Coach v${{ github.run_number }}
+        body: |
+          ## 🚀 Quantum Risk Coach APK
+          
+          ### ✨ Features:
+          - **Personalized Onboarding** - Custom questions for tailored experience
+          - **AI Trading Coach** - Intelligent guidance and analysis
+          - **Risk Management** - Advanced risk assessment tools
+          - **Trade Journal** - Comprehensive trade tracking
+          - **Market Sentiment** - Real-time market analysis
+          - **Performance Analytics** - Detailed performance insights
+          
+          ### 📱 Installation:
+          1. Download the APK file
+          2. Enable "Install from Unknown Sources" on your Android device
+          3. Install the APK
+          4. Enjoy your personalized trading experience!
+          
+          ### 🔧 Technical Details:
+          - Built with React + TypeScript
+          - Capacitor for native mobile experience
+          - Supabase backend integration
+          - Modern holographic UI design
+        draft: false
+        prerelease: false
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: android/app/build/outputs/apk/debug/app-debug.apk
+        asset_name: quantum-risk-coach.apk
+        asset_content_type: application/vnd.android.package-archive 

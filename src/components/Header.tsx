@@ -93,7 +93,7 @@ const Header = () => {
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-xl md:text-2xl font-bold gradient-text">TradeMind AI</h1>
+                <h1 className="text-xl md:text-2xl font-bold gradient-text">Quantum Risk Coach</h1>
                 <p className="text-xs text-slate-400">Next-Gen Trading Intelligence</p>
               </div>
             </div>

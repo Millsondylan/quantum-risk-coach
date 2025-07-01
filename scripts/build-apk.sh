@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# TradeMind AI APK Build Script
-# This script automates the process of building an APK for the TradeMind AI app
+# Quantum Risk Coach APK Build Script
+# This script automates the process of building an APK for the Quantum Risk Coach app
 
 set -e
 
-echo "🚀 TradeMind AI - APK Build Script"
+echo "🚀 Quantum Risk Coach - APK Build Script"
 echo "=================================="
 
 # Check if Node.js is installed

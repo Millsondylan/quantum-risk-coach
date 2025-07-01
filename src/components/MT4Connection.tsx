@@ -327,7 +327,7 @@ const MT4Connection = () => {
               <div>
                 <h4 className="font-medium text-white">Install EA</h4>
                 <p className="text-sm text-slate-400">
-                  Download and install the TradeMind AI Expert Advisor in your MT4/MT5 platform
+                  Download and install the Quantum Risk Coach Expert Advisor in your MT4/MT5 platform
                 </p>
               </div>
             </div>
