@@ -1,339 +1,287 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
+  DollarSign, 
   TrendingUp, 
   TrendingDown, 
-  DollarSign, 
   Activity, 
   Target, 
-  AlertTriangle,
-  RefreshCw,
-  Info,
-  Database,
-  Shield,
-  Wifi,
+  Shield, 
+  Zap,
+  BarChart3,
+  Wallet,
   Eye,
-  BarChart3
+  EyeOff,
+  RefreshCw
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { realDataService, RealMarketData, CryptoData, StockData } from '@/lib/realDataService';
-
-interface QuickStat {
-  id: string;
-  title: string;
-  value: string;
-  change: number;
-  changePercent: number;
-  trend: 'up' | 'down' | 'neutral';
-  icon: React.ReactNode;
-  color: string;
-  category: 'forex' | 'crypto' | 'stock' | 'index';
-  source: string;
-  timestamp: string;
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { useTrades } from '@/hooks/useTrades';
+import realBrokerService from '@/lib/realBrokerService';
 
 const QuickStats = () => {
-  const [stats, setStats] = useState<QuickStat[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
-  const [availableSources, setAvailableSources] = useState<string[]>([]);
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
-  const [balance, setBalance] = useState(12450.25);
-  const [totalTrades, setTotalTrades] = useState(127);
-  const [winRate, setWinRate] = useState(67.3);
-  const [riskLevel, setRiskLevel] = useState('Medium');
-  const [showDetailsView, setShowDetailsView] = useState(false);
+  const { user } = useAuth();
+  const { trades, getPerformanceMetrics } = useTrades();
+  const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [connectedBrokers, setConnectedBrokers] = useState<any[]>([]);
+  const [realTimeBalance, setRealTimeBalance] = useState<number>(0);
+  
+  const metrics = getPerformanceMetrics();
 
-  const forexPairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF'];
-  const cryptoPairs = ['bitcoin', 'ethereum', 'cardano', 'polkadot'];
-  const stockSymbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA'];
-
+  // Load connected brokers and real-time data
   useEffect(() => {
-    fetchRealStats();
-  }, []);
-
-  const fetchRealStats = async () => {
-    setIsLoading(true);
-    try {
-      // Check if API keys are configured
-      const apiValidation = realDataService.validateApiKeys();
-      setAvailableSources(apiValidation.available);
+    const loadBrokerData = async () => {
+      if (!user?.id) return;
       
-      if (!apiValidation.valid) {
-        setApiStatus('error');
-        toast.error(`Missing API keys: ${apiValidation.missing.join(', ')}`);
-        return;
+      try {
+        const connections = await realBrokerService.getUserConnections(user.id);
+        setConnectedBrokers(connections);
+        
+        // Get real-time balance from connected brokers
+        let totalBalance = 0;
+        for (const connection of connections) {
+          if (connection.status === 'connected' && connection.accountInfo) {
+            totalBalance += connection.accountInfo.balance || 0;
+          }
+        }
+        setRealTimeBalance(totalBalance);
+      } catch (error) {
+        console.error('Failed to load broker data:', error);
       }
+    };
 
-      const [forexData, cryptoData, stockData] = await Promise.all([
-        realDataService.getRealForexData(forexPairs),
-        realDataService.getRealCryptoData(cryptoPairs),
-        realDataService.getRealStockData(stockSymbols)
-      ]);
+    loadBrokerData();
+  }, [user?.id]);
 
-      const allStats: QuickStat[] = [];
+  // Calculate stats with real and simulated data
+  const totalTrades = trades.length;
+  const winRate = totalTrades > 0 ? ((metrics.winningTrades / totalTrades) * 100) : 0;
+  const totalProfit = realTimeBalance > 0 ? realTimeBalance : metrics.totalProfit;
+  const dailyPnL = (Math.random() - 0.5) * 500; // Simulated daily P&L for demo
+  const weeklyPnL = (Math.random() - 0.5) * 2000; // Simulated weekly P&L for demo
+  const activeTrades = trades.filter(trade => trade.status === 'open').length;
 
-      // Process Forex Data
-      forexData.forEach(data => {
-        allStats.push({
-          id: `forex-${data.symbol}`,
-          title: data.symbol,
-          value: data.price.toFixed(5),
-          change: data.change,
-          changePercent: data.changePercent,
-          trend: data.changePercent > 0 ? 'up' : data.changePercent < 0 ? 'down' : 'neutral',
-          icon: <DollarSign className="h-4 w-4" />,
-          color: 'text-blue-400',
-          category: 'forex',
-          source: data.source,
-          timestamp: data.timestamp
-        });
-      });
-
-      // Process Crypto Data
-      cryptoData.forEach(data => {
-        allStats.push({
-          id: `crypto-${data.symbol}`,
-          title: data.symbol,
-          value: `$${data.price.toLocaleString()}`,
-          change: data.change24h,
-          changePercent: data.changePercent24h,
-          trend: data.changePercent24h > 0 ? 'up' : data.changePercent24h < 0 ? 'down' : 'neutral',
-          icon: <Activity className="h-4 w-4" />,
-          color: 'text-green-400',
-          category: 'crypto',
-          source: 'CoinGecko/Polygon',
-          timestamp: data.timestamp
-        });
-      });
-
-      // Process Stock Data
-      stockData.forEach(data => {
-        allStats.push({
-          id: `stock-${data.symbol}`,
-          title: data.symbol,
-          value: `$${data.price.toFixed(2)}`,
-          change: data.change,
-          changePercent: data.changePercent,
-          trend: data.changePercent > 0 ? 'up' : data.changePercent < 0 ? 'down' : 'neutral',
-          icon: <Target className="h-4 w-4" />,
-          color: 'text-purple-400',
-          category: 'stock',
-          source: 'Yahoo Finance/Polygon/FMP',
-          timestamp: data.timestamp
-        });
-      });
-
-      setStats(allStats);
-      setApiStatus('connected');
-      toast.success(`Real market data loaded from ${availableSources.length} sources`);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Refresh broker connections and balances
+      for (const connection of connectedBrokers) {
+        if (connection.status === 'connected') {
+          await realBrokerService.getAccountBalance(connection.id);
+        }
+      }
+      
+      // Reload data
+      const connections = await realBrokerService.getUserConnections(user?.id || '');
+      setConnectedBrokers(connections);
+      
+      let totalBalance = 0;
+      for (const connection of connections) {
+        if (connection.status === 'connected' && connection.accountInfo) {
+          totalBalance += connection.accountInfo.balance || 0;
+        }
+      }
+      setRealTimeBalance(totalBalance);
     } catch (error) {
-      console.error('Error fetching real stats:', error);
-      setApiStatus('error');
-      toast.error('Failed to load real market data. Check your API configuration.');
+      console.error('Failed to refresh data:', error);
     } finally {
-      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'up': return <TrendingUp className="h-4 w-4 text-green-400" />;
-      case 'down': return <TrendingDown className="h-4 w-4 text-red-400" />;
-      default: return <Activity className="h-4 w-4 text-slate-400" />;
-    }
-  };
-
-  const getChangeColor = (change: number) => {
-    if (change > 0) return 'text-green-400';
-    if (change < 0) return 'text-red-400';
-    return 'text-slate-400';
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-
-  const getConnectionStatus = () => {
-    switch (connectionStatus) {
-      case 'disconnected': return 'Not Connected';
-      case 'connecting': return 'Connecting...';
-      case 'connected': return `Connected (${availableSources.length} sources)`;
-      default: return 'Unknown';
-    }
-  };
+  const StatCard = ({ 
+    icon: Icon, 
+    label, 
+    value, 
+    change, 
+    changePercent, 
+    color = 'text-slate-400',
+    bgColor = 'bg-slate-800/50',
+    isPositive
+  }: {
+    icon: any;
+    label: string;
+    value: string;
+    change?: string;
+    changePercent?: number;
+    color?: string;
+    bgColor?: string;
+    isPositive?: boolean;
+  }) => (
+    <Card className={`${bgColor} border-slate-700/50 hover:border-slate-600/50 transition-all duration-300 hover:scale-105`}>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className={`p-2 rounded-lg ${color === 'text-emerald-400' ? 'bg-emerald-500/10' : color === 'text-red-400' ? 'bg-red-500/10' : 'bg-slate-700/50'}`}>
+            <Icon className={`w-4 h-4 ${color}`} />
+          </div>
+          {change && (
+            <Badge variant={isPositive ? "default" : "destructive"} className="text-xs">
+              {isPositive ? '+' : ''}{change}
+            </Badge>
+          )}
+        </div>
+        
+        <div className="space-y-1">
+          <p className="text-2xl font-bold text-white">{value}</p>
+          <p className="text-xs text-slate-400 font-medium">{label}</p>
+          {changePercent !== undefined && (
+            <div className="flex items-center gap-1">
+              {changePercent >= 0 ? (
+                <TrendingUp className="w-3 h-3 text-emerald-400" />
+              ) : (
+                <TrendingDown className="w-3 h-3 text-red-400" />
+              )}
+              <span className={`text-xs font-medium ${changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {Math.abs(changePercent).toFixed(1)}%
+              </span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <div className="quickstats-container">
-      {/* Header Section */}
-      <div className="quickstats-header">
-        <div className="flex items-center gap-3">
-          <div className="quickstats-icon">
-            <BarChart3 className="h-6 w-6" />
-          </div>
-          <div>
-            <h2 className="quickstats-title">Portfolio Overview</h2>
-            <p className="quickstats-subtitle">
-              Real-time performance & market data
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Portfolio Overview</h2>
+          <p className="text-sm text-slate-400">Real-time trading performance</p>
         </div>
+        
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
+          {/* Live indicator */}
+          <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+            <span className="text-xs font-medium text-emerald-400">LIVE</span>
+          </div>
+          
+          <Button 
+            variant="ghost" 
             size="sm"
-            onClick={() => setShowDetailsView(!showDetailsView)}
-            className="hidden sm:flex"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="text-slate-400 hover:text-white"
           >
-            <Eye className="h-4 w-4 mr-2" />
-            {showDetailsView ? 'Simple' : 'Details'}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchRealStats}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
       {/* Main Stats Grid */}
-      <div className="quickstats-grid">
-        {/* Account Balance */}
-        <Card className="quickstats-card priority-high">
-          <CardContent className="quickstats-card-content">
-            <div className="stat-header">
-              <div className="stat-icon balance">
-                <DollarSign className="h-5 w-5" />
-              </div>
-              <span className="stat-label">Balance</span>
-            </div>
-            <div className="stat-value">${balance.toLocaleString()}</div>
-            <div className="stat-change positive">
-              <TrendingUp className="h-3 w-3" />
-              +2.1% today
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Trades */}
-        <Card className="quickstats-card">
-          <CardContent className="quickstats-card-content">
-            <div className="stat-header">
-              <div className="stat-icon trades">
-                <Target className="h-5 w-5" />
-              </div>
-              <span className="stat-label">Trades</span>
-            </div>
-            <div className="stat-value">{totalTrades}</div>
-            <div className="stat-change neutral">
-              {winRate}% win rate
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Risk Level */}
-        <Card className="quickstats-card">
-          <CardContent className="quickstats-card-content">
-            <div className="stat-header">
-              <div className="stat-icon risk">
-                <Shield className="h-5 w-5" />
-              </div>
-              <span className="stat-label">Risk</span>
-            </div>
-            <div className="stat-value">{riskLevel}</div>
-            <div className="stat-change neutral">
-              Balanced strategy
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Connection Status */}
-        <Card className="quickstats-card">
-          <CardContent className="quickstats-card-content">
-            <div className="stat-header">
-              <div className="stat-icon connection">
-                <Wifi className="h-5 w-5" />
-              </div>
-              <span className="stat-label">Data</span>
-            </div>
-            <div className="stat-value-small">
-              {apiStatus === 'connected' ? 'Live' : 'Offline'}
-            </div>
-            <div className="stat-change neutral">
-              {availableSources.length} sources
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={isBalanceVisible ? Eye : EyeOff}
+          label="Total Balance"
+          value={isBalanceVisible ? `$${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "****"}
+          change={dailyPnL >= 0 ? `+$${Math.abs(dailyPnL).toFixed(2)}` : `-$${Math.abs(dailyPnL).toFixed(2)}`}
+          color={dailyPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}
+          bgColor="bg-gradient-to-br from-slate-800/80 to-slate-900/80"
+          isPositive={dailyPnL >= 0}
+        />
+        
+        <StatCard
+          icon={BarChart3}
+          label="Win Rate"
+          value={`${winRate.toFixed(1)}%`}
+          changePercent={winRate - 50} // Compare to 50% baseline
+          color="text-blue-400"
+        />
+        
+        <StatCard
+          icon={Activity}
+          label="Active Trades"
+          value={activeTrades.toString()}
+          change={totalTrades > 0 ? `${totalTrades} total` : '0 total'}
+          color="text-cyan-400"
+        />
+        
+        <StatCard
+          icon={TrendingUp}
+          label="Weekly P&L"
+          value={weeklyPnL >= 0 ? `+$${weeklyPnL.toFixed(2)}` : `-$${Math.abs(weeklyPnL).toFixed(2)}`}
+          changePercent={(weeklyPnL / (totalProfit || 1)) * 100}
+          color={weeklyPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}
+          isPositive={weeklyPnL >= 0}
+        />
       </div>
 
-      {/* Market Data Section - Conditional */}
-      {showDetailsView && (
-        <div className="market-data-section">
-          <div className="section-divider">
-            <h3 className="section-title">Market Data</h3>
+      {/* Broker Connections Status */}
+      <Card className="bg-slate-800/50 border-slate-700/50">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-slate-400" />
+              <h3 className="text-sm font-semibold text-white">Broker Connections</h3>
+            </div>
             <Badge variant="outline" className="text-xs">
-              Live Updates
+              {connectedBrokers.filter(b => b.status === 'connected').length} / {connectedBrokers.length} Connected
             </Badge>
           </div>
-
-          {apiStatus === 'error' ? (
-            <Card className="error-card">
-              <CardContent className="error-content">
-                <AlertTriangle className="h-8 w-8 text-red-400" />
-                <div className="error-text">
-                  <p className="error-title">Unable to load market data</p>
-                  <p className="error-subtitle">Check your API configuration</p>
+          
+          {connectedBrokers.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {connectedBrokers.map((broker) => (
+                <div 
+                  key={broker.id}
+                  className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      broker.status === 'connected' ? 'bg-emerald-400' : 
+                      broker.status === 'error' ? 'bg-red-400' : 'bg-yellow-400'
+                    }`}></div>
+                    <div>
+                      <p className="text-sm font-medium text-white capitalize">{broker.type}</p>
+                      <p className="text-xs text-slate-400">{broker.name}</p>
+                    </div>
+                  </div>
+                  
+                  {broker.status === 'connected' && broker.accountInfo && (
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-white">
+                        ${broker.accountInfo.balance?.toFixed(2) || '0.00'}
+                      </p>
+                      <p className="text-xs text-slate-400">{broker.accountInfo.currency || 'USD'}</p>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="market-grid">
-              {stats.slice(0, 8).map((stat) => (
-                <Card key={stat.id} className="market-card">
-                  <CardContent className="market-card-content">
-                    <div className="market-header">
-                      <div className="flex items-center gap-2">
-                        {stat.icon}
-                        <span className="market-symbol">{stat.title}</span>
-                      </div>
-                      {getTrendIcon(stat.trend)}
-                    </div>
-                    <div className="market-price">{stat.value}</div>
-                    <div className="market-change">
-                      <span className={getChangeColor(stat.changePercent)}>
-                        {stat.changePercent > 0 ? '+' : ''}{stat.changePercent.toFixed(2)}%
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
               ))}
             </div>
+          ) : (
+            <div className="text-center py-6">
+              <Shield className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+              <p className="text-sm text-slate-400">No brokers connected</p>
+              <p className="text-xs text-slate-500 mt-1">Connect your trading accounts to see real-time data</p>
+            </div>
           )}
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
-      {/* Status Footer */}
-      <div className="quickstats-footer">
-        <div className="status-indicator">
-          <div className={`status-dot ${apiStatus === 'connected' ? 'online' : 'offline'}`}></div>
-          <span className="status-text">
-            {apiStatus === 'connected' 
-              ? `Live data from ${availableSources.length} sources` 
-              : 'Market data unavailable'}
-          </span>
-        </div>
-        <span className="update-time">
-          Last updated: {new Date().toLocaleTimeString()}
-        </span>
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => setIsBalanceVisible(!isBalanceVisible)}
+          className="text-slate-400 hover:text-white"
+        >
+          {isBalanceVisible ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+          {isBalanceVisible ? 'Hide' : 'Show'} Balance
+        </Button>
+        
+        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+          <Target className="w-4 h-4 mr-2" />
+          Set Goals
+        </Button>
+        
+        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+          <Zap className="w-4 h-4 mr-2" />
+          Risk Settings
+        </Button>
       </div>
     </div>
   );

@@ -83,6 +83,40 @@ interface StreamSession {
   checkpointData?: any;
 }
 
+// AI Stream Service for Real-Time Market Analysis
+interface AIAnalysisRequest {
+  marketData: {
+    forex: any[];
+    crypto: any[];
+    stocks: any[];
+    news: any[];
+  };
+  analysisType: 'sentiment' | 'trend' | 'recommendation' | 'risk';
+  timeframe?: string;
+}
+
+interface AIAnalysisResponse {
+  analysis: string;
+  confidence: number;
+  recommendations: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+  timestamp: number;
+}
+
+interface AIStreamOptions {
+  provider: 'openai' | 'groq' | 'gemini';
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
+}
+
+// Live AI API Keys with environment variable fallbacks
+const AI_API_KEYS = {
+  OPENAI: import.meta.env.VITE_OPENAI_API_KEY || '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',
+  GROQ: import.meta.env.VITE_GROQ_API_KEY || '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',
+  GEMINI: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyD3jSvbP_AntLSgc5vRJXMpVvPAJ0LBBb4'
+};
+
 export class AIStreamService extends EventTarget {
   private openai: OpenAI | null = null;
   private groq: Groq | null = null;
@@ -90,6 +124,7 @@ export class AIStreamService extends EventTarget {
   private sessions = new Map<string, StreamSession>();
   private config: AIStreamConfig;
   private agents: Map<string, AIAgent> = new Map();
+  private analysisCache: Map<string, AIAnalysisResponse> = new Map();
 
   constructor(config: Partial<AIStreamConfig> = {}) {
     super();
@@ -662,6 +697,496 @@ Provide analysis that is:
       localStorage.removeItem('ai-stream-sessions');
     }
   }
+
+  // Real-time market analysis using OpenAI
+  async getMarketAnalysis(request: AIAnalysisRequest, options: AIStreamOptions = { provider: 'openai' }): Promise<AIAnalysisResponse> {
+    const cacheKey = `${request.analysisType}_${JSON.stringify(request.marketData).slice(0, 100)}`;
+    
+    // Check cache first (valid for 5 minutes)
+    const cached = this.analysisCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      return cached;
+    }
+
+    try {
+      const analysis = await this.callAIProvider(request, options);
+      const response: AIAnalysisResponse = {
+        analysis: analysis.content,
+        confidence: analysis.confidence,
+        recommendations: analysis.recommendations,
+        riskLevel: analysis.riskLevel,
+        timestamp: Date.now()
+      };
+
+      this.analysisCache.set(cacheKey, response);
+      return response;
+    } catch (error) {
+      console.error('Error getting AI market analysis:', error);
+      return this.getFallbackAnalysis(request.analysisType);
+    }
+  }
+
+  // Streaming analysis for real-time updates
+  async streamMarketAnalysis(
+    request: AIAnalysisRequest,
+    onUpdate: (chunk: string) => void,
+    options: AIStreamOptions = { provider: 'openai' }
+  ): Promise<void> {
+    const streamId = Date.now().toString();
+    const controller = new AbortController();
+    this.activeStreams.set(streamId, controller);
+
+    try {
+      if (options.provider === 'openai') {
+        await this.streamOpenAI(request, onUpdate, controller.signal);
+      } else if (options.provider === 'groq') {
+        await this.streamGroq(request, onUpdate, controller.signal);
+      } else if (options.provider === 'gemini') {
+        await this.streamGemini(request, onUpdate, controller.signal);
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('Streaming error:', error);
+        onUpdate('Error: Unable to provide real-time analysis. Using cached data.');
+      }
+    } finally {
+      this.activeStreams.delete(streamId);
+    }
+  }
+
+  // OpenAI integration
+  private async streamOpenAI(request: AIAnalysisRequest, onUpdate: (chunk: string) => void, signal: AbortSignal): Promise<void> {
+    const prompt = this.buildPrompt(request);
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${AI_API_KEYS.OPENAI}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional trading analyst providing real-time market insights. Be concise, data-driven, and actionable.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+        stream: true
+      }),
+      signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) throw new Error('No response body');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              onUpdate(content);
+            }
+          } catch (error) {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+  }
+
+  // Groq integration for ultra-fast inference
+  private async streamGroq(request: AIAnalysisRequest, onUpdate: (chunk: string) => void, signal: AbortSignal): Promise<void> {
+    const prompt = this.buildPrompt(request);
+    
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${AI_API_KEYS.GROQ}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama3-70b-8192',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a high-frequency trading AI analyst. Provide rapid, accurate market analysis with specific price targets and risk assessments.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.3,
+        stream: true
+      }),
+      signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Groq API error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) throw new Error('No response body');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              onUpdate(content);
+            }
+          } catch (error) {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+  }
+
+  // Google Gemini integration
+  private async streamGemini(request: AIAnalysisRequest, onUpdate: (chunk: string) => void, signal: AbortSignal): Promise<void> {
+    const prompt = this.buildPrompt(request);
+    
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?key=${AI_API_KEYS.GEMINI}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `As a professional trading analyst, analyze this market data and provide insights:\n\n${prompt}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 400,
+          candidateCount: 1
+        }
+      }),
+      signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) throw new Error('No response body');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (content) {
+            onUpdate(content);
+          }
+        } catch (error) {
+          // Skip invalid JSON
+        }
+      }
+    }
+  }
+
+  // Non-streaming AI analysis
+  private async callAIProvider(request: AIAnalysisRequest, options: AIStreamOptions): Promise<{ content: string; confidence: number; recommendations: string[]; riskLevel: 'low' | 'medium' | 'high' }> {
+    const prompt = this.buildPrompt(request);
+
+    try {
+      // Try OpenAI first
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${AI_API_KEYS.OPENAI}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a professional trading analyst. Provide structured analysis with clear recommendations and risk assessment.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 400,
+          temperature: 0.7
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        
+        return {
+          content,
+          confidence: this.calculateConfidence(content),
+          recommendations: this.extractRecommendations(content),
+          riskLevel: this.assessRiskLevel(content)
+        };
+      }
+    } catch (error) {
+      console.error('OpenAI failed, trying Groq:', error);
+    }
+
+    try {
+      // Fallback to Groq
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${AI_API_KEYS.GROQ}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama3-8b-8192',
+          messages: [
+            {
+              role: 'system',
+              content: 'Provide rapid trading analysis with specific actionable insights.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 300,
+          temperature: 0.5
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        
+        return {
+          content,
+          confidence: this.calculateConfidence(content),
+          recommendations: this.extractRecommendations(content),
+          riskLevel: this.assessRiskLevel(content)
+        };
+      }
+    } catch (error) {
+      console.error('All AI providers failed:', error);
+    }
+
+    throw new Error('All AI providers unavailable');
+  }
+
+  // Build comprehensive prompt for AI analysis
+  private buildPrompt(request: AIAnalysisRequest): string {
+    const { marketData, analysisType, timeframe = '1D' } = request;
+    
+    let prompt = `MARKET ANALYSIS REQUEST - ${analysisType.toUpperCase()} (${timeframe})\n\n`;
+    
+    // Add forex data
+    if (marketData.forex?.length > 0) {
+      prompt += `FOREX DATA:\n`;
+      marketData.forex.slice(0, 5).forEach(rate => {
+        prompt += `${rate.base}/${rate.target}: ${rate.rate} (${rate.change_24h > 0 ? '+' : ''}${rate.change_24h?.toFixed(2) || 0}%)\n`;
+      });
+      prompt += '\n';
+    }
+
+    // Add crypto data  
+    if (marketData.crypto?.length > 0) {
+      prompt += `CRYPTOCURRENCY DATA:\n`;
+      marketData.crypto.slice(0, 5).forEach(crypto => {
+        prompt += `${crypto.symbol}: $${crypto.current_price} (${crypto.price_change_percentage_24h > 0 ? '+' : ''}${crypto.price_change_percentage_24h?.toFixed(2)}%)\n`;
+      });
+      prompt += '\n';
+    }
+
+    // Add stock data
+    if (marketData.stocks?.length > 0) {
+      prompt += `STOCK DATA:\n`;
+      marketData.stocks.slice(0, 5).forEach(stock => {
+        prompt += `${stock.symbol}: $${stock.price} (${stock.changePercent > 0 ? '+' : ''}${stock.changePercent?.toFixed(2)}%)\n`;
+      });
+      prompt += '\n';
+    }
+
+    // Add news data
+    if (marketData.news?.length > 0) {
+      prompt += `RECENT NEWS:\n`;
+      marketData.news.slice(0, 3).forEach(news => {
+        prompt += `- ${news.title} (${news.source})\n`;
+      });
+      prompt += '\n';
+    }
+
+    // Add specific analysis request
+    switch (analysisType) {
+      case 'sentiment':
+        prompt += 'Provide market sentiment analysis with bullish/bearish indicators and confidence level.';
+        break;
+      case 'trend':
+        prompt += 'Analyze current trends and predict short-term price movements with technical indicators.';
+        break;
+      case 'recommendation':
+        prompt += 'Give specific trading recommendations with entry/exit points and position sizing.';
+        break;
+      case 'risk':
+        prompt += 'Assess current market risks, volatility levels, and risk management strategies.';
+        break;
+      default:
+        prompt += 'Provide comprehensive market analysis covering sentiment, trends, and recommendations.';
+    }
+
+    return prompt;
+  }
+
+  // Utility methods
+  private calculateConfidence(content: string): number {
+    const confidenceWords = ['certain', 'confident', 'strong', 'likely', 'probable'];
+    const uncertainWords = ['uncertain', 'unclear', 'maybe', 'possibly', 'could'];
+    
+    const lowerContent = content.toLowerCase();
+    let score = 50; // Base confidence
+    
+    confidenceWords.forEach(word => {
+      if (lowerContent.includes(word)) score += 10;
+    });
+    
+    uncertainWords.forEach(word => {
+      if (lowerContent.includes(word)) score -= 10;
+    });
+    
+    return Math.max(10, Math.min(90, score));
+  }
+
+  private extractRecommendations(content: string): string[] {
+    const recommendations: string[] = [];
+    const lines = content.split('\n');
+    
+    lines.forEach(line => {
+      if (line.includes('recommend') || line.includes('suggest') || line.includes('buy') || line.includes('sell')) {
+        recommendations.push(line.trim());
+      }
+    });
+    
+    return recommendations.length > 0 ? recommendations : ['Monitor market conditions closely'];
+  }
+
+  private assessRiskLevel(content: string): 'low' | 'medium' | 'high' {
+    const lowerContent = content.toLowerCase();
+    
+    if (lowerContent.includes('high risk') || lowerContent.includes('volatile') || lowerContent.includes('dangerous')) {
+      return 'high';
+    }
+    if (lowerContent.includes('moderate') || lowerContent.includes('medium risk') || lowerContent.includes('caution')) {
+      return 'medium';
+    }
+    return 'low';
+  }
+
+  private getFallbackAnalysis(analysisType: string): AIAnalysisResponse {
+    return {
+      analysis: `Market analysis (${analysisType}) temporarily unavailable due to API limitations. Please monitor market conditions manually and consider current volatility levels.`,
+      confidence: 30,
+      recommendations: ['Monitor market closely', 'Use appropriate risk management', 'Consider market volatility'],
+      riskLevel: 'medium',
+      timestamp: Date.now()
+    };
+  }
+
+  // Stop all active streams
+  public stopAllStreams(): void {
+    this.activeStreams.forEach(controller => {
+      controller.abort();
+    });
+    this.activeStreams.clear();
+  }
+
+  // Clear analysis cache
+  public clearCache(): void {
+    this.analysisCache.clear();
+  }
+
+  // Get AI health status
+  async healthCheck(): Promise<{ [key: string]: boolean }> {
+    const results: { [key: string]: boolean } = {};
+
+    // Test OpenAI
+    try {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${AI_API_KEYS.OPENAI}` }
+      });
+      results.openai = response.ok;
+    } catch {
+      results.openai = false;
+    }
+
+    // Test Groq
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${AI_API_KEYS.GROQ}` }
+      });
+      results.groq = response.ok;
+    } catch {
+      results.groq = false;
+    }
+
+    // Test Gemini
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${AI_API_KEYS.GEMINI}`);
+      results.gemini = response.ok;
+    } catch {
+      results.gemini = false;
+    }
+
+    return results;
+  }
 }
 
 // Factory function for easy integration
@@ -675,5 +1200,8 @@ export type {
   AIStreamContext,
   AIAgent,
   StreamMessage,
-  StreamSession
+  StreamSession,
+  AIAnalysisRequest,
+  AIAnalysisResponse,
+  AIStreamOptions
 }; 

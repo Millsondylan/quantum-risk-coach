@@ -191,6 +191,21 @@ const Auth = () => {
                     <Button type="submit" className="w-full holo-button" disabled={loading}>
                       {loading ? 'Signing In...' : 'Sign In'}
                     </Button>
+                    
+                    {/* Demo account for testing */}
+                    <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                      <p className="text-sm text-slate-400 mb-2">Demo Account for Testing:</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full text-xs"
+                        onClick={() => {
+                          setLoginData({ email: 'demo@quantumrisk.coach', password: 'demo123' });
+                        }}
+                      >
+                        Fill Demo Credentials
+                      </Button>
+                    </div>
                   </form>
                 </TabsContent>
                 

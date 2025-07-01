@@ -1,106 +1,131 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Target, BookOpen, Brain, TrendingUp, Plus } from 'lucide-react';
-import { useIsMobile } from '../hooks/use-mobile';
-import { Button } from '@/components/ui/button';
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  Home, 
+  BookOpen, 
+  PlusCircle, 
+  BarChart3, 
+  Settings,
+  TrendingUp,
+  Target,
+  Calendar
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const MobileBottomNav = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useIsMobile();
-
-  if (!isMobile) return null;
 
   const navItems = [
     {
+      href: '/',
       icon: Home,
       label: 'Home',
-      path: '/',
-      onClick: () => navigate('/')
+      activeColor: 'text-cyan-400',
+      paths: ['/']
     },
     {
-      icon: TrendingUp,
-      label: 'Portfolio',
-      path: '/portfolio',
-      onClick: () => {
-        navigate('/');
-        setTimeout(() => {
-          const portfolioSection = document.querySelector('[data-section="portfolio"]') || 
-                                 document.querySelector('.portfolio-manager');
-          if (portfolioSection) {
-            portfolioSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-        }, 100);
-      }
-    },
-    {
-      icon: Plus,
-      label: 'Add Trade',
-      path: '/journal/add',
-      onClick: () => navigate('/journal/add'),
-      isHighlight: true
-    },
-    {
+      href: '/journal',
       icon: BookOpen,
       label: 'Journal',
-      path: '/journal',
-      onClick: () => navigate('/journal')
+      activeColor: 'text-blue-400',
+      paths: ['/journal']
     },
     {
-      icon: Brain,
-      label: 'AI Coach',
-      path: '/ai-coach',
-      onClick: () => {
-        navigate('/');
-        setTimeout(() => {
-          const aiCoachSection = document.querySelector('[data-section="ai-coach"]');
-          if (aiCoachSection) {
-            aiCoachSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, 100);
-      }
+      href: '/trade-builder',
+      icon: PlusCircle,
+      label: 'Trade',
+      activeColor: 'text-emerald-400',
+      isHighlight: true,
+      paths: ['/trade-builder']
+    },
+    {
+      href: '/performance-calendar',
+      icon: BarChart3,
+      label: 'Analytics',
+      activeColor: 'text-purple-400',
+      paths: ['/performance-calendar', '/strategy-analyzer']
+    },
+    {
+      href: '/settings',
+      icon: Settings,
+      label: 'Settings',
+      activeColor: 'text-slate-400',
+      paths: ['/settings']
     }
   ];
 
+  const isActivePath = (paths: string[]) => {
+    return paths.some(path => location.pathname === path || location.pathname.startsWith(path));
+  };
+
   return (
-    <nav className="nav-mobile">
-      <div className="nav-mobile-container">
+    <nav className="mobile-nav fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 sm:hidden">
+      <div className="mobile-nav-content px-2 py-2">
         {navItems.map((item) => {
+          const isActive = isActivePath(item.paths);
           const Icon = item.icon;
-          const isActive = location.pathname === item.path || 
-            (item.path === '/' && location.pathname === '/');
-          
+
           if (item.isHighlight) {
             return (
-              <Button
-                key={item.path}
-                onClick={item.onClick}
-                className="nav-mobile-highlight"
-                size="icon"
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  "relative flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300",
+                  "bg-gradient-to-br from-emerald-500 to-blue-500 text-white shadow-lg",
+                  "hover:scale-105 active:scale-95",
+                  "w-14 h-14 -mt-2 border-2 border-slate-800"
+                )}
               >
                 <Icon className="w-6 h-6" />
-              </Button>
+                <span className="text-xs font-medium mt-1">{item.label}</span>
+                
+                {/* Glow effect */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 blur-lg -z-10 scale-110"></div>
+              </Link>
             );
           }
-          
+
           return (
-            <button
-              key={item.path}
-              onClick={item.onClick}
-              className={`nav-mobile-item ${
+            <Link
+              key={item.href}
+              to={item.href}
+              className={cn(
+                "mobile-nav-item flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200",
+                "min-w-[60px] text-center relative overflow-hidden",
                 isActive 
-                  ? 'nav-mobile-item-active' 
-                  : 'nav-mobile-item-inactive'
-              }`}
+                  ? `${item.activeColor} bg-slate-800/80` 
+                  : "text-slate-400 hover:text-slate-300"
+              )}
             >
-              <Icon className="w-5 h-5 mb-1" />
-              <span className="text-xs font-medium truncate">{item.label}</span>
-            </button>
+              {/* Background highlight for active state */}
+              {isActive && (
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl"></div>
+              )}
+              
+              <Icon className={cn(
+                "w-5 h-5 transition-all duration-200 relative z-10",
+                isActive ? "scale-110" : "scale-100"
+              )} />
+              
+              <span className={cn(
+                "text-xs font-medium mt-1 relative z-10 transition-all duration-200",
+                isActive ? "opacity-100" : "opacity-80"
+              )}>
+                {item.label}
+              </span>
+
+              {/* Active indicator dot */}
+              {isActive && (
+                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full"></div>
+              )}
+            </Link>
           );
         })}
       </div>
+
+      {/* Safe area padding for iPhones */}
+      <div className="h-safe-bottom bg-slate-900/95"></div>
     </nav>
   );
 };

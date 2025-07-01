@@ -2,16 +2,44 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://heptsojfesbumrhwniqj.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlcHRzb2pmZXNidW1yaHduaXFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwODQyNjUsImV4cCI6MjA2MzY2MDI2NX0.BFOaKS7RDeRAUFH1g1-OHV3a4jCe6LnNK5c3tEI8YeQ";
+const supabaseUrl = 'https://heptsogjfesbumrhwniqj.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlcHRzb2pmZXNidW1yaHduaXFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwODQyNjUsImV4cCI6MjA2MzY2MDI2NX0.BFOaKS7RDeRAUFH1g1-OHV3a4jCe6LnNK5c3tEI8YeQ';
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: typeof window !== 'undefined' ? localStorage : undefined,
-    persistSession: true,
     autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 });
+
+// Service role client for admin operations
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlcHRzb2pmZXNidW1yaHduaXFqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODA4NDI2NSwiZXhwIjoyMDYzNjYwMjY1fQ.4eztZmNeDMyGaz5BCCMwyUUOg1qQnGRYgs748OpcwPQ';
+
+export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
+
+// Test connection
+export const testConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('profiles').select('count', { count: 'exact' }).limit(1)
+    if (error) throw error
+    console.log('✅ Supabase connection successful')
+    return true
+  } catch (error) {
+    console.error('❌ Supabase connection failed:', error)
+    return false
+  }
+}

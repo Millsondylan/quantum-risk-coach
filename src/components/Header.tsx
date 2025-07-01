@@ -1,486 +1,201 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { TrendingUp, Settings, Bell, User, WifiOff, Menu, LogOut, UserCircle, Home, BookOpen, Trophy, Brain, Target, Zap, ChevronDown, Plus, BarChart3, Tag, Download, Upload, Shield, HelpCircle, Search } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTrades } from '@/hooks/useTrades';
-import { useIsMobile } from '../hooks/use-mobile';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from './ui/sheet';
-import { Input } from './ui/input';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, Settings, User, LogOut, TrendingUp, Activity } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from './ui/dropdown-menu';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Badge } from './ui/badge';
+
+// Real-time market data (simplified for demo)
+const useRealTimeData = () => {
+  const [marketData, setMarketData] = useState({
+    BTCUSDT: { price: 0, change: 0 },
+    EURUSD: { price: 0, change: 0 },
+    GBPUSD: { price: 0, change: 0 },
+    USDJPY: { price: 0, change: 0 }
+  });
+
+  useEffect(() => {
+    // Simulate real-time data updates
+    const updateData = () => {
+      setMarketData({
+        BTCUSDT: { 
+          price: 43000 + Math.random() * 2000, 
+          change: (Math.random() - 0.5) * 5 
+        },
+        EURUSD: { 
+          price: 1.0850 + Math.random() * 0.01, 
+          change: (Math.random() - 0.5) * 0.5 
+        },
+        GBPUSD: { 
+          price: 1.2650 + Math.random() * 0.01, 
+          change: (Math.random() - 0.5) * 0.5 
+        },
+        USDJPY: { 
+          price: 148.50 + Math.random() * 2, 
+          change: (Math.random() - 0.5) * 1 
+        }
+      });
+    };
+
+    updateData();
+    const interval = setInterval(updateData, 5000); // Update every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return marketData;
+};
 
 const Header = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { user, signOut } = useAuth();
-  const { getPerformanceMetrics } = useTrades();
-  const [notificationCount, setNotificationCount] = useState(3);
-  const isMobile = useIsMobile();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const marketData = useRealTimeData();
+  const [notifications, setNotifications] = useState(3);
 
-  const metrics = getPerformanceMetrics();
-  const balance = metrics.totalProfit || 0; // Show actual profit or 0 if no data
-
-  const handleConnectMT4 = () => {
-    navigate('/connect-mt4');
-    setIsMenuOpen(false);
-    toast.success('Navigating to MT4 connection');
-  };
-
-  const handleConnectMT5 = () => {
-    navigate('/connect-mt5');
-    setIsMenuOpen(false);
-    toast.success('Navigating to MT5 connection');
-  };
-
-  const handleConnectCTrader = () => {
-    navigate('/connect-ctrader');
-    setIsMenuOpen(false);
-    toast.success('Navigating to cTrader connection');
-  };
-
-  const handleConnectTradingView = () => {
-    navigate('/connect-tradingview');
-    setIsMenuOpen(false);
-    toast.success('Navigating to TradingView connection');
+  const getPageTitle = () => {
+    const path = location.pathname;
+    switch (path) {
+      case '/': return 'Dashboard';
+      case '/journal': return 'Trading Journal';
+      case '/trade-builder': return 'Trade Builder';
+      case '/performance-calendar': return 'Performance';
+      case '/strategy-analyzer': return 'Strategy Analyzer';
+      case '/settings': return 'Settings';
+      default: return 'Quantum Risk Coach';
+    }
   };
 
   const handleSignOut = async () => {
     try {
-      await signOut(() => navigate('/auth'));
-      toast.success('Signed out successfully');
+      await signOut();
+      navigate('/auth');
     } catch (error) {
       console.error('Sign out error:', error);
-      navigate('/auth');
     }
   };
 
-  const handleProfile = () => {
-    navigate('/settings');
-    toast.success('Navigating to settings');
-  };
-
-  const handleDashboard = () => {
-    navigate('/');
-    setIsMenuOpen(false);
-    toast.success('Navigating to dashboard');
-  };
-
-  const handleJournal = () => {
-    navigate('/journal');
-    setIsMenuOpen(false);
-    toast.success('Navigating to journal');
-  };
-
-  const handleJournalView = () => {
-    navigate('/journal');
-    toast.success('Navigating to journal');
-  };
-
-  const handleJournalAdd = () => {
-    navigate('/journal/add');
-    toast.success('Navigating to add journal entry');
-  };
-
-  const handleJournalAnalytics = () => {
-    navigate('/journal/analytics');
-    toast.success('Navigating to journal analytics');
-  };
-
-  const handleJournalTags = () => {
-    navigate('/journal/tags');
-    toast.success('Navigating to journal tags');
-  };
-
-  const handleJournalExport = () => {
-    navigate('/journal/export');
-    toast.success('Navigating to journal export');
-  };
-
-  const handleLeaderboard = () => {
-    navigate('/');
-    // Scroll to leaderboard section
-    setTimeout(() => {
-      const leaderboardSection = document.querySelector('[data-section="leaderboard"]');
-      if (leaderboardSection) {
-        leaderboardSection.scrollIntoView({ behavior: 'smooth' });
-        toast.success('Scrolled to leaderboard section');
-      } else {
-        toast.info('Leaderboard section not found on this page');
-      }
-    }, 100);
-    setIsMenuOpen(false);
-  };
-
-  const handleAICoach = () => {
-    navigate('/');
-    // Scroll to AI coach section
-    setTimeout(() => {
-      const aiCoachSection = document.querySelector('[data-section="ai-coach"]');
-      if (aiCoachSection) {
-        aiCoachSection.scrollIntoView({ behavior: 'smooth' });
-        toast.success('Scrolled to AI coach section');
-      } else {
-        toast.info('AI coach section not found on this page');
-      }
-    }, 100);
-    setIsMenuOpen(false);
-  };
-
-  const handleTradeBuilder = () => {
-    navigate('/trade-builder');
-    setIsMenuOpen(false);
-    toast.success('Navigating to trade builder');
-  };
-
-  const handlePerformanceCalendar = () => {
-    navigate('/performance-calendar');
-    setIsMenuOpen(false);
-    toast.success('Navigating to performance calendar');
-  };
-
-  const handleStrategyAnalyzer = () => {
-    navigate('/strategy-analyzer');
-    setIsMenuOpen(false);
-    toast.success('Navigating to strategy analyzer');
-  };
-
-  const markNotificationsAsRead = () => {
-    setNotificationCount(0);
-    toast.success('Notifications marked as read');
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.info('Search functionality coming soon');
-  };
+  const MarketTicker = ({ symbol, data }: { symbol: string; data: { price: number; change: number } }) => (
+    <div className="flex items-center gap-2 px-3 py-1 bg-slate-900/50 rounded-lg border border-slate-700/50 backdrop-blur-sm">
+      <span className="text-xs font-medium text-slate-300">{symbol}</span>
+      <span className="text-sm font-semibold text-white">
+        {symbol === 'BTCUSDT' ? `$${data.price.toFixed(0)}` : data.price.toFixed(4)}
+      </span>
+      <span className={`text-xs font-medium ${data.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+        {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)}%
+      </span>
+    </div>
+  );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-slate-900/75">
-      <div className="container mx-auto px-4 md:px-6">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo and Brand */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white hidden sm:block">Quantum Risk Coach</span>
-              <span className="text-xl font-bold text-white sm:hidden">QRC</span>
+    <header className="header sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl">
+      <div className="header-content flex items-center justify-between px-4 md:px-6 py-3">
+        {/* Logo and Title */}
+        <div className="flex items-center gap-4">
+          <Link to="/" className="flex items-center gap-2 header-logo">
+            <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-white" />
             </div>
+            <span className="hidden sm:block font-bold text-xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+              Quantum Risk Coach
+            </span>
+          </Link>
+          
+          {/* Page Title */}
+          <div className="hidden md:flex items-center gap-2">
+            <div className="w-1 h-6 bg-gradient-to-b from-cyan-400 to-blue-500 rounded-full"></div>
+            <h1 className="text-lg font-semibold text-slate-200">{getPageTitle()}</h1>
+          </div>
+        </div>
+
+        {/* Market Ticker - Hidden on small screens */}
+        <div className="hidden lg:flex items-center gap-3 overflow-x-auto scrollbar-hide">
+          <MarketTicker symbol="BTC" data={marketData.BTCUSDT} />
+          <MarketTicker symbol="EUR/USD" data={marketData.EURUSD} />
+          <MarketTicker symbol="GBP/USD" data={marketData.GBPUSD} />
+          <MarketTicker symbol="USD/JPY" data={marketData.USDJPY} />
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          {/* Live Status Indicator */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+            <span className="text-xs font-medium text-emerald-400">LIVE</span>
           </div>
 
-          {/* Mobile Menu Button */}
-          {isMobile && (
-            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5 text-slate-400" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] bg-slate-900 border-r border-slate-800">
-                <SheetHeader>
-                  <SheetTitle className="text-white">Menu</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6 space-y-4">
-                  {/* Mobile Navigation Items */}
-                  <div className="space-y-2">
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                      onClick={handleDashboard}
-                    >
-                      <Home className="w-4 h-4 mr-3" />
-                      Dashboard
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                      onClick={handleTradeBuilder}
-                    >
-                      <Target className="w-4 h-4 mr-3" />
-                      Trade Builder
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                      onClick={handleJournal}
-                    >
-                      <BookOpen className="w-4 h-4 mr-3" />
-                      Journal
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                      onClick={handleAICoach}
-                    >
-                      <Brain className="w-4 h-4 mr-3" />
-                      AI Coach
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                      onClick={handleLeaderboard}
-                    >
-                      <Trophy className="w-4 h-4 mr-3" />
-                      Leaderboard
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                      onClick={handlePerformanceCalendar}
-                    >
-                      <BarChart3 className="w-4 h-4 mr-3" />
-                      Performance
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                      onClick={handleStrategyAnalyzer}
-                    >
-                      <Zap className="w-4 h-4 mr-3" />
-                      Strategy Analyzer
-                    </Button>
-                  </div>
+          {/* Notifications */}
+          <Button variant="ghost" size="sm" className="relative" onClick={() => setNotifications(0)}>
+            <Bell className="w-5 h-5 text-slate-400" />
+            {notifications > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500"
+              >
+                {notifications}
+              </Badge>
+            )}
+          </Button>
 
-                  <div className="border-t border-slate-800 pt-4">
-                    <h3 className="text-sm font-medium text-slate-400 mb-2">Connect</h3>
-                    <div className="space-y-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                        onClick={handleConnectMT4}
-                      >
-                        <Shield className="w-4 h-4 mr-3" />
-                        MT4
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                        onClick={handleConnectMT5}
-                      >
-                        <Shield className="w-4 h-4 mr-3" />
-                        MT5
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                        onClick={handleConnectCTrader}
-                      >
-                        <Shield className="w-4 h-4 mr-3" />
-                        cTrader
-                      </Button>
-                    </div>
-                  </div>
+          {/* Activity Monitor */}
+          <Button variant="ghost" size="sm" className="hidden md:flex">
+            <Activity className="w-5 h-5 text-slate-400" />
+          </Button>
 
-                  <div className="border-t border-slate-800 pt-4">
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
-                      onClick={handleProfile}
-                    >
-                      <Settings className="w-4 h-4 mr-3" />
-                      Settings
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="w-4 h-4 mr-3" />
-                      Sign Out
-                    </Button>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          )}
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white text-sm font-semibold">
+                    {user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 bg-slate-900/95 backdrop-blur-xl border-slate-700/50" align="end" forceMount>
+              <div className="flex flex-col space-y-1 p-2">
+                <p className="text-sm font-medium leading-none text-slate-200">{user?.email}</p>
+                <p className="text-xs leading-none text-slate-400">Professional Trader</p>
+              </div>
+              <DropdownMenuSeparator className="bg-slate-700/50" />
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/journal" className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+                  <User className="w-4 h-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-slate-700/50" />
+              <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 cursor-pointer text-red-400 hover:text-red-300 focus:text-red-300">
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
-          {/* Desktop Navigation */}
-          {!isMobile && (
-            <div className="flex items-center space-x-4">
-              {/* Search */}
-              <form onSubmit={handleSearch} className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  type="text"
-                  placeholder="Search..."
-                  className="pl-10 w-64 bg-slate-800 border-slate-600 text-slate-300 placeholder:text-slate-400"
-                />
-              </form>
-
-              {/* Trading Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                    Trading
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600">
-                  <DropdownMenuItem onClick={handleTradeBuilder}>
-                    <Target className="w-4 h-4 mr-2" />
-                    Trade Builder
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handlePerformanceCalendar}>
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Performance Calendar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleStrategyAnalyzer}>
-                    <Zap className="w-4 h-4 mr-2" />
-                    Strategy Analyzer
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Journal Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                    Journal
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600">
-                  <DropdownMenuItem onClick={handleJournalView}>
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    View Journal
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleJournalAdd}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Entry
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleJournalAnalytics}>
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Analytics
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleJournalTags}>
-                    <Tag className="w-4 h-4 mr-2" />
-                    Tags
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleJournalExport}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Connect Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                    Connect
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600">
-                  <DropdownMenuItem onClick={handleConnectMT4}>
-                    <Shield className="w-4 h-4 mr-2" />
-                    MT4
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleConnectMT5}>
-                    <Shield className="w-4 h-4 mr-2" />
-                    MT5
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleConnectCTrader}>
-                    <Shield className="w-4 h-4 mr-2" />
-                    cTrader
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Notifications */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-5 w-5 text-slate-400" />
-                    {notificationCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
-                        {notificationCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600 w-80">
-                  <DropdownMenuLabel className="text-white">Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <div className="p-4 text-center text-slate-400">
-                    <Bell className="h-8 w-8 mx-auto mb-2 text-slate-500" />
-                    <p className="text-sm">No new notifications</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={markNotificationsAsRead}
-                      className="mt-2"
-                    >
-                      Mark all as read
-                    </Button>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* User Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                    <UserCircle className="h-5 w-5 mr-2" />
-                    {user?.email?.split('@')[0] || 'User'}
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600">
-                  <DropdownMenuLabel className="text-white">
-                    <div className="flex items-center space-x-2">
-                      <UserCircle className="h-5 w-5" />
-                      <div>
-                        <p className="text-sm font-medium">{user?.email}</p>
-                        <p className="text-xs text-slate-400">Balance: ${balance.toFixed(2)}</p>
-                      </div>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleProfile}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAICoach}>
-                    <Brain className="w-4 h-4 mr-2" />
-                    AI Coach
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLeaderboard}>
-                    <Trophy className="w-4 h-4 mr-2" />
-                    Leaderboard
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="text-red-400">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+      {/* Mobile Market Ticker */}
+      <div className="lg:hidden border-t border-slate-700/50 bg-slate-900/50 px-4 py-2">
+        <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+          <MarketTicker symbol="BTC" data={marketData.BTCUSDT} />
+          <MarketTicker symbol="EUR/USD" data={marketData.EURUSD} />
+          <MarketTicker symbol="GBP/USD" data={marketData.GBPUSD} />
+          <MarketTicker symbol="USD/JPY" data={marketData.USDJPY} />
         </div>
       </div>
     </header>

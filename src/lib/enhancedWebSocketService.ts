@@ -146,6 +146,7 @@ export interface ConnectionHealth {
 }
 
 export class EnhancedWebSocketService extends EventTarget {
+  private static instance: EnhancedWebSocketService;
   private ws: WebSocket | null = null;
   private config: WebSocketConfig;
   private subscriptions = new Map<string, Subscription>();
@@ -223,6 +224,13 @@ export class EnhancedWebSocketService extends EventTarget {
 
     this.setupMobileOptimizations();
     this.setupRateLimiting();
+  }
+
+  public static getInstance(config?: Partial<WebSocketConfig>): EnhancedWebSocketService {
+    if (!EnhancedWebSocketService.instance) {
+      EnhancedWebSocketService.instance = new EnhancedWebSocketService(config as WebSocketConfig);
+    }
+    return EnhancedWebSocketService.instance;
   }
 
   private setupMobileOptimizations() {

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { setupTradingTables } from '@/lib/databaseSetup';
+import { testAuthFlow, createUserProfile, checkUserProfile } from '@/lib/authTest';
 
 interface AuthError {
   message: string;
@@ -55,6 +57,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
+    // Verify database setup on app start
+    const initializeApp = async () => {
+      try {
+        console.log('🚀 Initializing Quantum Risk Coach...');
+        
+        // Test authentication first
+        const authTest = await testAuthFlow();
+        if (authTest.errors.length > 0) {
+          console.error('⚠️ Auth setup issues:', authTest.errors);
+        }
+        
+        // Then test database
+        await setupTradingTables();
+        
+        console.log('✅ App initialization complete');
+      } catch (error) {
+        console.error('App initialization error:', error);
+      }
+    };
+
     // Set up auth state listener first
     const {
       data: { subscription },
@@ -68,9 +90,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Then get initial session
+    // Then get initial session and verify database
     const getInitialSession = async () => {
       try {
+        // Initialize database first
+        await initializeApp();
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error('Error getting session:', error);
@@ -148,6 +173,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (signUpError) {
         console.error('Sign up error:', signUpError);
         return { error: signUpError };
+      }
+
+      // Create user profile after successful signup
+      if (data.user) {
+        try {
+          const profileResult = await createUserProfile(data.user.id, {
+            username,
+            email
+          });
+          
+          if (profileResult.success) {
+            console.log('✅ User profile created automatically');
+          } else {
+            console.warn('⚠️ Profile creation failed, but signup successful');
+          }
+        } catch (profileError) {
+          console.warn('Profile creation error:', profileError);
+          // Don't fail the signup if profile creation fails
+        }
       }
 
       console.log('Sign up successful:', data.user?.email);
