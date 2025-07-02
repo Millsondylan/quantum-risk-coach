@@ -15,14 +15,12 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('signup');
 
-  // Visible name state
+  // Form state
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  // Hidden fields to keep existing tests unchanged
-  const [email, setEmail] = useState('test@example.com');
-  const [password, setPassword] = useState('password123');
-
-  const handleContinue = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -44,15 +42,27 @@ const Auth = () => {
     }
   };
 
-  // Common hidden inputs CSS
-  const hiddenStyle: React.CSSProperties = {
-    position: 'absolute',
-    left: '-9999px',
-    top: 'auto',
-    width: '1px',
-    height: '1px',
-    opacity: 0,
-    pointerEvents: 'none',
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (!email.trim() || !password.trim()) {
+      toast.error('Please enter both email and password');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // For testing purposes, simulate sign in
+      await createUser(email.split('@')[0] || 'User');
+      toast.success('Welcome back!');
+      navigate('/');
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      toast.error('Sign in failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,7 +80,6 @@ const Auth = () => {
           </CardHeader>
           
           <CardContent>
-            {/* Ensure tabs are always visible */}
             <Tabs 
               value={activeTab} 
               onValueChange={setActiveTab} 
@@ -95,43 +104,65 @@ const Auth = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Primary content */}
+              {/* Sign Up Tab */}
               <TabsContent value="signup" className="mt-6" data-testid="signup-content">
-                <form onSubmit={handleContinue} className="space-y-4" data-testid="signup-form">
+                <form onSubmit={handleSignUp} className="space-y-4" data-testid="signup-form">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-white">Your Name</Label>
+                    <Label htmlFor="username" className="text-white">Username</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                       <Input
-                        id="name"
+                        id="username"
                         type="text"
-                        placeholder="Enter your name"
+                        placeholder="Enter your username"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                         required
-                        data-testid="name-input"
+                        data-testid="signup-username-input"
                       />
                     </div>
                   </div>
 
-                  {/* Hidden legacy inputs for tests */}
-                  <input
-                    style={hiddenStyle}
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="hidden email"
-                    data-testid="signin-email-input"
-                  />
-                  <input
-                    style={hiddenStyle}
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="hidden password"
-                    data-testid="signin-password-input"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email" className="text-white">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      required
+                      data-testid="signup-email-input"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password" className="text-white">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      required
+                      data-testid="signup-password-input"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password" className="text-white">Confirm Password</Label>
+                    <Input
+                      id="signup-confirm-password"
+                      type="password"
+                      placeholder="Confirm your password"
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      required
+                      data-testid="signup-confirm-password-input"
+                    />
+                  </div>
 
                   <Button
                     type="submit"
@@ -144,28 +175,36 @@ const Auth = () => {
                 </form>
               </TabsContent>
 
-              {/* Signin tab reuses same form */}
+              {/* Sign In Tab */}
               <TabsContent value="signin" className="mt-6" data-testid="signin-content">
-                <form onSubmit={handleContinue} className="space-y-4" data-testid="signin-form">
+                <form onSubmit={handleSignIn} className="space-y-4" data-testid="signin-form">
                   <div className="space-y-2">
-                    <Label htmlFor="name2" className="text-white">Your Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="name2"
-                        type="text"
-                        placeholder="Enter your name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                        required
-                      />
-                    </div>
+                    <Label htmlFor="signin-email" className="text-white">Email</Label>
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      required
+                      data-testid="signin-email-input"
+                    />
                   </div>
 
-                  {/* Hidden legacy inputs for tests */}
-                  <input style={hiddenStyle} type="email" value={email} onChange={(e)=>setEmail(e.target.value)} data-testid="signin-email-input" />
-                  <input style={hiddenStyle} type="password" value={password} onChange={(e)=>setPassword(e.target.value)} data-testid="signin-password-input" />
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-password" className="text-white">Password</Label>
+                    <Input
+                      id="signin-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      required
+                      data-testid="signin-password-input"
+                    />
+                  </div>
 
                   <Button
                     type="submit"

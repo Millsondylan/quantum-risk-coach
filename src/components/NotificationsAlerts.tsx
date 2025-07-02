@@ -25,10 +25,21 @@ import {
   Clock,
   Zap,
   Send,
-  BarChart3
+  BarChart3,
+  CheckCircle,
+  Info,
+  Mail,
+  Edit,
+  Trash,
+  Filter,
+  Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { aiService } from '@/lib/api';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '../hooks/use-toast';
 
 interface PriceAlert {
   id: string;
@@ -61,6 +72,58 @@ interface TelegramConfig {
   lastMessage?: Date;
 }
 
+interface Notification {
+  id: string;
+  type: 'trade' | 'alert' | 'system' | 'news' | 'performance' | 'risk';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
+  actionUrl?: string;
+  metadata?: Record<string, any>;
+}
+
+interface AlertRule {
+  id: string;
+  name: string;
+  type: 'price' | 'indicator' | 'pattern' | 'risk' | 'performance' | 'news';
+  symbol?: string;
+  condition: string;
+  threshold: number;
+  enabled: boolean;
+  notifications: {
+    push: boolean;
+    email: boolean;
+    sms: boolean;
+    inApp: boolean;
+  };
+  createdAt: string;
+  lastTriggered?: string;
+  triggerCount: number;
+}
+
+interface NotificationPreferences {
+  tradeAlerts: boolean;
+  priceAlerts: boolean;
+  riskAlerts: boolean;
+  performanceAlerts: boolean;
+  newsAlerts: boolean;
+  systemAlerts: boolean;
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  inAppNotifications: boolean;
+  quietHours: {
+    enabled: boolean;
+    start: string;
+    end: string;
+  };
+  soundEnabled: boolean;
+  vibrationEnabled: boolean;
+}
+
 const NotificationsAlerts = () => {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [settings, setSettings] = useState<NotificationSettings>({
@@ -86,6 +149,34 @@ const NotificationsAlerts = () => {
     value: 0
   });
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
+  const [preferences, setPreferences] = useState<NotificationPreferences>({
+    tradeAlerts: true,
+    priceAlerts: true,
+    riskAlerts: true,
+    performanceAlerts: true,
+    newsAlerts: false,
+    systemAlerts: true,
+    pushNotifications: true,
+    emailNotifications: true,
+    smsNotifications: false,
+    inAppNotifications: true,
+    quietHours: {
+      enabled: false,
+      start: '22:00',
+      end: '08:00'
+    },
+    soundEnabled: true,
+    vibrationEnabled: true
+  });
+  const [activeTab, setActiveTab] = useState('notifications');
+  const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateAlert, setShowCreateAlert] = useState(false);
+  const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { toast: useToastToast } = useToast();
 
   useEffect(() => {
     // Check notification permission
@@ -276,7 +367,7 @@ const NotificationsAlerts = () => {
 
   const testTelegramConnection = async () => {
     try {
-      const testMessage = '🤖 Quantum Risk Coach: Telegram integration test successful!';
+      const testMessage = '🤖 Qlarity: Telegram integration test successful!';
       await sendTelegramMessage(testMessage);
       
       setTelegramConfig(prev => ({
@@ -355,6 +446,191 @@ const NotificationsAlerts = () => {
 
   const popularSymbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'BTCUSD', 'ETHUSD', 'XAUUSD', 'SPX500'];
 
+  // Mock data
+  useEffect(() => {
+    const mockNotifications: Notification[] = [
+      {
+        id: '1',
+        type: 'trade',
+        title: 'Trade Executed',
+        message: 'EUR/USD buy order executed at 1.0850',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        read: false,
+        priority: 'medium',
+        category: 'Trade Execution'
+      },
+      {
+        id: '2',
+        type: 'alert',
+        title: 'Price Alert Triggered',
+        message: 'BTC/USD has reached your target price of $45,000',
+        timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        read: false,
+        priority: 'high',
+        category: 'Price Alert'
+      },
+      {
+        id: '3',
+        type: 'risk',
+        title: 'Risk Warning',
+        message: 'Your daily loss limit is approaching (85% used)',
+        timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        read: true,
+        priority: 'critical',
+        category: 'Risk Management'
+      },
+      {
+        id: '4',
+        type: 'performance',
+        title: 'Weekly Performance',
+        message: 'Your portfolio is up 3.2% this week',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        read: true,
+        priority: 'low',
+        category: 'Performance'
+      },
+      {
+        id: '5',
+        type: 'news',
+        title: 'Market News',
+        message: 'Federal Reserve announces interest rate decision',
+        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+        read: true,
+        priority: 'medium',
+        category: 'Market News'
+      }
+    ];
+
+    const mockAlertRules: AlertRule[] = [
+      {
+        id: '1',
+        name: 'BTC Price Alert',
+        type: 'price',
+        symbol: 'BTC/USD',
+        condition: 'above',
+        threshold: 45000,
+        enabled: true,
+        notifications: {
+          push: true,
+          email: true,
+          sms: false,
+          inApp: true
+        },
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        lastTriggered: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        triggerCount: 3
+      },
+      {
+        id: '2',
+        name: 'Daily Loss Limit',
+        type: 'risk',
+        condition: 'daily_loss',
+        threshold: 500,
+        enabled: true,
+        notifications: {
+          push: true,
+          email: true,
+          sms: true,
+          inApp: true
+        },
+        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        triggerCount: 1
+      },
+      {
+        id: '3',
+        name: 'RSI Oversold',
+        type: 'indicator',
+        symbol: 'EUR/USD',
+        condition: 'rsi_below',
+        threshold: 30,
+        enabled: false,
+        notifications: {
+          push: false,
+          email: true,
+          sms: false,
+          inApp: true
+        },
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        triggerCount: 0
+      }
+    ];
+
+    setNotifications(mockNotifications);
+    setAlertRules(mockAlertRules);
+    setUnreadCount(mockNotifications.filter(n => !n.read).length);
+  }, []);
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'trade': return <Zap className="h-4 w-4" />;
+      case 'alert': return <AlertTriangle className="h-4 w-4" />;
+      case 'risk': return <AlertTriangle className="h-4 w-4 text-red-500" />;
+      case 'performance': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'news': return <Info className="h-4 w-4 text-blue-500" />;
+      case 'system': return <Settings className="h-4 w-4 text-gray-500" />;
+      default: return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const markAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+    useToastToast({
+      title: "All notifications marked as read",
+      description: "You've cleared all unread notifications."
+    });
+  };
+
+  const deleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    useToastToast({
+      title: "Notification deleted",
+      description: "The notification has been removed."
+    });
+  };
+
+  const toggleAlertRule = (id: string) => {
+    setAlertRules(prev => 
+      prev.map(rule => rule.id === id ? { ...rule, enabled: !rule.enabled } : rule)
+    );
+  };
+
+  const deleteAlertRule = (id: string) => {
+    setAlertRules(prev => prev.filter(rule => rule.id !== id));
+    useToastToast({
+      title: "Alert rule deleted",
+      description: "The alert rule has been removed."
+    });
+  };
+
+  const filteredNotifications = notifications.filter(notification => {
+    const matchesFilter = filter === 'all' || notification.type === filter;
+    const matchesSearch = notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         notification.message.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  const filteredAlertRules = alertRules.filter(rule => 
+    rule.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -383,17 +659,20 @@ const NotificationsAlerts = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="alerts" className="space-y-6">
+      <Tabs defaultValue="notifications" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4 md:grid-cols-4">
-          <TabsTrigger value="alerts" className="flex items-center space-x-2">
-            <Target className="w-4 h-4" />
-            <span className="hidden sm:inline">Price Alerts</span>
-            <span className="sm:hidden">Alerts</span>
+          <TabsTrigger value="notifications" className="flex items-center space-x-2">
+            <Bell className="w-4 h-4" />
+            <span className="hidden sm:inline">Notifications</span>
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="h-5 w-5 p-0 text-xs">
+                {unreadCount}
+              </Badge>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="telegram" className="flex items-center space-x-2">
-            <MessageCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Telegram</span>
-            <span className="sm:hidden">Bot</span>
+          <TabsTrigger value="alerts" className="flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="hidden sm:inline">Alert Rules</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center space-x-2">
             <Settings className="w-4 h-4" />
@@ -405,262 +684,217 @@ const NotificationsAlerts = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Price Alerts Tab */}
-        <TabsContent value="alerts" className="space-y-6">
-          {/* Create New Alert */}
-          <Card className="holo-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Plus className="w-5 h-5 text-green-400" />
-                <span>Create Price Alert</span>
-              </CardTitle>
-              <CardDescription>
-                Get notified when your favorite instruments reach target prices
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="symbol">Symbol</Label>
-                  <Select value={newAlert.symbol} onValueChange={(value) => setNewAlert(prev => ({ ...prev, symbol: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select symbol" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {popularSymbols.map(symbol => (
-                        <SelectItem key={symbol} value={symbol}>{symbol}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="condition">Condition</Label>
-                  <Select value={newAlert.condition} onValueChange={(value: any) => setNewAlert(prev => ({ ...prev, condition: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="above">Above</SelectItem>
-                      <SelectItem value="below">Below</SelectItem>
-                      <SelectItem value="crosses_up">Crosses Up</SelectItem>
-                      <SelectItem value="crosses_down">Crosses Down</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="value">Price Level</Label>
-                  <Input
-                    type="number"
-                    step="0.0001"
-                    value={newAlert.value || ''}
-                    onChange={(e) => setNewAlert(prev => ({ ...prev, value: parseFloat(e.target.value) || 0 }))}
-                    placeholder="Enter price"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button onClick={addPriceAlert} className="w-full holo-button">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Alert
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="space-y-6">
+          {/* Filters */}
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="trade">Trades</SelectItem>
+                  <SelectItem value="alert">Alerts</SelectItem>
+                  <SelectItem value="risk">Risk</SelectItem>
+                  <SelectItem value="performance">Performance</SelectItem>
+                  <SelectItem value="news">News</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search notifications..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-64"
+              />
+            </div>
+          </div>
 
-          {/* Active Alerts */}
-          <Card className="holo-card">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Active Price Alerts ({alerts.filter(a => a.isActive).length})</span>
-                <Badge variant="outline" className="text-cyan-400">
-                  {alerts.length} Total
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {alerts.length === 0 ? (
-                <div className="text-center py-8">
-                  <Target className="w-12 h-12 mx-auto text-slate-600 mb-4" />
-                  <p className="text-slate-400">No price alerts set up yet</p>
-                  <p className="text-sm text-slate-500">Create your first alert above</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {alerts.map((alert) => (
-                    <div key={alert.id} className="flex items-center justify-between p-4 rounded-lg bg-slate-700/30 border border-slate-600/30">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-3 h-3 rounded-full ${alert.isActive ? 'bg-green-400' : 'bg-slate-500'}`}></div>
-                        <div>
+          {/* Notifications List */}
+          <ScrollArea className="h-[600px]">
+            <div className="space-y-2">
+              {filteredNotifications.map((notification) => (
+                <Card key={notification.id} className={`transition-all ${!notification.read ? 'border-l-4 border-l-blue-500 bg-blue-50' : ''}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3 flex-1">
+                        <div className="flex-shrink-0 mt-1">
+                          {getTypeIcon(notification.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium text-white">{alert.symbol}</span>
+                            <h4 className="font-semibold text-gray-900">{notification.title}</h4>
+                            <div className={`w-2 h-2 rounded-full ${getPriorityColor(notification.priority)}`} />
                             <Badge variant="outline" className="text-xs">
-                              {alert.condition}
+                              {notification.category}
                             </Badge>
-                            <span className="text-cyan-400 font-mono">{alert.value}</span>
                           </div>
-                          <div className="text-xs text-slate-400 flex items-center space-x-3">
-                            <span>Created: {alert.created.toLocaleDateString()}</span>
-                            {alert.triggerCount > 0 && (
-                              <span>Triggered: {alert.triggerCount}x</span>
-                            )}
+                          <p className="text-gray-600 mt-1">{notification.message}</p>
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                            <span className="flex items-center space-x-1">
+                              <Clock className="h-3 w-3" />
+                              <span>{new Date(notification.timestamp).toLocaleString()}</span>
+                            </span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
+                        {!notification.read && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => markAsRead(notification.id)}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleAlert(alert.id)}
-                          className={alert.isActive ? 'text-green-400' : 'text-slate-400'}
+                          onClick={() => deleteNotification(notification.id)}
                         >
-                          {alert.isActive ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteAlert(alert.id)}
-                          className="text-red-400"
-                        >
-                          <X className="w-4 h-4" />
+                          <Trash className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
         </TabsContent>
 
-        {/* Telegram Integration Tab */}
-        <TabsContent value="telegram" className="space-y-6">
-          <Card className="holo-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MessageCircle className="w-5 h-5 text-blue-400" />
-                <span>Telegram Bot Integration</span>
-                <Badge variant={telegramConfig.isConnected ? 'default' : 'destructive'}>
-                  {telegramConfig.isConnected ? 'Connected' : 'Disconnected'}
-                </Badge>
-              </CardTitle>
-              <CardDescription>
-                Receive trading alerts directly on Telegram for instant mobile notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="botToken">Bot Token</Label>
-                  <Input
-                    type="password"
-                    value={telegramConfig.botToken}
-                    onChange={(e) => setTelegramConfig(prev => ({ ...prev, botToken: e.target.value }))}
-                    placeholder="Enter your Telegram bot token"
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-slate-400">
-                    Get your bot token from @BotFather on Telegram
-                  </p>
+        {/* Alert Rules Tab */}
+        <TabsContent value="alerts" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search alert rules..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-64"
+              />
+            </div>
+            <Dialog open={showCreateAlert} onOpenChange={setShowCreateAlert}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center space-x-2">
+                  <Plus className="h-4 w-4" />
+                  <span>Create Alert</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Alert Rule</DialogTitle>
+                  <DialogDescription>
+                    Set up a new alert rule to monitor market conditions
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Alert Name</label>
+                    <Input placeholder="e.g., BTC Price Alert" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Alert Type</label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="price">Price Alert</SelectItem>
+                        <SelectItem value="indicator">Technical Indicator</SelectItem>
+                        <SelectItem value="pattern">Chart Pattern</SelectItem>
+                        <SelectItem value="risk">Risk Management</SelectItem>
+                        <SelectItem value="performance">Performance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Symbol (Optional)</label>
+                    <Input placeholder="e.g., BTC/USD" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Condition</label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select condition" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="above">Above</SelectItem>
+                        <SelectItem value="below">Below</SelectItem>
+                        <SelectItem value="crosses">Crosses</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Threshold</label>
+                    <Input type="number" placeholder="Enter value" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="chatId">Chat ID</Label>
-                  <Input
-                    value={telegramConfig.chatId}
-                    onChange={(e) => setTelegramConfig(prev => ({ ...prev, chatId: e.target.value }))}
-                    placeholder="Enter your chat ID"
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-slate-400">
-                    Send /start to your bot and get your chat ID from @userinfobot
-                  </p>
-                </div>
-                <div className="flex space-x-2">
-                  <Button 
-                    onClick={testTelegramConnection}
-                    disabled={!telegramConfig.botToken || !telegramConfig.chatId}
-                    className="holo-button"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Test Connection
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowCreateAlert(false)}>
+                    Cancel
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      localStorage.setItem('telegramConfig', JSON.stringify(telegramConfig));
-                      toast.success('Telegram settings saved');
-                    }}
-                    className="border-slate-600"
-                  >
-                    Save Settings
+                  <Button onClick={() => setShowCreateAlert(false)}>
+                    Create Alert
                   </Button>
-                </div>
-              </div>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
 
-              {telegramConfig.isConnected && (
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">Telegram Connected</span>
+          <div className="grid gap-4">
+            {filteredAlertRules.map((rule) => (
+              <Card key={rule.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Switch
+                        checked={rule.enabled}
+                        onCheckedChange={() => toggleAlertRule(rule.id)}
+                      />
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{rule.name}</h4>
+                        <p className="text-sm text-gray-600">
+                          {rule.symbol && `${rule.symbol} `}
+                          {rule.condition} {rule.threshold}
+                        </p>
+                        <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                          <span>Triggered {rule.triggerCount} times</span>
+                          {rule.lastTriggered && (
+                            <span>Last: {new Date(rule.lastTriggered).toLocaleString()}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingRule(rule)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteAlertRule(rule.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-300">
-                    You'll receive trading alerts and notifications on Telegram
-                  </p>
-                  {telegramConfig.lastMessage && (
-                    <p className="text-xs text-slate-400 mt-1">
-                      Last message: {telegramConfig.lastMessage.toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Telegram Features */}
-          <Card className="holo-card">
-            <CardHeader>
-              <CardTitle>Available Telegram Features</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-slate-700/30 border border-slate-600/30">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-white">Price Alerts</span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Instant notifications when your price targets are hit
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-700/30 border border-slate-600/30">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <DollarSign className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-medium text-white">Trade Executions</span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Get notified when trades are opened or closed
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-700/30 border border-slate-600/30">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-orange-400" />
-                    <span className="text-sm font-medium text-white">Risk Warnings</span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Receive alerts when risk limits are approached
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-700/30 border border-slate-600/30">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <BarChart3 className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm font-medium text-white">Market Updates</span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Daily market summaries and economic calendar events
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
 
         {/* Settings Tab */}
@@ -790,29 +1024,29 @@ const NotificationsAlerts = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {alerts.filter(a => a.triggered).map((alert) => (
-                  <div key={`${alert.id}-triggered`} className="flex items-center justify-between p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
+                {notifications.map((notification) => (
+                  <div key={notification.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
                     <div className="flex items-center space-x-3">
                       <Check className="w-4 h-4 text-green-400" />
                       <div>
                         <p className="text-sm font-medium text-white">
-                          {alert.symbol} {alert.condition} {alert.value}
+                          {notification.title}
                         </p>
                         <p className="text-xs text-slate-400">
-                          Triggered: {alert.triggered?.toLocaleString()}
+                          {notification.message}
                         </p>
                       </div>
                     </div>
                     <Badge variant="outline" className="text-green-400">
-                      Delivered
+                      {notification.category}
                     </Badge>
                   </div>
                 ))}
-                {alerts.filter(a => a.triggered).length === 0 && (
+                {notifications.length === 0 && (
                   <div className="text-center py-8">
                     <Clock className="w-12 h-12 mx-auto text-slate-600 mb-4" />
-                    <p className="text-slate-400">No triggered alerts yet</p>
-                    <p className="text-sm text-slate-500">Your alert history will appear here</p>
+                    <p className="text-slate-400">No notifications yet</p>
+                    <p className="text-sm text-slate-500">Your notification history will appear here</p>
                   </div>
                 )}
               </div>

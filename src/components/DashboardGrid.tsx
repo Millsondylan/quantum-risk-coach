@@ -143,7 +143,11 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ layout = 'standard' }) =>
   if (isMobile) {
     return (
       <div className="space-y-6 p-4">
-        {/* Critical components first for mobile */}
+        {/* AI Coach always at the top */}
+        <div className="space-y-2">
+          <h2 className="text-lg font-bold text-white">AI Trading Coach</h2>
+          <MemoizedAICoachCard />
+        </div>
         <div className="space-y-4">
           {componentMap['quick-stats']}
           {componentMap['recent-trades']}
@@ -151,7 +155,6 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ layout = 'standard' }) =>
           {layout === 'journal' && componentMap['enhanced-journal']}
           {layout === 'analytics' && componentMap['advanced-analytics']}
           {componentMap['performance-calendar']}
-          {componentMap['ai-coach']}
         </div>
       </div>
     );
@@ -160,6 +163,11 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ layout = 'standard' }) =>
   // Desktop/tablet layout with optimized grid
   return (
     <div className="space-y-6">
+      {/* AI Coach always at the top */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-bold text-white">AI Trading Coach</h2>
+        <MemoizedAICoachCard />
+      </div>
       {/* Welcome Header */}
       <div className="flex items-center justify-between">
         <div>

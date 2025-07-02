@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Settings, User, LogOut, TrendingUp, Activity, Database, RefreshCw } from 'lucide-react';
+import { Bell, Settings, User, LogOut, TrendingUp, Activity, Database, RefreshCw, Home, BookOpen, PlusCircle, BarChart3 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { Button } from '@/components/ui/button';
 import { 
@@ -156,7 +156,7 @@ const Header: React.FC = () => {
       case '/performance-calendar': return 'Analytics';
       case '/strategy-analyzer': return 'Strategy';
       case '/settings': return 'Settings';
-      default: return 'Quantum Risk Coach';
+      default: return 'Qlarity';
     }
   };
 
@@ -173,36 +173,37 @@ const Header: React.FC = () => {
           realDataService.getForexRates()
         ]);
         
-        // Update market data (this would typically trigger a re-render of the component that uses this data)
-        console.log('Market data refreshed:', { cryptoData, forexData });
+        toast.success('Market data refreshed');
+      } else {
+        toast.error('No working APIs available');
       }
-      
-      setNotifications(3); // Assuming the number of notifications doesn't change on refresh
     } catch (error) {
-      console.error('Error refreshing market data:', error);
+      toast.error('Failed to refresh market data');
     } finally {
       setRefreshing(false);
     }
   };
 
   const MarketTicker = ({ symbol, data }: { symbol: string; data: { price: number; change: number; source: string; status: string } }) => (
-    <div className="flex items-center gap-2 px-3 py-1 bg-slate-900/50 rounded-lg border border-slate-700/50 backdrop-blur-sm">
-      <span className="text-xs font-medium text-slate-300">{symbol}</span>
-      <span className="text-sm font-semibold text-white">
-        {symbol === 'BTC' ? `$${data.price.toFixed(0)}` : data.price.toFixed(4)}
-      </span>
-      <span className={`text-xs font-medium ${data.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-        {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)}%
+    <div className="flex items-center gap-1 text-xs">
+      <span className="text-slate-400">{symbol}:</span>
+      <span className="text-white font-medium">
+        {data.status === 'connected' ? `$${data.price.toFixed(2)}` : '--'}
       </span>
       {data.status === 'connected' && (
-        <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
+        <span className={cn(
+          "ml-1",
+          data.change >= 0 ? "text-green-400" : "text-red-400"
+        )}>
+          {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)}%
+        </span>
       )}
     </div>
   );
 
   const getStatusColor = () => {
     switch (apiStatus) {
-      case 'connected': return 'text-emerald-400';
+      case 'connected': return 'text-green-400';
       case 'error': return 'text-red-400';
       default: return 'text-yellow-400';
     }
@@ -210,17 +211,17 @@ const Header: React.FC = () => {
 
   const getStatusBg = () => {
     switch (apiStatus) {
-      case 'connected': return 'bg-emerald-500/10 border-emerald-500/20';
-      case 'error': return 'bg-red-500/10 border-red-500/20';
-      default: return 'bg-yellow-500/10 border-yellow-500/20';
+      case 'connected': return 'bg-green-500/10';
+      case 'error': return 'bg-red-500/10';
+      default: return 'bg-yellow-500/10';
     }
   };
 
   const getStatusText = () => {
     switch (apiStatus) {
-      case 'connected': return 'LIVE DATA';
-      case 'error': return 'API ERROR';
-      default: return 'CONNECTING';
+      case 'connected': return 'Live Data';
+      case 'error': return 'Offline';
+      default: return 'Connecting...';
     }
   };
 
@@ -234,13 +235,62 @@ const Header: React.FC = () => {
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div className="hidden md:block">
-              <h1 className="text-lg font-bold text-white">Quantum Risk Coach</h1>
+              <h1 className="text-lg font-bold text-white">Qlarity</h1>
             </div>
           </Link>
           
           <div className="hidden lg:block text-slate-400 text-sm">
             {getPageTitle()}
           </div>
+        </div>
+
+        {/* Navigation Links */}
+        <div className="hidden md:flex items-center space-x-6">
+          <Link 
+            to="/" 
+            className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
+            aria-label="Navigate to Overview"
+            data-testid="nav-overview"
+          >
+            <Home className="w-4 h-4" />
+            <span>Overview</span>
+          </Link>
+          <Link 
+            to="/journal" 
+            className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
+            aria-label="Navigate to Journal"
+            data-testid="nav-journal"
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Journal</span>
+          </Link>
+          <Link 
+            to="/trade-builder" 
+            className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
+            aria-label="Navigate to Trade"
+            data-testid="nav-trade"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Trade</span>
+          </Link>
+          <Link 
+            to="/performance-calendar" 
+            className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
+            aria-label="Navigate to Analytics"
+            data-testid="nav-analytics"
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Analytics</span>
+          </Link>
+          <Link 
+            to="/settings" 
+            className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
+            aria-label="Navigate to Profile"
+            data-testid="nav-profile"
+          >
+            <User className="w-4 h-4" />
+            <span>Profile</span>
+          </Link>
         </div>
 
         {/* Market Data Tickers - Desktop */}

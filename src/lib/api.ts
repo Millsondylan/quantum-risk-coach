@@ -18,7 +18,7 @@ const API_CONFIG = {
   timeout: 10000, // 10 seconds timeout for mobile networks
   headers: {
     'Content-Type': 'application/json',
-    'User-Agent': 'QuantumRiskCoach/1.0',
+    'User-Agent': 'Qlarity/1.0',
   }
 };
 
@@ -96,7 +96,7 @@ class APIService {
   private openAIKey: string;
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api.quantumriskcoach.com';
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api.qlarity.com';
     this.openAIKey = import.meta.env.VITE_OPENAI_API_KEY || '';
   }
 
@@ -244,7 +244,7 @@ class APIService {
   // Mobile-optimized WebSocket connection for real-time data
   createWebSocketConnection(symbol: string, callback: (data: any) => void): WebSocket | null {
     try {
-      const wsUrl = `wss://api.quantumriskcoach.com/ws/live/${symbol}`;
+      const wsUrl = `wss://api.qlarity.com/ws/live/${symbol}`;
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
@@ -293,7 +293,7 @@ class APIService {
             body: message,
             icon: '/icon-192x192.png',
             badge: '/icon-72x72.png',
-            tag: 'quantum-risk-coach',
+            tag: 'qlarity',
             requireInteraction: type === 'warning' || type === 'error',
             data: {
               type,

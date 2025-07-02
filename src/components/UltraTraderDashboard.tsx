@@ -452,21 +452,21 @@ const UltraTraderDashboard = () => {
             onClick={handleConnectBroker}
                       variant="outline"
             className="flex-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
-          >
+                    >
             <Database className="w-4 h-4 mr-2" />
             Connect
-          </Button>
-          <Button 
+                    </Button>
+              <Button
             onClick={handleViewAnalytics}
             variant="outline"
             className="flex-1 border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
           >
             <BarChart3 className="w-4 h-4 mr-2" />
             Analytics
-                    </Button>
+              </Button>
                   </div>
-                </div>
-
+            </div>
+            
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
         <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border-slate-600/30">
@@ -505,17 +505,17 @@ const UltraTraderDashboard = () => {
                     <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
                       <DollarSign className="w-4 h-4 text-white" />
               </div>
-                    <div>
+              <div>
                       <p className="text-white font-medium">{item.symbol || 'EUR/USD'}</p>
                       <p className="text-sm text-slate-400">{item.rate || '1.1000'}</p>
-                    </div>
+                </div>
                   </div>
                   <div className="text-right">
                     <p className={`font-semibold ${(item.change_24h || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {(item.change_24h || 0) > 0 ? '+' : ''}{(item.change_24h || 0).toFixed(2)}%
                     </p>
-                  </div>
                 </div>
+              </div>
               ))}
             </CardContent>
           </Card>
@@ -541,8 +541,8 @@ const UltraTraderDashboard = () => {
                       <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
                         {insight.type}
                       </Badge>
-                    </div>
                   </div>
+                </div>
                 ))}
             </CardContent>
           </Card>
@@ -561,12 +561,12 @@ const UltraTraderDashboard = () => {
                 <div className="text-center p-3 bg-slate-700/30 rounded-lg">
                   <p className="text-slate-400 text-sm">Avg Win</p>
                   <p className="text-green-400 font-semibold">${portfolioStats.avgWin.toFixed(2)}</p>
-              </div>
+                  </div>
                 <div className="text-center p-3 bg-slate-700/30 rounded-lg">
                   <p className="text-slate-400 text-sm">Avg Loss</p>
                   <p className="text-red-400 font-semibold">${portfolioStats.avgLoss.toFixed(2)}</p>
                 </div>
-              </div>
+                  </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-slate-700/30 rounded-lg">
                   <p className="text-slate-400 text-sm">Largest Win</p>
@@ -575,7 +575,7 @@ const UltraTraderDashboard = () => {
                 <div className="text-center p-3 bg-slate-700/30 rounded-lg">
                   <p className="text-slate-400 text-sm">Largest Loss</p>
                   <p className="text-red-400 font-semibold">${portfolioStats.largestLoss.toFixed(2)}</p>
-                </div>
+              </div>
               </div>
             </CardContent>
           </Card>
@@ -616,7 +616,7 @@ const UltraTraderDashboard = () => {
             {filteredTrades.map((trade) => (
               <Card key={trade.id} className="bg-slate-800/50 border-slate-600/30">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
                         {getDirectionIcon(trade.direction)}
@@ -645,14 +645,14 @@ const UltraTraderDashboard = () => {
                       <p className="text-sm text-slate-400">
                         {trade.timestamp.toLocaleDateString()}
                       </p>
-                  </div>
                 </div>
+              </div>
 
                   <div className="grid grid-cols-3 gap-4 text-sm mb-3">
                     <div>
                       <p className="text-slate-400">Entry</p>
                       <p className="text-white">${trade.entryPrice.toFixed(4)}</p>
-                  </div>
+            </div>
                     {trade.exitPrice && (
                       <div>
                         <p className="text-slate-400">Exit</p>
@@ -672,7 +672,7 @@ const UltraTraderDashboard = () => {
                           {strategy}
                         </Badge>
                     ))}
-                  </div>
+        </div>
                   )}
 
                   {trade.notes && (
@@ -681,9 +681,9 @@ const UltraTraderDashboard = () => {
 
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-600/30">
                                         <div className="flex space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
                         className="text-slate-400 hover:text-white"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -692,10 +692,10 @@ const UltraTraderDashboard = () => {
                         }}
                       >
                         <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
                         className="text-red-400 hover:text-red-300"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -707,12 +707,12 @@ const UltraTraderDashboard = () => {
                         }}
                       >
                         <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                </Button>
+              </div>
                     <div className="flex items-center space-x-2 text-xs text-slate-400">
                       <Clock className="w-3 h-3" />
                       <span>{trade.duration || 'N/A'}</span>
-              </div>
+            </div>
             </div>
           </CardContent>
         </Card>
@@ -729,7 +729,7 @@ const UltraTraderDashboard = () => {
                 <PieChart className="w-5 h-5 mr-2 text-green-400" />
                 Win/Loss Ratio
               </CardTitle>
-            </CardHeader>
+          </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center h-32">
                 <div className="text-center">

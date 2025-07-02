@@ -25,7 +25,7 @@ export const verifyCompleteSetup = async (): Promise<SetupStatus> => {
     instructions: []
   };
 
-  console.log('🔍 Verifying complete Quantum Risk Coach setup...');
+  console.log('�� Verifying complete Qlarity setup...');
 
   // Step 1: Environment Variables
   console.log('\n1️⃣ Checking environment variables...');
@@ -128,7 +128,7 @@ export const verifyCompleteSetup = async (): Promise<SetupStatus> => {
   console.log(`Overall Ready: ${status.ready ? '🎉' : '⚠️'}`);
 
   if (status.ready) {
-    console.log('\n🎉 Congratulations! Your Quantum Risk Coach setup is complete and ready to use!');
+    console.log('\n🎉 Congratulations! Your Qlarity setup is complete and ready to use!');
   } else {
     console.log('\n⚠️ Setup incomplete. Please address the following issues:');
     status.issues.forEach((issue, index) => {

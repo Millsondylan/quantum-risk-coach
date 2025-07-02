@@ -2,6 +2,7 @@ import React, { useState, useEffect, memo, useMemo } from 'react';
 import { lazy, Suspense } from 'react';
 import { Target, Brain, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import Header from '@/components/Header';
 
 // Lazy load heavy components
 const UltraTraderDashboard = lazy(() => import('../components/UltraTraderDashboard'));
@@ -92,6 +93,7 @@ const Index = memo(() => {
   
   return (
     <div data-testid="page-container" className="min-h-screen bg-[#0A0B0D] text-white">
+      <Header />
       <main data-testid="main-content" className="main-content" role="main">
         <Suspense fallback={<SectionLoader />}>
           <UltraTraderDashboard />

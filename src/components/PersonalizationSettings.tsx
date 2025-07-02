@@ -36,14 +36,14 @@ import { useUser } from '@/contexts/UserContext';
 import { pushNotificationService, NotificationPreferences, PersonalizationProfile } from '@/lib/pushNotificationService';
 
 const PersonalizationSettings = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const [preferences, setPreferences] = useState<NotificationPreferences>(pushNotificationService.getPreferences());
   const [profile, setProfile] = useState<PersonalizationProfile | null>(pushNotificationService.getPersonalization());
   const [isLoading, setIsLoading] = useState(false);
   
   // User profile settings
   const [userProfile, setUserProfile] = useState({
-    displayName: user?.user_metadata?.display_name || '',
+    displayName: user?.name || '',
     tradingExperience: 'intermediate',
     riskTolerance: 'moderate',
     tradingStyle: 'day',
@@ -64,7 +64,10 @@ const PersonalizationSettings = () => {
     aiPersonality: 'balanced',
     learningMode: true,
     showTips: true,
-    confidenceThreshold: 70
+    confidenceThreshold: 70,
+    openaiKey: '',
+    groqKey: '',
+    geminiKey: ''
   });
 
   useEffect(() => {
@@ -124,7 +127,7 @@ const PersonalizationSettings = () => {
 
   const resetToDefaults = () => {
     setUserProfile({
-      displayName: user?.user_metadata?.display_name || '',
+      displayName: user?.name || '',
       tradingExperience: 'intermediate',
       riskTolerance: 'moderate',
       tradingStyle: 'day',
@@ -144,7 +147,10 @@ const PersonalizationSettings = () => {
       aiPersonality: 'balanced',
       learningMode: true,
       showTips: true,
-      confidenceThreshold: 70
+      confidenceThreshold: 70,
+      openaiKey: '',
+      groqKey: '',
+      geminiKey: ''
     });
 
     toast.success('Settings reset to defaults');
@@ -157,6 +163,20 @@ const PersonalizationSettings = () => {
     // Show personalized message based on settings
     const personalizedMessage = `Welcome ${userProfile.displayName || 'Trader'}! Your ${userProfile.tradingStyle} trading setup is optimized for ${userProfile.riskTolerance} risk tolerance.`;
     toast.success(personalizedMessage);
+  };
+
+  const saveApiKey = async (provider: string, key: string) => {
+    try {
+      // Save to localStorage
+      const storedKeys = localStorage.getItem('apiKeys');
+      const keys = storedKeys ? JSON.parse(storedKeys) : {};
+      keys[provider] = key;
+      localStorage.setItem('apiKeys', JSON.stringify(keys));
+      toast.success(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key saved successfully!`);
+    } catch (error) {
+      console.error(`Error saving ${provider} API key:`, error);
+      toast.error(`Failed to save ${provider} API key`);
+    }
   };
 
   return (
@@ -585,9 +605,28 @@ const PersonalizationSettings = () => {
                 <Brain className="w-5 h-5 text-cyan-400" />
                 <span>AI Coach Personalization</span>
               </CardTitle>
-              <CardDescription>Customize your AI trading coach behavior</CardDescription>
+              <CardDescription>Customize your AI trading coach behavior and manage API keys</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* API Key Management Section */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>OpenAI API Key</Label>
+                  <Input type="password" placeholder="Enter your OpenAI API Key" value={personalSettings.openaiKey || ''} onChange={e => setPersonalSettings({...personalSettings, openaiKey: e.target.value})} />
+                  <Button size="sm" onClick={() => saveApiKey('openai', personalSettings.openaiKey)}>Save</Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>Groq API Key</Label>
+                  <Input type="password" placeholder="Enter your Groq API Key" value={personalSettings.groqKey || ''} onChange={e => setPersonalSettings({...personalSettings, groqKey: e.target.value})} />
+                  <Button size="sm" onClick={() => saveApiKey('groq', personalSettings.groqKey)}>Save</Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>Gemini API Key</Label>
+                  <Input type="password" placeholder="Enter your Gemini API Key" value={personalSettings.geminiKey || ''} onChange={e => setPersonalSettings({...personalSettings, geminiKey: e.target.value})} />
+                  <Button size="sm" onClick={() => saveApiKey('gemini', personalSettings.geminiKey)}>Save</Button>
+                </div>
+              </div>
+              {/* Existing AI Coach Personalization Section */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>AI Personality</Label>

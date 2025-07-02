@@ -12,7 +12,8 @@ import {
   User,
   LineChart,
   Search,
-  Wallet
+  Wallet,
+  Bell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,51 +25,43 @@ const MobileBottomNav = () => {
     {
       href: '/',
       icon: Home,
-      label: 'Overview',
+      label: 'Home',
       activeColor: 'text-blue-400',
       paths: ['/'],
-      testId: 'nav-overview'
+      testId: 'nav-home'
     },
     {
-      href: '/journal',
-      icon: BookOpen,
-      label: 'Journal',
+      href: '/live-trades',
+      icon: TrendingUp,
+      label: 'Live Trades',
       activeColor: 'text-blue-400',
-      paths: ['/journal'],
-      testId: 'nav-journal'
+      paths: ['/live-trades'],
+      testId: 'nav-live-trades'
     },
     {
-      href: '/trade-builder',
+      href: '/add-trade',
       icon: PlusCircle,
-      label: 'Trade',
+      label: 'Add Trade',
       activeColor: 'text-blue-400',
       isHighlight: true,
-      paths: ['/trade-builder'],
-      testId: 'nav-trade'
+      paths: ['/add-trade'],
+      testId: 'nav-add-trade'
     },
     {
-      href: '/performance-calendar',
+      href: '/history',
       icon: BarChart3,
-      label: 'Analytics',
+      label: 'History',
       activeColor: 'text-blue-400',
-      paths: ['/performance-calendar', '/strategy-analyzer'],
-      testId: 'nav-analytics'
+      paths: ['/history'],
+      testId: 'nav-history'
     },
     {
-      href: '/mt4mt5-sync',
-      icon: TrendingUp,
-      label: 'Auto-Sync',
-      activeColor: 'text-cyan-400',
-      paths: ['/mt4mt5-sync'],
-      testId: 'nav-auto-sync'
-    },
-    {
-      href: '/settings',
-      icon: User,
-      label: 'Profile',
+      href: '/alarms',
+      icon: Bell,
+      label: 'Alarms',
       activeColor: 'text-blue-400',
-      paths: ['/settings'],
-      testId: 'nav-profile'
+      paths: ['/alarms'],
+      testId: 'nav-alarms'
     }
   ];
 

@@ -377,7 +377,7 @@ class RealDataService {
           `${API_ENDPOINTS.NEWS}/everything?q=trading OR forex OR cryptocurrency OR stocks&sortBy=publishedAt&language=en&pageSize=20&apiKey=${API_KEYS.NEWS}`,
           {
             headers: {
-              'User-Agent': 'QuantumRiskCoach/1.0'
+              'User-Agent': 'Qlarity/1.0'
             }
           }
         );

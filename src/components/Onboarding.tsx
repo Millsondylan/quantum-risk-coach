@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
 const Onboarding = () => {
-  const { completeOnboarding } = useUser();
+  const { completeOnboarding, user, createUser } = useUser();
   const [step, setStep] = useState(1);
   const [preferences, setPreferences] = useState({
     tradingStyle: 'day-trading' as any,
@@ -23,6 +23,7 @@ const Onboarding = () => {
     theme: 'dark' as any,
     language: 'en',
   });
+  const [username, setUsername] = useState('');
 
   const tradingStyles = [
     { value: 'scalping', label: 'Scalping', description: 'Quick trades, small profits' },
@@ -53,6 +54,9 @@ const Onboarding = () => {
   ];
 
   const handleComplete = async () => {
+    if (!user) {
+      await createUser(username);
+    }
     await completeOnboarding(preferences);
   };
 
@@ -61,9 +65,46 @@ const Onboarding = () => {
       case 1:
         return (
           <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 p-4">
+            <Card className="w-full max-w-md mx-auto relative z-10" data-testid="onboarding-step-username">
+              <CardHeader>
+                <CardTitle className="text-center">Create Your Username</CardTitle>
+                <p className="text-center text-muted-foreground">
+                  Choose a username to get started. This will be your identity in the app.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="username">Username</Label>
+                  <input
+                    id="username"
+                    type="text"
+                    className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={username}
+                    onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 20))}
+                    placeholder="Enter a username"
+                    autoFocus
+                    data-testid="onboarding-username-input"
+                  />
+                </div>
+                <Button
+                  onClick={() => setStep(2)}
+                  disabled={!username.trim()}
+                  className="w-full relative z-20"
+                  data-testid="onboarding-next-button"
+                >
+                  Next
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 p-4">
             <Card className="w-full max-w-md mx-auto relative z-10" data-testid="onboarding-step-1">
               <CardHeader>
-                <CardTitle className="text-center" data-testid="onboarding-title">Welcome to Quantum Risk Coach</CardTitle>
+                <CardTitle className="text-center" data-testid="onboarding-title">Welcome to Qlarity</CardTitle>
                 <p className="text-center text-muted-foreground">
                   Let's personalize your trading experience
                 </p>
@@ -100,7 +141,7 @@ const Onboarding = () => {
           </div>
         );
 
-      case 2:
+      case 3:
         return (
           <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 p-4">
             <Card className="w-full max-w-md mx-auto relative z-10" data-testid="onboarding-step-2">
@@ -147,7 +188,7 @@ const Onboarding = () => {
           </div>
         );
 
-      case 3:
+      case 4:
         return (
           <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 p-4">
             <Card className="w-full max-w-md mx-auto relative z-10" data-testid="onboarding-step-3">
@@ -201,7 +242,7 @@ const Onboarding = () => {
           </div>
         );
 
-      case 4:
+      case 5:
         return (
           <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 p-4">
             <Card className="w-full max-w-md mx-auto relative z-10" data-testid="onboarding-step-4">
@@ -248,7 +289,7 @@ const Onboarding = () => {
           </div>
         );
 
-      case 5:
+      case 6:
         return (
           <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 p-4">
             <Card className="w-full max-w-md mx-auto relative z-10" data-testid="onboarding-step-5">
@@ -314,7 +355,7 @@ const Onboarding = () => {
           </div>
         );
 
-      case 6:
+      case 7:
         return (
           <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 p-4">
             <Card className="w-full max-w-md mx-auto relative z-10" data-testid="onboarding-step-6">
@@ -356,7 +397,7 @@ const Onboarding = () => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(5)} className="flex-1 relative z-20" data-testid="onboarding-back-button">
+                  <Button variant="outline" onClick={() => setStep(6)} className="flex-1 relative z-20" data-testid="onboarding-back-button">
                     Back
                   </Button>
                   <Button 

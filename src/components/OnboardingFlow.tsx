@@ -41,7 +41,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete, onSkip }) =
 
   const steps = [
     {
-      title: "Welcome to Quantum Risk Coach",
+      title: "Welcome to Qlarity",
       description: "Let's personalize your trading experience",
       component: (
         <div className="space-y-6">

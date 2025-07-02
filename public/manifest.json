@@ -1,11 +1,11 @@
 {
-  "name": "Quantum Risk Coach",
-  "short_name": "QRCoach",
-  "description": "Professional Trading Coach with AI-Powered Insights and Risk Management",
-  "start_url": "/",
+  "name": "Qlarity",
+  "short_name": "Qlarity",
+  "description": "Qlarity - AI-powered trading journal and risk coach.",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#00d9ff",
+  "background_color": "#11161a",
+  "theme_color": "#11161a",
   "orientation": "portrait-primary",
   "categories": ["finance", "productivity", "business"],
   "lang": "en",
@@ -14,9 +14,9 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "qlarity-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
     },
     {
       "src": "placeholder.svg",

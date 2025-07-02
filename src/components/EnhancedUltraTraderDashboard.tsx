@@ -404,7 +404,7 @@ const EnhancedUltraTraderDashboard = () => {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold text-white">Quantum Risk Coach</h1>
+              <h1 className="text-xl font-semibold text-white">Qlarity</h1>
               <Badge 
                 variant="outline" 
                 className={cn(
@@ -626,6 +626,19 @@ const EnhancedUltraTraderDashboard = () => {
           </Button>
         </div>
 
+        {/* AI Coach Section - always at the top */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Brain className="w-5 h-5 text-blue-400" />
+              AI Trading Coach
+            </h2>
+            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20">
+              Live Analysis
+            </Badge>
+          </div>
+          <AICoachCard />
+        </div>
         {/* Personal Challenges Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -639,21 +652,6 @@ const EnhancedUltraTraderDashboard = () => {
           </div>
           <PersonalChallenges />
         </div>
-
-        {/* AI Coach Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Brain className="w-5 h-5 text-blue-400" />
-              AI Coaching Insights
-            </h2>
-            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20">
-              Live Analysis
-            </Badge>
-          </div>
-          <AICoachCard />
-        </div>
-
         {/* Risk Analysis Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">

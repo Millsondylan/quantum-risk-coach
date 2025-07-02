@@ -1,6 +1,6 @@
 # Integration Guide: Latest 2024-2025 AI Trading Technologies
 
-This guide explains how to integrate the new **AI Stream Service** and **Enhanced WebSocket Service** into your Quantum Risk Coach app.
+This guide explains how to integrate the new **AI Stream Service** and **Enhanced WebSocket Service** into your Qlarity app.
 
 ## Overview of New Services
 

@@ -184,7 +184,7 @@ const NotificationSystem = () => {
   const sendTestNotification = () => {
     if (pushPermission === 'granted') {
       new Notification('Test Notification', {
-        body: 'Your Quantum Risk Coach notifications are working!',
+        body: 'Your Qlarity notifications are working!',
         icon: '/favicon.ico',
         badge: '/favicon.ico',
         tag: 'test-notification'

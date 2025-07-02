@@ -5,7 +5,7 @@ const BASE = 'http://localhost:5173';
 // Helper function to authenticate a user
 const authenticateUser = async (page: any, name: string = 'Test User') => {
   await page.goto(`${BASE}/auth`);
-  await page.fill('[data-testid="name-input"]', name);
+  await page.fill('[data-testid="signup-username-input"]', name);
   await page.click('[data-testid="signup-button"]');
   await page.waitForURL(`${BASE}/`); // Wait for redirect to home page
 };
@@ -196,7 +196,7 @@ test.describe('Authentication', () => {
 
   test('password input exists', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await expect(page.locator('input[type="password"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signin-password-input"]')).toBeVisible();
   });
 
   test('sign in button exists', async ({ page }) => {
@@ -235,14 +235,14 @@ test.describe('Authentication', () => {
 
   test('password input accepts text', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.fill('input[type="password"]', 'password123');
-    await expect(page.locator('input[type="password"]')).toHaveValue('password123');
+    await page.fill('[data-testid="signin-password-input"]', 'password123');
+    await expect(page.locator('[data-testid="signin-password-input"]')).toHaveValue('password123');
   });
 
   test('form validation works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.fill('[data-testid="name-input"]', ''); // Clear the name input
-    await expect(page.locator('[data-testid="name-input"]')).toHaveValue(''); // Assert that the input is empty
+    await page.fill('[data-testid="signup-username-input"]', ''); // Clear the username input
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue(''); // Assert that the input is empty
     await page.click('[data-testid="signup-button"]');
     
     // Assert that the page remains on the auth URL

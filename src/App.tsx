@@ -22,6 +22,10 @@ const PerformanceCalendar = lazy(() => import("./pages/PerformanceCalendar"));
 const StrategyAnalyzer = lazy(() => import("./pages/StrategyAnalyzer"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const MT4MT5AutoSyncDashboard = lazy(() => import("./components/MT4MT5AutoSyncDashboard"));
+const LiveTrades = lazy(() => import('./pages/LiveTrades'));
+const AddTrade = lazy(() => import('./pages/AddTrade'));
+const History = lazy(() => import('./pages/History'));
+const Alarms = lazy(() => import('./pages/Alarms'));
 
 // Optimized QueryClient with better defaults
 const queryClient = new QueryClient({
@@ -45,7 +49,7 @@ const LoadingSpinner = memo(() => (
   <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
     <div className="text-center">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4" />
-      <p className="text-slate-400">Loading Quantum Risk Coach...</p>
+      <p className="text-slate-400">Loading Qlarity...</p>
     </div>
   </div>
 ));
@@ -156,6 +160,10 @@ const AppContent = memo(() => {
               <MT4MT5AutoSyncDashboard />
             </ProtectedRoute>
           } />
+          <Route path="/live-trades" element={<ProtectedRoute><LiveTrades /></ProtectedRoute>} />
+          <Route path="/add-trade" element={<ProtectedRoute><AddTrade /></ProtectedRoute>} />
+          <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+          <Route path="/alarms" element={<ProtectedRoute><Alarms /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

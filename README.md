@@ -1,4 +1,4 @@
-# 🚀 Quantum Risk Coach - Next-Gen Trading Intelligence Platform
+# 🚀 Qlarity - Next-Gen Trading Intelligence Platform
 
 A comprehensive AI-powered trading platform that combines advanced analytics, real-time coaching, and personalized risk management to elevate your trading performance.
 
@@ -364,9 +364,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ for traders who want to elevate their game**
 
-*Quantum Risk Coach - Where AI meets trading intelligence*
+*Qlarity - Where AI meets trading intelligence*
 
-# Quantum Risk Coach - Next-Gen Trading Intelligence
+# Qlarity - Next-Gen Trading Intelligence
 
 Advanced trading platform with AI-powered insights, real-time data, and comprehensive analytics. Built with React, TypeScript, and Capacitor for cross-platform mobile deployment.
 
@@ -593,9 +593,9 @@ For mobile-specific issues:
 
 ---
 
-**Quantum Risk Coach** - Empowering traders with AI-driven insights across all platforms.
+**Qlarity** - Empowering traders with AI-driven insights across all platforms.
 
-# Quantum Risk Coach
+# Qlarity
 
 A comprehensive trading risk management and analytics platform built with React, TypeScript, and modern web technologies.
 
@@ -846,7 +846,7 @@ The app is configured for mobile deployment using Capacitor:
 // capacitor.config.ts
 export default defineConfig({
   appId: 'com.quantumriskcoach.app',
-  appName: 'Quantum Risk Coach',
+  appName: 'Qlarity',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

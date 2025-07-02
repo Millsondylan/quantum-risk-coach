@@ -214,7 +214,7 @@ class PushNotificationService {
         body: personalizedNotification.body,
         icon: personalizedNotification.icon || '/favicon.ico',
         badge: '/favicon.ico',
-        tag: personalizedNotification.tag || 'quantum-risk-coach',
+        tag: personalizedNotification.tag || 'qlarity',
         requireInteraction: personalizedNotification.requireInteraction || false,
         actions: personalizedNotification.actions,
         data: personalizedNotification.data
@@ -226,7 +226,7 @@ class PushNotificationService {
           body: personalizedNotification.body,
           icon: personalizedNotification.icon || '/favicon.ico',
           badge: '/favicon.ico',
-          tag: personalizedNotification.tag || 'quantum-risk-coach',
+          tag: personalizedNotification.tag || 'qlarity',
           requireInteraction: personalizedNotification.requireInteraction || false,
           actions: personalizedNotification.actions,
           data: personalizedNotification.data
@@ -457,7 +457,7 @@ class PushNotificationService {
   async sendTestNotification(): Promise<void> {
     const testNotification = {
       title: '🧪 Test Notification',
-      body: 'Your Quantum Risk Coach notifications are working perfectly! This is a personalized test message.',
+      body: 'Your Qlarity notifications are working perfectly! This is a personalized test message.',
       icon: '/favicon.ico',
       tag: 'test-notification',
       type: 'test',

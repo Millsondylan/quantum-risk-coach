@@ -58,7 +58,7 @@ const Settings: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `quantum-risk-coach-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `qlarity-data-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -296,12 +296,12 @@ const Settings: React.FC = () => {
         <TabsContent value="about" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>About Quantum Risk Coach</CardTitle>
+              <CardTitle>About Qlarity</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Quantum Risk Coach is a comprehensive trading journal and risk management platform designed to help traders improve their performance through data-driven insights and AI-powered coaching.
+                  Qlarity is a comprehensive trading journal and risk management platform designed to help traders improve their performance through data-driven insights and AI-powered coaching.
                 </p>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">Version 1.0.0</Badge>
