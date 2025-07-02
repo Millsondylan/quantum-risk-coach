@@ -15,25 +15,25 @@ const API_ENDPOINTS = {
   NEWS: 'https://newsapi.org/v2'
 };
 
-// API Configuration with environment variables
+// API Configuration with environment variables (no fallback keys for security)
 const API_KEYS = {
-  YFINANCE: import.meta.env.VITE_YFINANCE_API_KEY || 'C7wD6OmWJ_xzKSMZy0Vhpffs3hpyaYJU',
-  COINGECKO: import.meta.env.VITE_COINGECKO_API_KEY || 'CG-nCXJTWBdFGw2TdzhBdPgi7uH',
-  ALPHA_VANTAGE: import.meta.env.VITE_ALPHA_VANTAGE_API_KEY || 'DSPSF5OFTDBPT0Q3',
-  POLYGON: import.meta.env.VITE_POLYGON_API_KEY || 'iLvuzznF8yhGvWFxk_Dt7vr2ykM8p6BM',
-  EXCHANGERATE: import.meta.env.VITE_EXCHANGERATE_API_KEY || '82b2f90230ac56fe9e1ac7e1',
-  FIXER: import.meta.env.VITE_FIXER_API_KEY || 'b86ef5114855abba3c2ad0d1776fdfe6',
-  FMP: import.meta.env.VITE_FMP_API_KEY || 'a8BaUPMXsbNfUmOeVMBVoaogf6oQzOQP',
-  ETHERSCAN: import.meta.env.VITE_ETHERSCAN_API_KEY || '923QMUQKQ2IKXUTZGRFBCZ8IM84QZUD7Y6',
-  FINNHUB: import.meta.env.VITE_FINNHUB_API_KEY || 'd1elql1r01qghj41ko20d1elql1r01qghj41ko2g',
-  NEWS: import.meta.env.VITE_NEWS_API_KEY || 'd555ac49f0db4edeac533af9a7232345'
+  YFINANCE: import.meta.env.VITE_YFINANCE_API_KEY,
+  COINGECKO: import.meta.env.VITE_COINGECKO_API_KEY,
+  ALPHA_VANTAGE: import.meta.env.VITE_ALPHA_VANTAGE_API_KEY,
+  POLYGON: import.meta.env.VITE_POLYGON_API_KEY,
+  EXCHANGERATE: import.meta.env.VITE_EXCHANGERATE_API_KEY,
+  FIXER: import.meta.env.VITE_FIXER_API_KEY,
+  FMP: import.meta.env.VITE_FMP_API_KEY,
+  ETHERSCAN: import.meta.env.VITE_ETHERSCAN_API_KEY,
+  FINNHUB: import.meta.env.VITE_FINNHUB_API_KEY,
+  NEWS: import.meta.env.VITE_NEWS_API_KEY
 };
 
-// AI API Configuration with environment variables
+// AI API Configuration with environment variables (no fallback keys for security)
 const AI_KEYS = {
-  OPENAI: import.meta.env.VITE_OPENAI_API_KEY || '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',
-  GROQ: import.meta.env.VITE_GROQ_API_KEY || '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',
-  GEMINI: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyD3jSvbP_AntLSgc5vRJXMpVvPAJ0LBBb4'
+  OPENAI: import.meta.env.VITE_OPENAI_API_KEY,
+  GROQ: import.meta.env.VITE_GROQ_API_KEY,
+  GEMINI: import.meta.env.VITE_GEMINI_API_KEY
 };
 
 // Interfaces
@@ -127,43 +127,77 @@ class RealDataService {
     return apiRateLimiter.makeRequest(
       'exchangerate',
       async () => {
+        // Check if we have any API keys available
+        if (!API_KEYS.EXCHANGERATE && !API_KEYS.FIXER) {
+          console.warn('No forex API keys configured');
+          throw new Error('No forex API keys available');
+        }
+
         // Primary: ExchangeRate API
-        const response = await fetch(
-          `${API_ENDPOINTS.EXCHANGERATE}/${API_KEYS.EXCHANGERATE}/latest/USD`
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          const rates: ForexRate[] = Object.entries(data.conversion_rates)
-            .filter(([currency]) => ['EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'].includes(currency))
-            .map(([target, rate]) => ({
-              base: 'USD',
-              target,
-              rate: rate as number,
-              timestamp: Date.now()
-            }));
-          
-          return rates;
+        if (API_KEYS.EXCHANGERATE) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(
+              `${API_ENDPOINTS.EXCHANGERATE}/${API_KEYS.EXCHANGERATE}/latest/USD`,
+              { signal: controller.signal }
+            );
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.result === 'success') {
+                const rates: ForexRate[] = Object.entries(data.conversion_rates)
+                  .filter(([currency]) => ['EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'].includes(currency))
+                  .map(([target, rate]) => ({
+                    base: 'USD',
+                    target,
+                    rate: rate as number,
+                    timestamp: Date.now()
+                  }));
+                
+                return rates;
+              }
+            }
+          } catch (error) {
+            console.warn('ExchangeRate API failed:', error);
+          }
         }
 
         // Fallback: Fixer API
-        const fixerResponse = await fetch(
-          `${API_ENDPOINTS.FIXER}/latest?access_key=${API_KEYS.FIXER}&base=USD&symbols=EUR,GBP,JPY,CHF,CAD,AUD,NZD`
-        );
-        
-        if (fixerResponse.ok) {
-          const fixerData = await fixerResponse.json();
-          const rates: ForexRate[] = Object.entries(fixerData.rates).map(([target, rate]) => ({
-            base: 'USD',
-            target,
-            rate: rate as number,
-            timestamp: Date.now()
-          }));
-          
-          return rates;
+        if (API_KEYS.FIXER) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const fixerResponse = await fetch(
+              `${API_ENDPOINTS.FIXER}/latest?access_key=${API_KEYS.FIXER}&base=USD&symbols=EUR,GBP,JPY,CHF,CAD,AUD,NZD`,
+              { signal: controller.signal }
+            );
+            
+            clearTimeout(timeoutId);
+            
+            if (fixerResponse.ok) {
+              const fixerData = await fixerResponse.json();
+              if (fixerData.success) {
+                const rates: ForexRate[] = Object.entries(fixerData.rates).map(([target, rate]) => ({
+                  base: 'USD',
+                  target,
+                  rate: rate as number,
+                  timestamp: Date.now()
+                }));
+                
+                return rates;
+              }
+            }
+          } catch (error) {
+            console.warn('Fixer API failed:', error);
+          }
         }
 
-        throw new Error('All forex API sources failed');
+        throw new Error('All forex API sources failed or no API keys configured');
       },
       'forex_rates'
     ).catch(error => {
@@ -177,31 +211,48 @@ class RealDataService {
     return apiRateLimiter.makeRequest(
       'coingecko',
       async () => {
-        const response = await fetch(
-          `${API_ENDPOINTS.COINGECKO}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h`,
-          {
-            headers: {
-              'x-cg-demo-api-key': API_KEYS.COINGECKO
+        // CoinGecko has free tier, but better with API key
+        const headers: any = {};
+        if (API_KEYS.COINGECKO) {
+          headers['x-cg-demo-api-key'] = API_KEYS.COINGECKO;
+        }
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          
+          const response = await fetch(
+            `${API_ENDPOINTS.COINGECKO}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h`,
+            {
+              headers,
+              signal: controller.signal
             }
+          );
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`CoinGecko API failed with status: ${response.status}`);
           }
-        );
 
-        if (!response.ok) throw new Error('CoinGecko API failed');
+          const data = await response.json();
+          const prices: CryptoPrice[] = data.map((coin: any) => ({
+            id: coin.id,
+            symbol: coin.symbol.toUpperCase(),
+            name: coin.name,
+            current_price: coin.current_price || 0,
+            price_change_24h: coin.price_change_24h || 0,
+            price_change_percentage_24h: coin.price_change_percentage_24h || 0,
+            market_cap: coin.market_cap || 0,
+            volume_24h: coin.total_volume || 0,
+            last_updated: coin.last_updated || new Date().toISOString()
+          }));
 
-        const data = await response.json();
-        const prices: CryptoPrice[] = data.map((coin: any) => ({
-          id: coin.id,
-          symbol: coin.symbol.toUpperCase(),
-          name: coin.name,
-          current_price: coin.current_price,
-          price_change_24h: coin.price_change_24h || 0,
-          price_change_percentage_24h: coin.price_change_percentage_24h || 0,
-          market_cap: coin.market_cap,
-          volume_24h: coin.total_volume,
-          last_updated: coin.last_updated
-        }));
-
-        return prices;
+          return prices;
+        } catch (error) {
+          console.error('CoinGecko API error:', error);
+          throw error;
+        }
       },
       'crypto_prices'
     ).catch(error => {

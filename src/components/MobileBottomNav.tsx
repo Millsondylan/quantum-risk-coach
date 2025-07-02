@@ -8,10 +8,15 @@ import {
   Settings,
   TrendingUp,
   Target,
-  Calendar
+  Calendar,
+  User,
+  LineChart,
+  Search,
+  Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// UltraTrader-style mobile navigation matching their exact interface
 const MobileBottomNav = () => {
   const location = useLocation();
 
@@ -19,8 +24,8 @@ const MobileBottomNav = () => {
     {
       href: '/',
       icon: Home,
-      label: 'Home',
-      activeColor: 'text-cyan-400',
+      label: 'Overview',
+      activeColor: 'text-blue-400',
       paths: ['/']
     },
     {
@@ -34,7 +39,7 @@ const MobileBottomNav = () => {
       href: '/trade-builder',
       icon: PlusCircle,
       label: 'Trade',
-      activeColor: 'text-emerald-400',
+      activeColor: 'text-blue-400',
       isHighlight: true,
       paths: ['/trade-builder']
     },
@@ -42,14 +47,14 @@ const MobileBottomNav = () => {
       href: '/performance-calendar',
       icon: BarChart3,
       label: 'Analytics',
-      activeColor: 'text-purple-400',
+      activeColor: 'text-blue-400',
       paths: ['/performance-calendar', '/strategy-analyzer']
     },
     {
       href: '/settings',
-      icon: Settings,
-      label: 'Settings',
-      activeColor: 'text-slate-400',
+      icon: User,
+      label: 'Profile',
+      activeColor: 'text-blue-400',
       paths: ['/settings']
     }
   ];
@@ -59,73 +64,49 @@ const MobileBottomNav = () => {
   };
 
   return (
-    <nav className="mobile-nav fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 sm:hidden">
-      <div className="mobile-nav-content px-2 py-2">
-        {navItems.map((item) => {
-          const isActive = isActivePath(item.paths);
-          const Icon = item.icon;
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-t border-[#1A1B1E] safe-area-inset-bottom">
+      <div className="px-4 py-2">
+        <div className="flex items-center justify-around">
+          {navItems.map((item) => {
+            const isActive = isActivePath(item.paths);
+            const Icon = item.icon;
 
-          if (item.isHighlight) {
             return (
               <Link
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  "relative flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300",
-                  "bg-gradient-to-br from-emerald-500 to-blue-500 text-white shadow-lg",
-                  "hover:scale-105 active:scale-95",
-                  "w-14 h-14 -mt-2 border-2 border-slate-800"
+                  "flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-all duration-200 min-w-[60px]",
+                  isActive 
+                    ? "text-blue-400" 
+                    : "text-slate-500 hover:text-slate-300",
+                  item.isHighlight && isActive && "bg-blue-600/10"
                 )}
               >
-                <Icon className="w-6 h-6" />
-                <span className="text-xs font-medium mt-1">{item.label}</span>
-                
-                {/* Glow effect */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 blur-lg -z-10 scale-110"></div>
+                <div className={cn(
+                  "p-2 rounded-xl transition-all duration-200",
+                  isActive && item.isHighlight 
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" 
+                    : isActive 
+                    ? "bg-blue-500/10" 
+                    : "hover:bg-slate-800/50"
+                )}>
+                  <Icon className={cn(
+                    "transition-all duration-200",
+                    item.isHighlight ? "w-6 h-6" : "w-5 h-5"
+                  )} />
+                </div>
+                <span className={cn(
+                  "text-xs font-medium transition-all duration-200",
+                  isActive ? "text-blue-400" : "text-slate-500"
+                )}>
+                  {item.label}
+                </span>
               </Link>
             );
-          }
-
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                "mobile-nav-item flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200",
-                "min-w-[60px] text-center relative overflow-hidden",
-                isActive 
-                  ? `${item.activeColor} bg-slate-800/80` 
-                  : "text-slate-400 hover:text-slate-300"
-              )}
-            >
-              {/* Background highlight for active state */}
-              {isActive && (
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl"></div>
-              )}
-              
-              <Icon className={cn(
-                "w-5 h-5 transition-all duration-200 relative z-10",
-                isActive ? "scale-110" : "scale-100"
-              )} />
-              
-              <span className={cn(
-                "text-xs font-medium mt-1 relative z-10 transition-all duration-200",
-                isActive ? "opacity-100" : "opacity-80"
-              )}>
-                {item.label}
-              </span>
-
-              {/* Active indicator dot */}
-              {isActive && (
-                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full"></div>
-              )}
-            </Link>
-          );
-        })}
+          })}
+        </div>
       </div>
-
-      {/* Safe area padding for iPhones */}
-      <div className="h-safe-bottom bg-slate-900/95"></div>
     </nav>
   );
 };
