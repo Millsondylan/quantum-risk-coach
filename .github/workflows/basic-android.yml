@@ -21,6 +21,9 @@ jobs:
         java-version: 17
         distribution: temurin
         
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+        
     - run: npm ci
     - run: npm run build
     - run: npx cap sync android
@@ -29,7 +32,7 @@ jobs:
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --stacktrace --info
         
     - uses: actions/upload-artifact@v4
       with:
