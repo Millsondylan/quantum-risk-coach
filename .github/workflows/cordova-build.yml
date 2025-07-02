@@ -1,0 +1,81 @@
+name: Cordova Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '8'
+    
+    - name: Setup Android SDK
+      run: |
+        export ANDROID_HOME=$HOME/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+        mkdir -p $ANDROID_HOME
+        cd $ANDROID_HOME
+        wget -q https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
+        unzip -q sdk-tools-linux-4333796.zip
+        echo y | tools/bin/sdkmanager "platforms;android-28" "build-tools;28.0.3" "platform-tools"
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+    
+    - name: Install Cordova
+      run: |
+        npm install -g cordova@latest
+        npm install
+        npm run build
+    
+    - name: Create Cordova Project
+      run: |
+        cordova create quantum-app com.quantumrisk.coach "Quantum Risk Coach"
+        cd quantum-app
+        rm -rf www/*
+        cp -r ../dist/* www/
+        cordova platform add android
+    
+    - name: Build APK
+      run: |
+        cd quantum-app
+        cordova build android --release
+        ls -la platforms/android/app/build/outputs/apk/release/
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: quantum-risk-coach-cordova-apk
+        path: quantum-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      if: success()
+      with:
+        tag_name: cordova-v${{ github.run_number }}
+        name: "🎉 Quantum Risk Coach APK (Cordova) v${{ github.run_number }}"
+        body: |
+          # 🎯 SUCCESS! Cordova APK Build Complete!
+          
+          ## 📱 APK Download Ready:
+          Your Quantum Risk Coach APK has been built successfully using Apache Cordova!
+          
+          ## 📥 Installation:
+          1. Download the APK file below
+          2. Enable "Unknown Sources" in Android settings
+          3. Install and launch the app
+          
+          **Build Method:** Apache Cordova  
+          **Status:** ✅ Success
+        files: quantum-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk 
