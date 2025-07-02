@@ -129,7 +129,7 @@ const Onboarding = () => {
                   </Select>
                 </div>
                 <Button 
-                  onClick={() => setStep(2)} 
+                  onClick={() => setStep(3)} 
                   disabled={!preferences.tradingStyle}
                   className="w-full relative z-20"
                   data-testid="onboarding-next-button"
