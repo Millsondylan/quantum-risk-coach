@@ -33,24 +33,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   console.log('ProtectedRoute - loading:', loading, 'initialized:', initialized, 'user:', user?.email);
   
+  // Show simple loading during initialization
   if (loading || !initialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">
-            {!initialized ? 'Initializing Quantum Risk Coach...' : 'Loading...'}
-          </p>
-          {!initialized && (
-            <p className="text-slate-500 text-sm mt-2">
-              Setting up database and authentication
-            </p>
-          )}
+          <p className="text-slate-400">Loading Quantum Risk Coach...</p>
         </div>
       </div>
     );
   }
   
+  // Redirect to auth if no user
   if (!user) {
     console.log('No user, redirecting to auth');
     return <Navigate to="/auth" replace />;

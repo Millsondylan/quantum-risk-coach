@@ -17,7 +17,11 @@ import {
   RefreshCw,
   Plus,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  TrendingUp,
+  DollarSign,
+  BarChart3,
+  Zap
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,7 +44,10 @@ const BrokerIntegration = () => {
     apiKey: '',
     secretKey: '',
     passphrase: '',
-    sandbox: true,
+    server: '',
+    login: '',
+    password: '',
+    sandbox: false,
     autoSync: true,
     syncInterval: 5
   });
@@ -50,58 +57,82 @@ const BrokerIntegration = () => {
       id: 'binance', 
       name: 'Binance', 
       description: 'World\'s largest crypto exchange',
+      icon: '🔸',
       supported: true,
-      requiresPassphrase: false
+      requiresPassphrase: false,
+      type: 'crypto',
+      features: ['Spot Trading', 'Futures', 'API Access']
     },
     { 
       id: 'bybit', 
       name: 'Bybit', 
       description: 'Popular derivatives exchange',
+      icon: '🟡',
       supported: true,
-      requiresPassphrase: false
+      requiresPassphrase: false,
+      type: 'crypto',
+      features: ['Derivatives', 'Spot', 'Copy Trading']
     },
     { 
       id: 'kucoin', 
       name: 'KuCoin', 
       description: 'Global crypto exchange',
+      icon: '🟢',
       supported: true,
-      requiresPassphrase: true
+      requiresPassphrase: true,
+      type: 'crypto',
+      features: ['Spot Trading', 'Futures', 'Margin']
+    },
+    { 
+      id: 'mt4', 
+      name: 'MetaTrader 4', 
+      description: 'Professional forex trading',
+      icon: '📈',
+      supported: true,
+      requiresPassphrase: false,
+      type: 'forex',
+      features: ['Forex', 'CFDs', 'EA Support']
+    },
+    { 
+      id: 'mt5', 
+      name: 'MetaTrader 5', 
+      description: 'Advanced trading platform',
+      icon: '📊',
+      supported: true,
+      requiresPassphrase: false,
+      type: 'forex',
+      features: ['Multi-Asset', 'Hedging', 'Advanced Charts']
+    },
+    { 
+      id: 'ctrader', 
+      name: 'cTrader', 
+      description: 'Professional ECN trading',
+      icon: '⚡',
+      supported: true,
+      requiresPassphrase: false,
+      type: 'forex',
+      features: ['ECN Trading', 'Level II Pricing', 'cBots']
+    },
+    { 
+      id: 'tradingview', 
+      name: 'TradingView', 
+      description: 'Social trading platform',
+      icon: '📉',
+      supported: false,
+      requiresPassphrase: false,
+      type: 'social',
+      features: ['Paper Trading', 'Social Trading', 'Charts']
     },
     { 
       id: 'okx', 
       name: 'OKX', 
       description: 'Leading crypto exchange',
+      icon: '🔷',
       supported: false,
-      requiresPassphrase: true
+      requiresPassphrase: true,
+      type: 'crypto',
+      features: ['Spot', 'Futures', 'Options']
     },
-    { 
-      id: 'mexc', 
-      name: 'MEXC', 
-      description: 'Global digital asset exchange',
-      supported: false,
-      requiresPassphrase: false
-    },
-    { 
-      id: 'mt4', 
-      name: 'MetaTrader 4', 
-      description: 'Expert Advisor required',
-      supported: false,
-      requiresPassphrase: false
-    },
-    { 
-      id: 'mt5', 
-      name: 'MetaTrader 5', 
-      description: 'Expert Advisor required',
-      supported: false,
-      requiresPassphrase: false
-    },
-    { 
-      id: 'ctrader', 
-      name: 'cTrader', 
-      description: 'cBot required',
-      supported: false,
-      requiresPassphrase: false
-    }
   ];
 
   useEffect(() => {
@@ -121,8 +152,14 @@ const BrokerIntegration = () => {
   };
 
   const handleAddConnection = async () => {
-    if (!user?.id || !newConnection.name || !newConnection.type || !newConnection.apiKey || !newConnection.secretKey) {
+    if (!newConnection.name || !newConnection.type) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Real broker validation - no fake data allowed
+    if (!validateRealCredentials()) {
+      toast.error('Invalid credentials - please ensure all fields are correct for live trading');
       return;
     }
 
@@ -138,6 +175,9 @@ const BrokerIntegration = () => {
           apiKey: newConnection.apiKey,
           secretKey: newConnection.secretKey,
           passphrase: newConnection.passphrase || undefined,
+          server: newConnection.server || undefined,
+          login: newConnection.login || undefined,
+          password: newConnection.password || undefined,
           sandbox: newConnection.sandbox
         },
         lastSync: new Date().toISOString(),
@@ -150,28 +190,63 @@ const BrokerIntegration = () => {
       const result = await realBrokerService.connectToBroker(connectionData);
       
       if (result.success) {
-        toast.success(`Successfully connected to ${newConnection.name}`);
+        toast.success(`✅ Live broker connection established successfully!`);
         setShowAddDialog(false);
-        setNewConnection({
-          name: '',
-          type: '',
-          apiKey: '',
-          secretKey: '',
-          passphrase: '',
-          sandbox: true,
-          autoSync: true,
-          syncInterval: 5
-        });
+        resetNewConnection();
         await loadConnections();
       } else {
-        toast.error(result.message || 'Failed to connect');
+        toast.error(`Connection failed: ${result.message || 'Please verify your credentials'}`);
       }
     } catch (error: any) {
-      console.error('Connection error:', error);
-      toast.error(error.message || 'Failed to connect to broker');
+      console.error('Broker connection error:', error);
+      toast.error('Failed to connect - please check your credentials and try again');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const validateRealCredentials = (): boolean => {
+    const { type, apiKey, secretKey, passphrase, server, login, password } = newConnection;
+    
+    // Ensure real credentials are provided
+    if (!apiKey || !secretKey) {
+      return false;
+    }
+
+    // Platform-specific validation for real accounts
+    if (type === 'kucoin' && !passphrase) {
+      return false;
+    }
+
+    if (['mt4', 'mt5'].includes(type)) {
+      if (!server || !login || !password) {
+        return false;
+      }
+    }
+
+    // Validate API key format (prevent obvious test keys)
+    if (apiKey.includes('test') || apiKey.includes('demo')) {
+      toast.warning('⚠️ Demo credentials detected - please use live trading credentials');
+      return false;
+    }
+
+    return true;
+  };
+
+  const resetNewConnection = () => {
+    setNewConnection({
+      name: '',
+      type: '',
+      apiKey: '',
+      secretKey: '',
+      passphrase: '',
+      server: '',
+      login: '',
+      password: '',
+      sandbox: false,
+      autoSync: true,
+      syncInterval: 5
+    });
   };
 
   const handleDisconnect = async (connectionId: string) => {
@@ -222,269 +297,396 @@ const BrokerIntegration = () => {
     }
   };
 
+  const getBrokerTypeColor = (type: string) => {
+    switch (type) {
+      case 'crypto': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      case 'forex': return 'bg-green-500/10 text-green-400 border-green-500/20';
+      case 'social': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+      default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+    }
+  };
+
+  const selectedBroker = supportedBrokers.find(b => b.id === newConnection.type);
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with UltraTrader-style stats */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-white">Broker Connections</h3>
-          <p className="text-sm text-slate-400">Connect your trading accounts for real-time data</p>
+          <h3 className="text-2xl font-bold text-white mb-1">Broker Connections</h3>
+          <p className="text-slate-400">Sync your trades automatically from multiple platforms</p>
         </div>
         
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Broker
-            </Button>
-          </DialogTrigger>
-          
-          <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-white">Add Broker Connection</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="broker-name" className="text-slate-300">Connection Name</Label>
-                <Input
-                  id="broker-name"
-                  value={newConnection.name}
-                  onChange={(e) => setNewConnection(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="My Binance Account"
-                  className="bg-slate-800 border-slate-600 text-white"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="broker-type" className="text-slate-300">Broker Type</Label>
-                <Select value={newConnection.type} onValueChange={(value) => setNewConnection(prev => ({ ...prev, type: value }))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
-                    <SelectValue placeholder="Select broker" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-600">
-                    {supportedBrokers.map((broker) => (
-                      <SelectItem 
-                        key={broker.id} 
-                        value={broker.id}
-                        disabled={!broker.supported}
-                        className="text-white"
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span>{broker.name}</span>
-                          {!broker.supported && <Badge variant="secondary" className="ml-2 text-xs">Coming Soon</Badge>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="api-key" className="text-slate-300">API Key</Label>
-                <Input
-                  id="api-key"
-                  type="text"
-                  value={newConnection.apiKey}
-                  onChange={(e) => setNewConnection(prev => ({ ...prev, apiKey: e.target.value }))}
-                  placeholder="Enter your API key"
-                  className="bg-slate-800 border-slate-600 text-white"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="secret-key" className="text-slate-300">Secret Key</Label>
-                <Input
-                  id="secret-key"
-                  type="password"
-                  value={newConnection.secretKey}
-                  onChange={(e) => setNewConnection(prev => ({ ...prev, secretKey: e.target.value }))}
-                  placeholder="Enter your secret key"
-                  className="bg-slate-800 border-slate-600 text-white"
-                />
-              </div>
-              
-              {supportedBrokers.find(b => b.id === newConnection.type)?.requiresPassphrase && (
-                <div>
-                  <Label htmlFor="passphrase" className="text-slate-300">Passphrase</Label>
-                  <Input
-                    id="passphrase"
-                    type="password"
-                    value={newConnection.passphrase}
-                    onChange={(e) => setNewConnection(prev => ({ ...prev, passphrase: e.target.value }))}
-                    placeholder="Enter your passphrase"
-                    className="bg-slate-800 border-slate-600 text-white"
-                  />
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between">
-                <Label htmlFor="sandbox" className="text-slate-300">Use Sandbox</Label>
-                <Switch
-                  id="sandbox"
-                  checked={newConnection.sandbox}
-                  onCheckedChange={(checked) => setNewConnection(prev => ({ ...prev, sandbox: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <Label htmlFor="auto-sync" className="text-slate-300">Auto Sync</Label>
-                <Switch
-                  id="auto-sync"
-                  checked={newConnection.autoSync}
-                  onCheckedChange={(checked) => setNewConnection(prev => ({ ...prev, autoSync: checked }))}
-                />
-              </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddDialog(false)}
-                  className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddConnection}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-                >
-                  {isLoading ? 'Connecting...' : 'Connect'}
-                </Button>
-              </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+              <span className="text-emerald-400 font-medium">{connections.filter(c => c.status === 'connected').length} Connected</span>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Connection List */}
-      {connections.length > 0 ? (
-        <div className="space-y-4">
-          {connections.map((connection) => (
-            <Card key={connection.id} className="bg-slate-800/50 border-slate-700/50">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className={`w-3 h-3 rounded-full ${getStatusColor(connection.status)}`}></div>
-                      {connection.status === 'connecting' && (
-                        <div className="absolute inset-0 w-3 h-3 rounded-full bg-yellow-500 animate-ping"></div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-white">{connection.name}</h4>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {connection.type}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        {getStatusIcon(connection.status)}
-                        <span className="text-xs text-slate-400 capitalize">{connection.status}</span>
-                        {connection.lastSync && (
-                          <span className="text-xs text-slate-500">
-                            • Last sync: {new Date(connection.lastSync).toLocaleTimeString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-blue-400" />
+              <span className="text-slate-300">Auto-sync enabled</span>
+            </div>
+          </div>
+          
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg">
+                <Plus className="w-4 h-4 mr-2" />
+                Connect Broker
+              </Button>
+            </DialogTrigger>
+            
+            <DialogContent className="bg-slate-900 border-slate-700 max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-xl text-white">Connect New Broker</DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="broker-name" className="text-slate-300 font-medium">Connection Name</Label>
+                    <Input
+                      id="broker-name"
+                      value={newConnection.name}
+                      onChange={(e) => setNewConnection(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="My Trading Account"
+                      className="bg-slate-800 border-slate-600 text-white mt-1"
+                    />
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    {connection.status === 'connected' && connection.accountInfo && (
-                      <div className="text-right mr-3">
-                        <p className="text-sm font-semibold text-white">
-                          ${connection.accountInfo.balance?.toFixed(2) || '0.00'}
-                        </p>
-                        <p className="text-xs text-slate-400">{connection.accountInfo.currency}</p>
-                      </div>
-                    )}
-                    
-                    {connection.status === 'connected' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRefreshBalance(connection.id)}
-                        className="text-slate-400 hover:text-white"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </Button>
-                    )}
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleCredentialVisibility(connection.id)}
-                      className="text-slate-400 hover:text-white"
-                    >
-                      {showCredentials.includes(connection.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDisconnect(connection.id)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div>
+                    <Label htmlFor="broker-type" className="text-slate-300 font-medium">Platform</Label>
+                    <Select value={newConnection.type} onValueChange={(value) => setNewConnection(prev => ({ ...prev, type: value }))}>
+                      <SelectTrigger className="bg-slate-800 border-slate-600 text-white mt-1">
+                        <SelectValue placeholder="Select platform" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-600">
+                        {supportedBrokers.map((broker) => (
+                          <SelectItem 
+                            key={broker.id} 
+                            value={broker.id}
+                            disabled={!broker.supported}
+                            className="text-white focus:bg-slate-700"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg">{broker.icon}</span>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span>{broker.name}</span>
+                                  <Badge variant="outline" className={`text-xs ${getBrokerTypeColor(broker.type)}`}>
+                                    {broker.type}
+                                  </Badge>
+                                </div>
+                                {!broker.supported && <span className="text-xs text-slate-500">Coming Soon</span>}
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                
-                {showCredentials.includes(connection.id) && (
-                  <div className="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/30">
-                    <div className="grid grid-cols-1 gap-2 text-xs">
+
+                {selectedBroker && (
+                  <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">{selectedBroker.icon}</span>
                       <div>
-                        <span className="text-slate-400">API Key: </span>
-                        <span className="text-slate-300 font-mono">{connection.credentials.apiKey?.substring(0, 8)}...</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Secret: </span>
-                        <span className="text-slate-300 font-mono">{'*'.repeat(16)}</span>
-                      </div>
-                      {connection.credentials.passphrase && (
-                        <div>
-                          <span className="text-slate-400">Passphrase: </span>
-                          <span className="text-slate-300 font-mono">{'*'.repeat(8)}</span>
+                        <h4 className="font-semibold text-white">{selectedBroker.name}</h4>
+                        <p className="text-sm text-slate-400 mb-2">{selectedBroker.description}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedBroker.features.map((feature, index) => (
+                            <Badge key={index} variant="outline" className="text-xs text-slate-300 border-slate-600">
+                              {feature}
+                            </Badge>
+                          ))}
                         </div>
-                      )}
-                      <div>
-                        <span className="text-slate-400">Mode: </span>
-                        <span className="text-slate-300">{connection.credentials.sandbox ? 'Sandbox' : 'Live'}</span>
                       </div>
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          ))}
+                
+                {/* Dynamic form based on broker type */}
+                {['mt4', 'mt5', 'ctrader'].includes(newConnection.type) ? (
+                  // MT4/MT5/cTrader form
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="server" className="text-slate-300 font-medium">Server</Label>
+                      <Input
+                        id="server"
+                        value={newConnection.server}
+                        onChange={(e) => setNewConnection(prev => ({ ...prev, server: e.target.value }))}
+                        placeholder="e.g., ICMarkets-Live01"
+                        className="bg-slate-800 border-slate-600 text-white mt-1"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="login" className="text-slate-300 font-medium">Login</Label>
+                        <Input
+                          id="login"
+                          value={newConnection.login}
+                          onChange={(e) => setNewConnection(prev => ({ ...prev, login: e.target.value }))}
+                          placeholder="Account number"
+                          className="bg-slate-800 border-slate-600 text-white mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="password" className="text-slate-300 font-medium">Password</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={newConnection.password}
+                          onChange={(e) => setNewConnection(prev => ({ ...prev, password: e.target.value }))}
+                          placeholder="••••••••"
+                          className="bg-slate-800 border-slate-600 text-white mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // API-based form for exchanges
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="api-key" className="text-slate-300 font-medium">API Key</Label>
+                      <Input
+                        id="api-key"
+                        value={newConnection.apiKey}
+                        onChange={(e) => setNewConnection(prev => ({ ...prev, apiKey: e.target.value }))}
+                        placeholder="Enter your API key"
+                        className="bg-slate-800 border-slate-600 text-white mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="secret-key" className="text-slate-300 font-medium">Secret Key</Label>
+                      <Input
+                        id="secret-key"
+                        type="password"
+                        value={newConnection.secretKey}
+                        onChange={(e) => setNewConnection(prev => ({ ...prev, secretKey: e.target.value }))}
+                        placeholder="Enter your secret key"
+                        className="bg-slate-800 border-slate-600 text-white mt-1"
+                      />
+                    </div>
+                    
+                    {selectedBroker?.requiresPassphrase && (
+                      <div>
+                        <Label htmlFor="passphrase" className="text-slate-300 font-medium">Passphrase</Label>
+                        <Input
+                          id="passphrase"
+                          type="password"
+                          value={newConnection.passphrase}
+                          onChange={(e) => setNewConnection(prev => ({ ...prev, passphrase: e.target.value }))}
+                          placeholder="Enter your passphrase"
+                          className="bg-slate-800 border-slate-600 text-white mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
+                  <div>
+                    <Label htmlFor="auto-sync" className="text-slate-300 font-medium">Auto-sync trades</Label>
+                    <p className="text-xs text-slate-500">Automatically import new trades every few minutes</p>
+                  </div>
+                  <Switch
+                    id="auto-sync"
+                    checked={newConnection.autoSync}
+                    onCheckedChange={(checked) => setNewConnection(prev => ({ ...prev, autoSync: checked }))}
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddDialog(false)}
+                    className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAddConnection}
+                    disabled={isLoading}
+                    className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                  >
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 mr-2" />
+                        Connect Now
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Connection List with UltraTrader-style cards */}
+      {connections.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {connections.map((connection) => {
+            const broker = supportedBrokers.find(b => b.id === connection.type);
+            return (
+              <Card key={connection.id} className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700/50 hover:border-slate-600/50 transition-all duration-200">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <span className="text-2xl">{broker?.icon || '🔗'}</span>
+                        <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${getStatusColor(connection.status)} border-2 border-slate-800`}></div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-semibold text-white text-lg">{connection.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className={`text-xs capitalize ${getBrokerTypeColor(broker?.type || 'default')}`}>
+                            {connection.type}
+                          </Badge>
+                          <Badge variant={connection.status === 'connected' ? 'default' : 'destructive'} className="text-xs">
+                            {connection.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleCredentialVisibility(connection.id)}
+                        className="text-slate-400 hover:text-white h-8 w-8 p-0"
+                      >
+                        {showCredentials.includes(connection.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDisconnect(connection.id)}
+                        className="text-red-400 hover:text-red-300 h-8 w-8 p-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {connection.status === 'connected' && connection.accountInfo && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-slate-900/50 rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <DollarSign className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs text-slate-400">Balance</span>
+                          </div>
+                          <p className="text-lg font-bold text-white">
+                            ${connection.accountInfo.balance?.toFixed(2) || '0.00'}
+                          </p>
+                        </div>
+                        
+                        <div className="p-3 bg-slate-900/50 rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <BarChart3 className="w-4 h-4 text-blue-400" />
+                            <span className="text-xs text-slate-400">P&L</span>
+                          </div>
+                          <p className={`text-lg font-bold ${(connection.accountInfo.profit || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {(connection.accountInfo.profit || 0) >= 0 ? '+' : ''}${connection.accountInfo.profit?.toFixed(2) || '0.00'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">
+                          Last sync: {new Date(connection.lastSync).toLocaleTimeString()}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRefreshBalance(connection.id)}
+                          className="text-blue-400 hover:text-blue-300 h-7 px-2"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Refresh
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {showCredentials.includes(connection.id) && (
+                    <div className="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/30">
+                      <div className="space-y-2 text-xs">
+                        {connection.credentials.apiKey && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">API Key:</span>
+                            <span className="text-slate-300 font-mono">{connection.credentials.apiKey.substring(0, 8)}...</span>
+                          </div>
+                        )}
+                        {connection.credentials.server && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Server:</span>
+                            <span className="text-slate-300">{connection.credentials.server}</span>
+                          </div>
+                        )}
+                        {connection.credentials.login && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Login:</span>
+                            <span className="text-slate-300">{connection.credentials.login}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Mode:</span>
+                          <span className="text-slate-300">{connection.credentials.sandbox ? 'Sandbox' : 'Live'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
-        <Card className="bg-slate-800/30 border-slate-700/50 border-dashed">
-          <CardContent className="p-8 text-center">
-            <Plug className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">No Brokers Connected</h3>
-            <p className="text-slate-400 mb-4">
-              Connect your trading accounts to import trades automatically and track real-time performance
-            </p>
-            <Button
-              onClick={() => setShowAddDialog(true)}
-              className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Connect Your First Broker
-            </Button>
+        <Card className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 border-slate-700/50 border-dashed">
+          <CardContent className="p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Plug className="w-10 h-10 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Connect Your First Broker</h3>
+              <p className="text-slate-400 mb-6">
+                Start syncing trades automatically by connecting your trading accounts. We support MT4, MT5, Binance, Bybit, and more.
+              </p>
+              <Button
+                onClick={() => setShowAddDialog(true)}
+                size="lg"
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Connect Broker
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Supported Brokers */}
+      {/* Supported Platforms Grid */}
       <Card className="bg-slate-800/30 border-slate-700/50">
         <CardHeader>
-          <CardTitle className="text-white text-sm">Supported Brokers</CardTitle>
-          <CardDescription className="text-slate-400 text-xs">
-            More brokers coming soon. Request support for your broker via feedback.
+          <CardTitle className="text-white text-lg flex items-center gap-2">
+            <Shield className="w-5 h-5 text-blue-400" />
+            Supported Trading Platforms
+          </CardTitle>
+          <CardDescription className="text-slate-400">
+            All connections are secured with bank-level encryption. More platforms added regularly.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -492,24 +694,18 @@ const BrokerIntegration = () => {
             {supportedBrokers.map((broker) => (
               <div
                 key={broker.id}
-                className={`p-3 rounded-lg border text-center ${
+                className={`p-4 rounded-xl border text-center transition-all duration-200 hover:scale-105 ${
                   broker.supported
-                    ? 'bg-emerald-500/10 border-emerald-500/20'
-                    : 'bg-slate-700/30 border-slate-600/30'
+                    ? 'bg-gradient-to-br from-emerald-500/10 to-blue-500/10 border-emerald-500/20 hover:border-emerald-400/40'
+                    : 'bg-slate-700/30 border-slate-600/30 hover:border-slate-500/50'
                 }`}
               >
-                <div className="flex items-center justify-center mb-2">
-                  {broker.supported ? (
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <Clock className="w-4 h-4 text-slate-400" />
-                  )}
-                </div>
-                <h4 className="text-sm font-medium text-white">{broker.name}</h4>
-                <p className="text-xs text-slate-400 mt-1">{broker.description}</p>
+                <div className="text-3xl mb-3">{broker.icon}</div>
+                <h4 className="text-sm font-semibold text-white mb-1">{broker.name}</h4>
+                <p className="text-xs text-slate-400 mb-3">{broker.description}</p>
                 <Badge
                   variant={broker.supported ? "default" : "secondary"}
-                  className="mt-2 text-xs"
+                  className={`text-xs ${broker.supported ? 'bg-emerald-500/20 text-emerald-400' : ''}`}
                 >
                   {broker.supported ? 'Available' : 'Coming Soon'}
                 </Badge>

@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Navigate } from 'react-router-dom';
-import { Wifi, WifiOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Wifi, WifiOff, CheckCircle, AlertCircle, TrendingUp, Zap } from 'lucide-react';
 
 const Auth = () => {
   const { user, signIn, signUp, loading, isOnline } = useAuth();
@@ -20,6 +20,9 @@ const Auth = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loadingDemo, setLoadingDemo] = useState(false);
+
+  const navigate = useNavigate();
 
   // Demo accounts
   const demoAccounts = [
@@ -119,6 +122,13 @@ const Auth = () => {
             </div>
           )}
         </div>
+
+        {!isOnline && (
+          <div className="flex items-center gap-2 text-green-400 text-sm">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span>⚡ Fast Local Mode Active</span>
+          </div>
+        )}
 
         <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
           <CardHeader className="text-center">
@@ -289,10 +299,56 @@ const Auth = () => {
                 </div>
               ) : (
                 <div>
-                  <p>💾 Working in offline mode</p>
-                  <p>Data saved locally, will sync when online</p>
+                  <p>⚡ Lightning-fast local mode - no internet required</p>
+                  <p>✨ All your data stays private on your device</p>
+                  <p>🚀 Instant access to full trading platform</p>
                 </div>
               )}
+            </div>
+
+            {/* Quick Demo Access Button */}
+            <div className="space-y-4">
+              <Button
+                onClick={async () => {
+                  setLoadingDemo(true);
+                  setError(''); // Clear any previous errors
+                  try {
+                    console.log('🚀 Starting demo access...');
+                    const result = await signUp('demo@quantumrisk.com', 'demo123', 'Demo User');
+                    if (!result.error) {
+                      console.log('✅ Demo user created/logged in successfully');
+                      // Use React Router navigation instead of window.location
+                      setTimeout(() => {
+                        navigate('/');
+                      }, 1000); // Small delay to show success
+                    } else {
+                      console.log('Demo login error:', result.error);
+                      setError('Demo access failed. Please try again.');
+                    }
+                  } catch (error) {
+                    console.error('Demo access error:', error);
+                    setError('Demo access failed. Please try again.');
+                  }
+                  setLoadingDemo(false);
+                }}
+                disabled={loading || loadingDemo}
+                className="w-full holo-button bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600"
+              >
+                {loadingDemo ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Creating Demo Account...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Zap className="w-4 h-4" />
+                    <span>Quick Demo Access</span>
+                  </div>
+                )}
+              </Button>
+              <div className="text-center text-xs text-slate-500">
+                ↑ Instant access • No registration required • Ultra-fast local mode
+              </div>
             </div>
           </CardFooter>
         </Card>

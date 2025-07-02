@@ -157,9 +157,16 @@ const supabaseSync = {
 
   async isOnline(): Promise<boolean> {
     try {
-      const { error } = await supabase.from('profiles').select('count').limit(1);
+      // Simple connectivity check with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      const { error } = await supabase.from('profiles').select('count').limit(1).abortSignal(controller.signal);
+      clearTimeout(timeoutId);
+      
       return !error;
     } catch {
+      // Default to offline mode - app works perfectly offline
       return false;
     }
   }
@@ -170,71 +177,85 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false); // Default to offline
 
-  // Check online status
+  // Check online status with timeout
   const checkOnlineStatus = useCallback(async () => {
-    const online = await supabaseSync.isOnline();
-    setIsOnline(online);
-    return online;
+    try {
+      const online = await supabaseSync.isOnline();
+      setIsOnline(online);
+      return online;
+    } catch {
+      setIsOnline(false);
+      return false;
+    }
   }, []);
 
-  // Initialize app
-  const initializeApp = useCallback(async () => {
-    if (initialized) return;
-    
-    try {
-      console.log('🚀 Initializing Quantum Risk Coach...');
-      
-      // Check if we have a local user
-      const localUser = localUserManager.getUser();
-      if (localUser) {
-        setUser(localUser);
-        console.log('✅ Local user found:', localUser.email);
-      }
-
-      // Check online status
-      await checkOnlineStatus();
-
-      // Try to get Supabase session if online
-      if (isOnline) {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            setSession(session);
-            setUser(session.user);
-            console.log('✅ Supabase session found:', session.user.email);
-          }
-        } catch (error) {
-          console.warn('Supabase session check failed:', error);
+  // Initialize app ONCE - prioritize local functionality
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        console.log('🚀 Initializing Quantum Risk Coach (Offline-First)...');
+        
+        // Always check for local user first - this is primary
+        const localUser = localUserManager.getUser();
+        if (localUser) {
+          setUser(localUser);
+          setInitialized(true);
+          setLoading(false);
+          console.log('✅ Local user found:', localUser.email);
+          
+          // Try to sync with Supabase in background (non-blocking)
+          checkOnlineStatus().then(online => {
+            if (online) {
+              supabaseSync.syncUserToSupabase(localUser);
+            }
+          });
+          
+          return;
         }
+
+        // Only if no local user, try Supabase (with timeout)
+        const online = await checkOnlineStatus();
+        if (online) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              setSession(session);
+              setUser(session.user);
+              console.log('✅ Supabase session found:', session.user.email);
+            }
+          } catch (error) {
+            console.warn('Supabase session check failed:', error);
+          }
+        }
+
+        setInitialized(true);
+        console.log('✅ App initialized successfully');
+      } catch (error) {
+        console.error('❌ App initialization failed:', error);
+        setInitialized(true); // Always mark as initialized
+      } finally {
+        setLoading(false);
       }
+    };
 
-      setInitialized(true);
-      console.log('✅ App initialization complete');
-    } catch (error) {
-      console.error('❌ App initialization error:', error);
-      setInitialized(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [initialized, isOnline, checkOnlineStatus]);
-
-  useEffect(() => {
     initializeApp();
-  }, [initializeApp]);
+  }, []); // Run only once
 
-  // Set up Supabase auth listener
+  // Listen for auth changes
   useEffect(() => {
+    if (!initialized) return;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Supabase auth state change:', event);
+      console.log('Auth state change:', event, session?.user?.email);
       
-      if (session) {
+      if (event === 'SIGNED_IN' && session?.user) {
         setSession(session);
         setUser(session.user);
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
-        // Keep local user if available
+        // Keep local user if exists
         const localUser = localUserManager.getUser();
         if (!localUser) {
           setUser(null);
@@ -243,7 +264,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [initialized]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
