@@ -26,14 +26,16 @@ const MobileBottomNav = () => {
       icon: Home,
       label: 'Overview',
       activeColor: 'text-blue-400',
-      paths: ['/']
+      paths: ['/'],
+      testId: 'nav-overview'
     },
     {
       href: '/journal',
       icon: BookOpen,
       label: 'Journal',
       activeColor: 'text-blue-400',
-      paths: ['/journal']
+      paths: ['/journal'],
+      testId: 'nav-journal'
     },
     {
       href: '/trade-builder',
@@ -41,21 +43,24 @@ const MobileBottomNav = () => {
       label: 'Trade',
       activeColor: 'text-blue-400',
       isHighlight: true,
-      paths: ['/trade-builder']
+      paths: ['/trade-builder'],
+      testId: 'nav-trade'
     },
     {
       href: '/performance-calendar',
       icon: BarChart3,
       label: 'Analytics',
       activeColor: 'text-blue-400',
-      paths: ['/performance-calendar', '/strategy-analyzer']
+      paths: ['/performance-calendar', '/strategy-analyzer'],
+      testId: 'nav-analytics'
     },
     {
       href: '/settings',
       icon: User,
       label: 'Profile',
       activeColor: 'text-blue-400',
-      paths: ['/settings']
+      paths: ['/settings'],
+      testId: 'nav-profile'
     }
   ];
 
@@ -64,7 +69,10 @@ const MobileBottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-t border-[#1A1B1E] safe-area-inset-bottom touch-manipulation">
+    <nav 
+      className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-t border-[#1A1B1E] safe-area-inset-bottom touch-manipulation"
+      data-testid="mobile-bottom-nav"
+    >
       <div className="px-2 py-2">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
@@ -85,6 +93,7 @@ const MobileBottomNav = () => {
                 role="button"
                 tabIndex={0}
                 aria-label={`Navigate to ${item.label}`}
+                data-testid={item.testId}
               >
                 <div className={cn(
                   "p-2 rounded-xl transition-all duration-200 flex items-center justify-center",

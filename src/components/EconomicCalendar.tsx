@@ -33,6 +33,7 @@ interface EconomicEvent {
   time: string;
   date: string;
   impact: 'high' | 'medium' | 'low';
+  category: string;
   forecast?: string;
   previous?: string;
   actual?: string;
@@ -73,6 +74,7 @@ const EconomicCalendar = () => {
           time: '08:30',
           date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
           impact: 'high',
+          category: '',
           forecast: '200K',
           previous: '187K',
           actual: ''
@@ -85,6 +87,7 @@ const EconomicCalendar = () => {
           time: '12:45',
           date: new Date(Date.now() + 172800000).toISOString().split('T')[0], // Day after tomorrow
           impact: 'high',
+          category: '',
           forecast: '4.50%',
           previous: '4.50%',
           actual: ''
@@ -97,6 +100,7 @@ const EconomicCalendar = () => {
           time: '08:30',
           date: new Date(Date.now() + 259200000).toISOString().split('T')[0], // 3 days from now
           impact: 'medium',
+          category: '',
           forecast: '3.2%',
           previous: '3.1%',
           actual: ''
@@ -109,6 +113,7 @@ const EconomicCalendar = () => {
           time: '03:00',
           date: new Date(Date.now() + 345600000).toISOString().split('T')[0], // 4 days from now
           impact: 'high',
+          category: '',
           forecast: '-0.10%',
           previous: '-0.10%',
           actual: ''

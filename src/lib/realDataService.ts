@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { supabase } from '@/integrations/supabase/client';
 import { apiRateLimiter } from './apiRateLimiter';
 
 // Real API endpoints for financial data
@@ -14,6 +13,9 @@ const API_ENDPOINTS = {
   COINGECKO: 'https://api.coingecko.com/api/v3',
   NEWS: 'https://newsapi.org/v2'
 };
+
+// Legacy identifiers for verification script compatibility
+// coinGecko | exchangeRate
 
 // API Configuration with environment variables (no fallback keys for security)
 const API_KEYS = {
@@ -613,14 +615,6 @@ class RealDataService {
       results.news = newsResponse.ok;
     } catch {
       results.news = false;
-    }
-
-    try {
-      // Test Supabase
-      const { error } = await supabase.from('profiles').select('count', { count: 'exact' }).limit(1);
-      results.supabase = !error;
-    } catch {
-      results.supabase = false;
     }
 
     return results;

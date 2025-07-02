@@ -16,12 +16,12 @@ import {
   EyeOff,
   RefreshCw
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser } from '@/contexts/UserContext';
 import { useTrades } from '@/hooks/useTrades';
 import realBrokerService from '@/lib/realBrokerService';
 
 const QuickStats = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { trades, getPerformanceMetrics } = useTrades();
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);

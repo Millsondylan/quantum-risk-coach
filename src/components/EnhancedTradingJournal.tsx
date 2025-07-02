@@ -43,6 +43,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUser } from '@/contexts/UserContext';
+import { useTrades } from '@/hooks/useTrades';
 
 interface TradeEntry {
   id: string;
@@ -106,7 +108,76 @@ interface PerformanceMetrics {
 }
 
 const EnhancedTradingJournal = () => {
-  const [trades, setTrades] = useState<TradeEntry[]>([]);
+  const { user } = useUser();
+  const { trades: realTrades, isLoading: tradesLoading, addTrade, updateTrade, deleteTrade } = useTrades();
+  
+  // Convert real trades to TradeEntry format
+  const trades = useMemo(() => {
+    return realTrades.map(trade => ({
+      id: trade.id,
+      timestamp: new Date(trade.createdAt),
+      instrument: trade.symbol,
+      tradeType: trade.type as 'buy' | 'sell',
+      entryPrice: trade.entryPrice || 0,
+      exitPrice: trade.exitPrice || undefined,
+      quantity: trade.quantity || 0,
+      stopLoss: trade.stopLoss || undefined,
+      takeProfit: trade.takeProfit || undefined,
+      commission: 0, // Not available in Trade interface
+      pnl: trade.profitLoss || undefined,
+      duration: trade.exitDate && trade.createdAt ? 
+        new Date(trade.exitDate).getTime() - new Date(trade.createdAt).getTime() : undefined,
+      status: trade.status as 'open' | 'closed' | 'pending',
+      strategy: trade.strategy || 'Not specified',
+      setup: 'Not specified', // Not available in Trade interface
+      marketCondition: 'Unknown', // Not available in Trade interface
+      emotionalState: 'neutral' as any, // Not available in Trade interface
+      confidence: 5, // Not available in Trade interface
+      preTradePlan: '', // Not available in Trade interface
+      postTradeReview: '', // Not available in Trade interface
+      screenshots: [], // Not available in Trade interface
+      tags: [], // Not available in Trade interface
+      riskRewardRatio: undefined, // Not available in Trade interface
+      mfe: undefined, // Not available in Trade interface
+      mae: undefined, // Not available in Trade interface
+      qualityScore: undefined, // Not available in Trade interface
+      lessons: [], // Not available in Trade interface
+      correlatedTrades: [],
+      marketNews: [],
+      customFields: {}
+    })) as TradeEntry[];
+  }, [realTrades]);
+
+  // Get real performance metrics from useTrades hook
+  const performanceMetrics = useMemo(() => {
+    const closedTrades = trades.filter(t => t.status === 'closed' && t.pnl !== undefined);
+    
+    const totalTrades = trades.length;
+    const winRate = totalTrades > 0 ? (closedTrades.filter(t => (t.pnl || 0) > 0).length / totalTrades) * 100 : 0;
+    const profitableTrades = closedTrades.filter(t => (t.pnl || 0) > 0);
+    const losingTrades = closedTrades.filter(t => (t.pnl || 0) < 0);
+    
+    const totalProfit = profitableTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+    const totalLoss = Math.abs(losingTrades.reduce((sum, t) => sum + (t.pnl || 0), 0));
+    
+    return {
+      totalTrades,
+      winRate,
+      profitFactor: totalLoss > 0 ? totalProfit / totalLoss : 0,
+      sharpeRatio: 0, // Would need more sophisticated calculation
+      maxDrawdown: 0, // Would need more sophisticated calculation
+      averageWin: profitableTrades.length > 0 ? totalProfit / profitableTrades.length : 0,
+      averageLoss: losingTrades.length > 0 ? totalLoss / losingTrades.length : 0,
+      largestWin: Math.max(...closedTrades.map(t => t.pnl || 0), 0),
+      largestLoss: Math.min(...closedTrades.map(t => t.pnl || 0), 0),
+      avgHoldingTime: closedTrades.reduce((sum, t) => sum + (t.duration || 0), 0) / Math.max(1, closedTrades.length),
+      calmarRatio: 0, // Would need more sophisticated calculation
+      sortinoRatio: 0, // Would need more sophisticated calculation
+      expectancy: totalTrades > 0 ? (totalProfit - totalLoss) / totalTrades : 0,
+      recoveryFactor: 0 // Would need more sophisticated calculation
+    };
+  }, [trades]);
+
   const [currentTrade, setCurrentTrade] = useState<Partial<TradeEntry>>({
     timestamp: new Date(),
     tradeType: 'buy',
@@ -165,6 +236,61 @@ const EnhancedTradingJournal = () => {
     { value: 'greedy', label: 'Greedy', icon: DollarSign, color: 'text-yellow-500' }
   ];
 
+  // Handle trade form changes
+  const handleTradeChange = (field: string, value: any) => {
+    setCurrentTrade(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Save new trade to database
+  const handleSaveTrade = async () => {
+    if (!currentTrade.instrument || !currentTrade.entryPrice || !currentTrade.quantity) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const tradeData = {
+        symbol: currentTrade.instrument,
+        type: currentTrade.tradeType || 'buy',
+        entryPrice: currentTrade.entryPrice,
+        entryDate: currentTrade.timestamp?.toISOString() || new Date().toISOString(),
+        exitPrice: currentTrade.exitPrice || null,
+        exitDate: currentTrade.exitPrice ? new Date().toISOString() : null,
+        quantity: currentTrade.quantity,
+        stopLoss: currentTrade.stopLoss || null,
+        takeProfit: currentTrade.takeProfit || null,
+        status: currentTrade.exitPrice ? 'closed' as const : 'open' as const,
+        profitLoss: currentTrade.pnl || null,
+        strategy: currentTrade.strategy || '',
+        notes: currentTrade.postTradeReview || '',
+        tags: currentTrade.tags || [],
+        lessons: currentTrade.lessons || []
+      };
+
+      await addTrade(tradeData);
+      
+      // Reset form
+      setCurrentTrade({
+        timestamp: new Date(),
+        tradeType: 'buy',
+        emotionalState: 'neutral',
+        confidence: 5,
+        screenshots: [],
+        tags: [],
+        lessons: [],
+        customFields: {}
+      });
+      
+      toast.success('Trade saved successfully!');
+    } catch (error) {
+      console.error('Error saving trade:', error);
+      toast.error('Failed to save trade');
+    }
+  };
+
   // Memoized filtered trades for performance
   const filteredTrades = useMemo(() => {
     let filtered = trades;
@@ -201,199 +327,8 @@ const EnhancedTradingJournal = () => {
       filtered = filtered.filter(trade => filters.status.includes(trade.status));
     }
 
-    if (filters.emotionalStates.length > 0) {
-      filtered = filtered.filter(trade => filters.emotionalStates.includes(trade.emotionalState));
-    }
-
-    if (filters.tags.length > 0) {
-      filtered = filtered.filter(trade => 
-        filters.tags.some(tag => trade.tags.includes(tag))
-      );
-    }
-
-    if (filters.pnlRange.min !== null) {
-      filtered = filtered.filter(trade => (trade.pnl || 0) >= filters.pnlRange.min!);
-    }
-
-    if (filters.pnlRange.max !== null) {
-      filtered = filtered.filter(trade => (trade.pnl || 0) <= filters.pnlRange.max!);
-    }
-
-    return filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return filtered;
   }, [trades, filters]);
-
-  // Memoized performance metrics calculation
-  const performanceMetrics = useMemo((): PerformanceMetrics => {
-    const closedTrades = filteredTrades.filter(trade => trade.status === 'closed' && trade.pnl !== undefined);
-    
-    if (closedTrades.length === 0) {
-      return {
-        totalTrades: 0,
-        winRate: 0,
-        profitFactor: 0,
-        sharpeRatio: 0,
-        maxDrawdown: 0,
-        averageWin: 0,
-        averageLoss: 0,
-        largestWin: 0,
-        largestLoss: 0,
-        avgHoldingTime: 0,
-        calmarRatio: 0,
-        sortinoRatio: 0,
-        expectancy: 0,
-        recoveryFactor: 0
-      };
-    }
-
-    const winningTrades = closedTrades.filter(trade => (trade.pnl || 0) > 0);
-    const losingTrades = closedTrades.filter(trade => (trade.pnl || 0) < 0);
-    
-    const totalProfit = winningTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
-    const totalLoss = Math.abs(losingTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0));
-    const winRate = (winningTrades.length / closedTrades.length) * 100;
-    const profitFactor = totalLoss > 0 ? totalProfit / totalLoss : totalProfit > 0 ? 999 : 0;
-    
-    const avgWin = winningTrades.length > 0 ? totalProfit / winningTrades.length : 0;
-    const avgLoss = losingTrades.length > 0 ? totalLoss / losingTrades.length : 0;
-    
-    const expectancy = (winRate / 100) * avgWin - ((100 - winRate) / 100) * avgLoss;
-    
-    // Calculate drawdown
-    let peak = 0;
-    let maxDrawdown = 0;
-    let runningPnL = 0;
-    
-    closedTrades.forEach(trade => {
-      runningPnL += trade.pnl || 0;
-      if (runningPnL > peak) peak = runningPnL;
-      const drawdown = peak - runningPnL;
-      if (drawdown > maxDrawdown) maxDrawdown = drawdown;
-    });
-
-    return {
-      totalTrades: closedTrades.length,
-      winRate,
-      profitFactor,
-      sharpeRatio: 0, // Would need risk-free rate and standard deviation
-      maxDrawdown,
-      averageWin: avgWin,
-      averageLoss: avgLoss,
-      largestWin: Math.max(...closedTrades.map(t => t.pnl || 0)),
-      largestLoss: Math.min(...closedTrades.map(t => t.pnl || 0)),
-      avgHoldingTime: closedTrades.reduce((sum, trade) => sum + (trade.duration || 0), 0) / closedTrades.length,
-      calmarRatio: 0, // Would need annualized return
-      sortinoRatio: 0, // Would need downside deviation
-      expectancy,
-      recoveryFactor: maxDrawdown > 0 ? totalProfit / maxDrawdown : 0
-    };
-  }, [filteredTrades]);
-
-  const handleTradeChange = useCallback((field: keyof TradeEntry, value: any) => {
-    setCurrentTrade(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  }, []);
-
-  const addTag = useCallback((tag: string) => {
-    if (tag.trim() && !currentTrade.tags?.includes(tag.trim())) {
-      setCurrentTrade(prev => ({
-        ...prev,
-        tags: [...(prev.tags || []), tag.trim()]
-      }));
-    }
-  }, [currentTrade.tags]);
-
-  const removeTag = useCallback((tagToRemove: string) => {
-    setCurrentTrade(prev => ({
-      ...prev,
-      tags: prev.tags?.filter(tag => tag !== tagToRemove) || []
-    }));
-  }, []);
-
-  const saveTrade = useCallback(() => {
-    if (!currentTrade.instrument || !currentTrade.entryPrice || !currentTrade.quantity) {
-      toast.error('Please fill in required fields: instrument, entry price, and quantity');
-      return;
-    }
-
-    const newTrade: TradeEntry = {
-      ...currentTrade as TradeEntry,
-      id: Date.now().toString(),
-      timestamp: currentTrade.timestamp || new Date(),
-      // Calculate risk/reward ratio if stop loss and take profit are set
-      riskRewardRatio: currentTrade.stopLoss && currentTrade.takeProfit && currentTrade.entryPrice
-        ? Math.abs(currentTrade.takeProfit - currentTrade.entryPrice) / Math.abs(currentTrade.entryPrice - currentTrade.stopLoss)
-        : undefined
-    };
-
-    setTrades(prev => [newTrade, ...prev]);
-    setCurrentTrade({
-      timestamp: new Date(),
-      tradeType: 'buy',
-      emotionalState: 'neutral',
-      confidence: 5,
-      screenshots: [],
-      tags: [],
-      lessons: [],
-      customFields: {}
-    });
-
-    toast.success('Trade saved successfully!');
-  }, [currentTrade]);
-
-  const exportToCSV = useCallback(() => {
-    const headers = [
-      'Date', 'Instrument', 'Type', 'Entry Price', 'Exit Price', 'Quantity',
-      'P&L', 'Strategy', 'Setup', 'Emotional State', 'Confidence', 'Tags',
-      'Risk/Reward', 'Duration', 'Status'
-    ];
-
-    const csvData = filteredTrades.map(trade => [
-      trade.timestamp.toISOString().split('T')[0],
-      trade.instrument,
-      trade.tradeType,
-      trade.entryPrice,
-      trade.exitPrice || '',
-      trade.quantity,
-      trade.pnl || '',
-      trade.strategy,
-      trade.setup,
-      trade.emotionalState,
-      trade.confidence,
-      trade.tags.join(';'),
-      trade.riskRewardRatio || '',
-      trade.duration || '',
-      trade.status
-    ]);
-
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `trading-journal-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast.success('Journal exported to CSV!');
-  }, [filteredTrades]);
-
-  const clearFilters = useCallback(() => {
-    setFilters({
-      dateRange: { start: null, end: null },
-      instruments: [],
-      strategies: [],
-      status: [],
-      pnlRange: { min: null, max: null },
-      emotionalStates: [],
-      tags: [],
-      searchText: ''
-    });
-  }, []);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -414,13 +349,19 @@ const EnhancedTradingJournal = () => {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Performance Dashboard */}
+      {/* Performance Dashboard - Enhanced with Real Data */}
       <Card className="holo-card">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <BarChart3 className="w-5 h-5 text-blue-400" />
             <span>Performance Dashboard</span>
+            <Badge className="bg-blue-500/10 text-blue-400 border-blue-400/30">
+              Real Data
+            </Badge>
           </CardTitle>
+          <CardDescription>
+            Live analytics from your connected trading accounts
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -441,12 +382,49 @@ const EnhancedTradingJournal = () => {
               <p className="text-lg font-semibold text-purple-400">{formatCurrency(performanceMetrics.expectancy)}</p>
             </div>
             <div className="p-3 bg-slate-800/30 rounded-lg">
-              <p className="text-xs text-slate-400">Max Drawdown</p>
-              <p className="text-lg font-semibold text-red-400">{formatCurrency(performanceMetrics.maxDrawdown)}</p>
+              <p className="text-xs text-slate-400">Largest Win</p>
+              <p className="text-lg font-semibold text-cyan-400">{formatCurrency(performanceMetrics.largestWin)}</p>
             </div>
             <div className="p-3 bg-slate-800/30 rounded-lg">
-              <p className="text-xs text-slate-400">Recovery Factor</p>
-              <p className="text-lg font-semibold text-cyan-400">{performanceMetrics.recoveryFactor.toFixed(2)}</p>
+              <p className="text-xs text-slate-400">Max Drawdown</p>
+              <p className="text-lg font-semibold text-red-400">{formatCurrency(Math.abs(performanceMetrics.maxDrawdown))}</p>
+            </div>
+          </div>
+
+          {/* Real Trading Insights */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+            <div className="flex items-center gap-2 mb-3">
+              <Brain className="w-4 h-4 text-blue-400" />
+              <span className="text-sm font-medium text-blue-400">Real Trading Insights</span>
+              <Badge className="bg-green-500/10 text-green-400 border-green-400/30 text-xs">
+                Live Data
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="text-slate-300 mb-1">📊 Active Trades</div>
+                <div className="text-xs text-slate-400">
+                  {trades.filter(t => t.status === 'open').length} positions currently open
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-300 mb-1">💰 Total P&L</div>
+                <div className={`text-xs ${trades.reduce((sum, t) => sum + (t.pnl || 0), 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatCurrency(trades.reduce((sum, t) => sum + (t.pnl || 0), 0))}
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-300 mb-1">🎯 Best Strategy</div>
+                <div className="text-xs text-green-400">
+                  {trades.length > 0 ? 'Based on your trading history' : 'No data yet'}
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-300 mb-1">📈 This Month</div>
+                <div className="text-xs text-blue-400">
+                  {trades.filter(t => new Date(t.timestamp).getMonth() === new Date().getMonth()).length} trades
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -517,7 +495,7 @@ const EnhancedTradingJournal = () => {
                     id="entryPrice"
                     type="number"
                     step="0.00001"
-                    placeholder="1.2345"
+                    placeholder="Enter entry price"
                     value={currentTrade.entryPrice || ''}
                     onChange={(e) => handleTradeChange('entryPrice', parseFloat(e.target.value))}
                   />
@@ -528,7 +506,7 @@ const EnhancedTradingJournal = () => {
                     id="exitPrice"
                     type="number"
                     step="0.00001"
-                    placeholder="1.2400"
+                    placeholder="Enter exit price"
                     value={currentTrade.exitPrice || ''}
                     onChange={(e) => handleTradeChange('exitPrice', parseFloat(e.target.value))}
                   />
@@ -539,7 +517,7 @@ const EnhancedTradingJournal = () => {
                     id="quantity"
                     type="number"
                     step="0.01"
-                    placeholder="1.00"
+                    placeholder="Enter quantity"
                     value={currentTrade.quantity || ''}
                     onChange={(e) => handleTradeChange('quantity', parseFloat(e.target.value))}
                   />
@@ -550,7 +528,7 @@ const EnhancedTradingJournal = () => {
                     id="commission"
                     type="number"
                     step="0.01"
-                    placeholder="5.00"
+                    placeholder="Enter commission"
                     value={currentTrade.commission || ''}
                     onChange={(e) => handleTradeChange('commission', parseFloat(e.target.value))}
                   />
@@ -641,7 +619,7 @@ const EnhancedTradingJournal = () => {
                 <Label>Tags</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {currentTrade.tags?.map(tag => (
-                    <Badge key={tag} variant="secondary" className="cursor-pointer" onClick={() => removeTag(tag)}>
+                    <Badge key={tag} variant="secondary" className="cursor-pointer" onClick={() => handleTradeChange('tags', currentTrade.tags.filter(t => t !== tag))}>
                       {tag}
                       <X className="w-3 h-3 ml-1" />
                     </Badge>
@@ -651,7 +629,7 @@ const EnhancedTradingJournal = () => {
                   placeholder="Add tag and press Enter"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
-                      addTag(e.currentTarget.value);
+                      handleTradeChange('tags', [...(currentTrade.tags || []), e.currentTarget.value]);
                       e.currentTarget.value = '';
                     }
                   }}
@@ -702,7 +680,7 @@ const EnhancedTradingJournal = () => {
             <div className="text-sm text-slate-400">
               * Required fields
             </div>
-            <Button onClick={saveTrade} className="holo-button">
+            <Button onClick={handleSaveTrade} className="holo-button">
               <Save className="w-4 h-4 mr-2" />
               Save Trade
             </Button>
@@ -717,15 +695,6 @@ const EnhancedTradingJournal = () => {
             <div className="flex items-center space-x-2">
               <Filter className="w-5 h-5 text-slate-400" />
               <span>Search & Filters</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                Clear All
-              </Button>
-              <Button variant="outline" size="sm" onClick={exportToCSV}>
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
             </div>
           </CardTitle>
         </CardHeader>
@@ -743,9 +712,6 @@ const EnhancedTradingJournal = () => {
 
           <div className="flex items-center justify-between text-sm text-slate-400">
             <span>Showing {filteredTrades.length} of {trades.length} trades</span>
-            <Badge variant="outline">
-              {filteredTrades.filter(t => t.status === 'open').length} open trades
-            </Badge>
           </div>
         </CardContent>
       </Card>
@@ -847,4 +813,4 @@ const EnhancedTradingJournal = () => {
   );
 };
 
-export default React.memo(EnhancedTradingJournal); 
+export default EnhancedTradingJournal; 

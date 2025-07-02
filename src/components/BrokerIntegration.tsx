@@ -26,12 +26,12 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser } from '@/contexts/UserContext';
 import realBrokerService, { RealBrokerConnection } from '@/lib/realBrokerService';
 import { toast } from 'sonner';
 
 const BrokerIntegration = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const [connections, setConnections] = useState<RealBrokerConnection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);

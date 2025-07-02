@@ -1,13 +1,17 @@
 {
   "name": "Quantum Risk Coach",
-  "short_name": "QuantumRisk",
-  "description": "AI-powered trading coach with risk management and market analysis",
+  "short_name": "QRCoach",
+  "description": "Professional Trading Coach with AI-Powered Insights and Risk Management",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#000000",
-  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00d9ff",
+  "orientation": "portrait-primary",
+  "categories": ["finance", "productivity", "business"],
+  "lang": "en",
+  "dir": "ltr",
   "scope": "/",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "favicon.ico",
@@ -22,12 +26,67 @@
     },
     {
       "src": "placeholder.svg",
-      "type": "image/svg+xml", 
+      "type": "image/svg+xml",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
-  "categories": ["finance", "productivity", "business"],
-  "lang": "en",
-  "dir": "ltr"
+  "screenshots": [
+    {
+      "src": "placeholder.svg",
+      "type": "image/svg+xml",
+      "sizes": "1280x720",
+      "form_factor": "wide"
+    },
+    {
+      "src": "placeholder.svg", 
+      "type": "image/svg+xml",
+      "sizes": "750x1334",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quick Trade",
+      "short_name": "Trade",
+      "description": "Open trade builder",
+      "url": "/trade-builder",
+      "icons": [{ "src": "placeholder.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Market Analysis",
+      "short_name": "Analysis", 
+      "description": "View market insights",
+      "url": "/analytics",
+      "icons": [{ "src": "placeholder.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Trading Journal",
+      "short_name": "Journal",
+      "description": "Access trading journal",
+      "url": "/journal", 
+      "icons": [{ "src": "placeholder.svg", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.quantumriskcoach.app",
+      "id": "com.quantumriskcoach.app"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+qrcoach",
+      "url": "/?action=%s"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "capture_links": "existing-client-navigate"
 } 

@@ -2,7 +2,7 @@
 import { realDataService } from './realDataService';
 import { AIStreamService } from './aiStreamService';
 import { EnhancedWebSocketService } from './enhancedWebSocketService';
-import { testConnection } from '@/integrations/supabase/client';
+// Supabase import removed - using local storage instead
 
 interface HealthStatus {
   service: string;
@@ -55,7 +55,7 @@ class HealthCheckService {
 
     try {
       const services: HealthStatus[] = await Promise.all([
-        this.checkSupabaseConnection(),
+        this.checkLocalStorage(),
         this.checkCryptoDataAPI(),
         this.checkForexDataAPI(),
         this.checkStockDataAPI(),
@@ -91,22 +91,29 @@ class HealthCheckService {
   }
 
   // Individual service checks
-  private async checkSupabaseConnection(): Promise<HealthStatus> {
+  private async checkLocalStorage(): Promise<HealthStatus> {
     const start = Date.now();
     try {
-      const isConnected = await testConnection();
+      // Test local storage functionality
+      const testKey = 'health_check_test';
+      const testValue = 'test_data';
+      localStorage.setItem(testKey, testValue);
+      const retrievedValue = localStorage.getItem(testKey);
+      localStorage.removeItem(testKey);
+      
+      const isWorking = retrievedValue === testValue;
       const responseTime = Date.now() - start;
 
       return {
-        service: 'Supabase Database',
-        status: isConnected ? 'healthy' : 'unhealthy',
+        service: 'Local Storage',
+        status: isWorking ? 'healthy' : 'unhealthy',
         responseTime,
         lastChecked: Date.now(),
-        details: { connected: isConnected }
+        details: { working: isWorking }
       };
     } catch (error) {
       return {
-        service: 'Supabase Database',
+        service: 'Local Storage',
         status: 'unhealthy',
         responseTime: Date.now() - start,
         lastChecked: Date.now(),
@@ -441,7 +448,7 @@ class HealthCheckService {
   async quickHealthCheck(): Promise<{ status: string; critical: number; total: number }> {
     try {
       const criticalChecks = await Promise.all([
-        this.checkSupabaseConnection(),
+        this.checkLocalStorage(),
         this.checkCryptoDataAPI(),
         this.checkForexDataAPI(),
         this.checkOpenAIAPI()

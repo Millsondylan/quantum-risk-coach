@@ -95,134 +95,95 @@ const AIMarketInsights = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // Generate realistic market data
-  const generateMarketData = useCallback(() => {
-    const instruments = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CHF', 'NZD/USD'];
-    
-    const sentiments: MarketSentiment[] = instruments.map(symbol => {
-      const score = Math.floor(Math.random() * 200) - 100; // -100 to 100
-      const sentiment = score > 20 ? 'bullish' : score < -20 ? 'bearish' : 'neutral';
-      
-      return {
-        symbol,
-        sentiment,
-        score,
-        confidence: Math.floor(Math.random() * 40) + 60, // 60-100
-        volume: Math.random() * 100,
-        volatility: Math.random() * 50,
-        momentum: Math.random() * 100 - 50,
-        keyLevels: {
-          support: [Math.random() * 0.1 + 1.0, Math.random() * 0.1 + 0.95],
-          resistance: [Math.random() * 0.1 + 1.1, Math.random() * 0.1 + 1.15]
-        },
-        signals: {
-          technical: ['RSI Divergence', 'MACD Crossover', 'Support Bounce'].slice(0, Math.floor(Math.random() * 3) + 1),
-          fundamental: ['GDP Data', 'Central Bank Decision', 'Employment Report'].slice(0, Math.floor(Math.random() * 3) + 1)
-        }
-      };
-    });
+  const generateMarketData = useCallback(async () => {
+    try {
+      // Get real market data from APIs
+      const [forexData, cryptoData, newsData] = await Promise.allSettled([
+        realDataService.getForexRates(),
+        realDataService.getCryptoPrices(),
+        realDataService.getFinancialNews()
+      ]);
 
-    const news: NewsItem[] = [
-      {
-        id: '1',
-        title: 'Federal Reserve Signals Potential Rate Cut',
-        impact: 'high',
-        sentiment: 'positive',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        source: 'Reuters',
-        affectedInstruments: ['EUR/USD', 'GBP/USD', 'USD/JPY'],
-        summary: 'Fed officials hint at dovish stance in upcoming meeting, weakening USD outlook.'
-      },
-      {
-        id: '2',
-        title: 'European GDP Shows Stronger Than Expected Growth',
-        impact: 'medium',
-        sentiment: 'positive',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        source: 'Bloomberg',
-        affectedInstruments: ['EUR/USD', 'EUR/GBP'],
-        summary: 'Eurozone economy exceeds forecasts, boosting Euro sentiment.'
-      },
-      {
-        id: '3',
-        title: 'Bank of Japan Maintains Ultra-Low Interest Rates',
-        impact: 'high',
-        sentiment: 'negative',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4),
-        source: 'Financial Times',
-        affectedInstruments: ['USD/JPY', 'EUR/JPY'],
-        summary: 'BoJ keeps accommodative policy, Yen remains under pressure.'
+      // Process real forex data for sentiment analysis
+      const realForexData = forexData.status === 'fulfilled' ? forexData.value : [];
+      const sentiments: MarketSentiment[] = realForexData.map(item => {
+        // Calculate real sentiment based on price changes
+        const changePercent = item.change_24h || 0;
+        const score = Math.max(-100, Math.min(100, changePercent * 10)); // Scale to -100 to 100
+        const sentiment = score > 20 ? 'bullish' : score < -20 ? 'bearish' : 'neutral';
+        
+        return {
+          symbol: `${item.base}/${item.target}`,
+          sentiment,
+          score,
+          confidence: Math.abs(score) + 40, // Higher confidence for larger moves
+          volume: 0, // Not available in ForexRate interface
+          volatility: Math.abs(changePercent) * 2,
+          momentum: changePercent,
+          keyLevels: {
+            support: [item.rate * 0.995, item.rate * 0.99],
+            resistance: [item.rate * 1.005, item.rate * 1.01]
+          },
+          signals: {
+            technical: changePercent > 0 ? ['Uptrend', 'Momentum'] : ['Downtrend', 'Reversal'],
+            fundamental: ['Market Data', 'Price Action']
+          }
+        };
+      });
+
+      // Use real news data if available
+      const news: NewsItem[] = newsData.status === 'fulfilled' && newsData.value.length > 0 
+        ? newsData.value.slice(0, 3).map((item: any, index: number) => ({
+            id: (index + 1).toString(),
+            title: item.title || 'Market Update',
+            impact: item.impact || 'medium',
+            sentiment: 'neutral', // Not available in NewsItem interface
+            timestamp: new Date(item.publishedAt || Date.now()),
+            source: item.source || 'Market Data',
+            affectedInstruments: ['EUR/USD'], // Default since not available in interface
+            summary: item.description || 'Market data update'
+          }))
+        : [];
+
+      // Get real economic events from API
+      const events: EconomicEvent[] = []; // Will be populated by real economic calendar API
+
+      // Generate real AI insights based on market data
+      const insights: AIInsight[] = [];
+      if (realForexData.length > 0) {
+        // Create insights based on real market movements
+        realForexData.forEach((item, index) => {
+          const changePercent = item.change_24h || 0;
+          if (Math.abs(changePercent) > 0.5) { // Only create insights for significant moves
+            insights.push({
+              id: (index + 1).toString(),
+              type: changePercent > 0 ? 'opportunity' : 'warning',
+              title: `${item.base}/${item.target} ${changePercent > 0 ? 'Bullish' : 'Bearish'} Move`,
+              description: `${item.base}/${item.target} showing ${Math.abs(changePercent).toFixed(2)}% ${changePercent > 0 ? 'gain' : 'loss'} in recent trading.`,
+              confidence: Math.min(95, Math.abs(changePercent) * 10 + 50),
+              timeframe: '1H',
+              instruments: [`${item.base}/${item.target}`],
+              action: changePercent > 0 ? 'buy' : 'sell',
+              riskLevel: Math.abs(changePercent) > 1 ? 'high' : 'medium',
+              expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 12)
+            });
+          }
+        });
       }
-    ];
 
-    const events: EconomicEvent[] = [
-      {
-        id: '1',
-        title: 'Non-Farm Payrolls',
-        currency: 'USD',
-        importance: 'high',
-        impact: 'positive',
-        actual: 235000,
-        forecast: 200000,
-        previous: 189000,
-        timestamp: new Date(Date.now() + 1000 * 60 * 60 * 24)
-      },
-      {
-        id: '2',
-        title: 'ECB Interest Rate Decision',
-        currency: 'EUR',
-        importance: 'high',
-        impact: 'neutral',
-        forecast: 0.25,
-        previous: 0.25,
-        timestamp: new Date(Date.now() + 1000 * 60 * 60 * 48)
-      }
-    ];
-
-    const insights: AIInsight[] = [
-      {
-        id: '1',
-        type: 'opportunity',
-        title: 'EUR/USD Bullish Divergence Detected',
-        description: 'Price making lower lows while RSI making higher lows, indicating potential upward momentum.',
-        confidence: 78,
-        timeframe: '4H',
-        instruments: ['EUR/USD'],
-        action: 'buy',
-        riskLevel: 'medium',
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 12)
-      },
-      {
-        id: '2',
-        type: 'warning',
-        title: 'High Volatility Expected During NFP',
-        description: 'Significant price movements anticipated around US employment data release.',
-        confidence: 95,
-        timeframe: '1H',
-        instruments: ['USD/JPY', 'EUR/USD', 'GBP/USD'],
-        action: 'watch',
-        riskLevel: 'high',
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
-      },
-      {
-        id: '3',
-        type: 'trend',
-        title: 'USD Weakness Continues Across Majors',
-        description: 'Dollar Index breaking key support levels, expect further weakness in the short term.',
-        confidence: 82,
-        timeframe: '1D',
-        instruments: ['EUR/USD', 'GBP/USD', 'AUD/USD'],
-        action: 'sell',
-        riskLevel: 'low',
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 72)
-      }
-    ];
-
-    setMarketSentiments(sentiments);
-    setNewsItems(news);
-    setEconomicEvents(events);
-    setAiInsights(insights);
-    setLastUpdate(new Date());
+      setMarketSentiments(sentiments);
+      setNewsItems(news);
+      setEconomicEvents(events);
+      setAiInsights(insights);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Failed to generate real market data:', error);
+      // Set empty arrays if real data fails
+      setMarketSentiments([]);
+      setNewsItems([]);
+      setEconomicEvents([]);
+      setAiInsights([]);
+    }
   }, []);
 
   useEffect(() => {

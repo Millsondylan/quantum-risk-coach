@@ -1,5 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
-
 export interface RealBrokerConnection {
   id: string;
   userId: string;
@@ -372,7 +370,9 @@ class RealBrokerService {
   }
 
   private async testMT45Connection(connection: RealBrokerConnection): Promise<any> {
-    throw new Error('MT4/MT5 connection requires expert advisor installation. Please see our setup guide.');
+    // MT4/MT5 connection requires real implementation with MetaTrader API
+    // This would need to be implemented using MetaTrader's API or through a bridge service
+    throw new Error('MT4/MT5 connection requires real implementation. Please contact support for setup assistance.');
   }
 
   private async testCTraderConnection(connection: RealBrokerConnection): Promise<any> {

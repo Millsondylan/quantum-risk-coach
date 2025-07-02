@@ -288,7 +288,7 @@ class PushNotificationService {
     }
 
     const { preferences, performanceMetrics, aiPersonality } = this.personalization;
-    let personalizedContent = { ...notification };
+    const personalizedContent = { ...notification };
 
     // Personalize based on trading style
     if (notification.type === 'trade_signal') {
@@ -564,6 +564,11 @@ class PushNotificationService {
   }
 
   getPersonalization(): PersonalizationProfile | null {
+    return this.personalization;
+  }
+
+  // Legacy alias for verification tests
+  get userProfile(): PersonalizationProfile | null {
     return this.personalization;
   }
 

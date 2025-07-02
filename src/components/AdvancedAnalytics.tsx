@@ -37,7 +37,7 @@ import { analyticsService, AnalyticsMetrics, TimeBasedMetrics } from '@/lib/api'
 import { realDataService } from '@/lib/realDataService';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser } from '@/contexts/UserContext';
 
 const AdvancedAnalytics = () => {
   const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
@@ -46,7 +46,7 @@ const AdvancedAnalytics = () => {
   const [symbolPerformance, setSymbolPerformance] = useState<any[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user } = useUser();
 
   useEffect(() => {
     const fetchAnalytics = async () => {

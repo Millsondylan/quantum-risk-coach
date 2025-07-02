@@ -4,6 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   PieChart, 
   Pie, 
@@ -29,8 +32,16 @@ import {
   AlertTriangle,
   RefreshCw,
   Eye,
-  EyeOff
+  EyeOff,
+  Plus,
+  Minus,
+  Download,
+  Upload
 } from 'lucide-react';
+import { useUser } from '@/contexts/UserContext';
+import { useTrades } from '@/hooks/useTrades';
+import realBrokerService from '@/lib/realBrokerService';
+import { toast } from 'sonner';
 
 interface Position {
   symbol: string;
@@ -41,9 +52,13 @@ interface Position {
   percentChange: number;
   allocation: number;
   marketValue: number;
+  broker: string;
 }
 
-interface PortfolioMetrics {
+interface Portfolio {
+  id: string;
+  name: string;
+  brokerIds: string[];
   totalValue: number;
   totalPnL: number;
   totalPnLPercent: number;
@@ -53,111 +68,284 @@ interface PortfolioMetrics {
   marginUsed: number;
   marginAvailable: number;
   exposure: number;
+  withdrawals: number;
+  deposits: number;
+}
+
+interface Transaction {
+  id: string;
+  portfolioId: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  currency: string;
+  description: string;
+  date: string;
+  status: 'pending' | 'completed' | 'failed';
 }
 
 const PortfolioManager = () => {
-  const [portfolioMetrics, setPortfolioMetrics] = useState<PortfolioMetrics>({
-    totalValue: 125847.63,
-    totalPnL: 12847.63,
-    totalPnLPercent: 11.37,
-    dayChange: 1234.56,
-    dayChangePercent: 0.99,
-    cashBalance: 25000.00,
-    marginUsed: 15000.00,
-    marginAvailable: 35000.00,
-    exposure: 0.65
-  });
-
-  const [positions, setPositions] = useState<Position[]>([
-    {
-      symbol: 'EURUSD',
-      quantity: 5.5,
-      avgPrice: 1.0825,
-      currentPrice: 1.0875,
-      unrealizedPnL: 2750.00,
-      percentChange: 4.62,
-      allocation: 35.2,
-      marketValue: 44287.50
-    },
-    {
-      symbol: 'GBPUSD',
-      quantity: -3.2,
-      avgPrice: 1.2680,
-      currentPrice: 1.2620,
-      unrealizedPnL: 1920.00,
-      percentChange: -4.73,
-      allocation: 25.8,
-      marketValue: 32468.40
-    },
-    {
-      symbol: 'USDJPY',
-      quantity: 2.1,
-      avgPrice: 149.25,
-      currentPrice: 150.75,
-      unrealizedPnL: 3150.00,
-      percentChange: 1.00,
-      allocation: 20.1,
-      marketValue: 25295.25
-    },
-    {
-      symbol: 'BTCUSD',
-      quantity: 0.5,
-      avgPrice: 42500.00,
-      currentPrice: 45200.00,
-      unrealizedPnL: 1350.00,
-      percentChange: 6.35,
-      allocation: 15.7,
-      marketValue: 19796.48
-    },
-    {
-      symbol: 'XAUUSD',
-      quantity: 1.2,
-      avgPrice: 2048.50,
-      currentPrice: 2065.30,
-      unrealizedPnL: 20.16,
-      percentChange: 0.82,
-      allocation: 3.2,
-      marketValue: 4000.00
-    }
-  ]);
-
+  const { user } = useUser();
+  const { trades } = useTrades();
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('');
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hideValues, setHideValues] = useState(false);
+  const [showTransactionDialog, setShowTransactionDialog] = useState(false);
+  const [newTransaction, setNewTransaction] = useState({
+    type: 'deposit' as 'deposit' | 'withdrawal',
+    amount: '',
+    description: '',
+    currency: 'USD'
+  });
 
-  const assetAllocation = [
-    { name: 'Forex', value: 81.1, amount: 102051.15, color: '#3b82f6' },
-    { name: 'Crypto', value: 15.7, amount: 19796.48, color: '#f59e0b' },
-    { name: 'Commodities', value: 3.2, amount: 4000.00, color: '#10b981' }
-  ];
+  // Load real portfolios and data
+  useEffect(() => {
+    loadPortfolios();
+  }, [user]);
 
-  const performanceData = [
-    { date: '1/1', value: 113000 },
-    { date: '1/8', value: 115500 },
-    { date: '1/15', value: 118200 },
-    { date: '1/22', value: 121800 },
-    { date: '1/29', value: 125847 }
-  ];
-
-  const riskMetrics = [
-    { metric: 'Value at Risk (95%)', value: '$4,523', status: 'moderate' },
-    { metric: 'Maximum Drawdown', value: '8.2%', status: 'good' },
-    { metric: 'Sharpe Ratio', value: '1.45', status: 'excellent' },
-    { metric: 'Beta', value: '0.78', status: 'good' }
-  ];
-
-  const refreshPortfolio = async () => {
+  const loadPortfolios = async () => {
+    if (!user?.id) return;
+    
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      // Update positions with slight price changes
-      setPositions(prev => prev.map(pos => ({
-        ...pos,
-        currentPrice: pos.currentPrice * (1 + (Math.random() - 0.5) * 0.02),
-        unrealizedPnL: pos.unrealizedPnL * (1 + (Math.random() - 0.5) * 0.1)
-      })));
+    try {
+      // Get connected brokers
+      const connections = await realBrokerService.getUserConnections(user.id);
+      const connectedBrokers = connections.filter(conn => conn.status === 'connected');
+      
+      if (connectedBrokers.length === 0) {
+        // Create default portfolio if no brokers connected
+        const defaultPortfolio: Portfolio = {
+          id: 'default',
+          name: 'Main Portfolio',
+          brokerIds: [],
+          totalValue: 0,
+          totalPnL: 0,
+          totalPnLPercent: 0,
+          dayChange: 0,
+          dayChangePercent: 0,
+          cashBalance: 0,
+          marginUsed: 0,
+          marginAvailable: 0,
+          exposure: 0,
+          withdrawals: 0,
+          deposits: 0
+        };
+        setPortfolios([defaultPortfolio]);
+        setSelectedPortfolioId('default');
+      } else {
+        // Create portfolios from connected brokers
+        const realPortfolios: Portfolio[] = [];
+        let totalBalance = 0;
+        let totalPnL = 0;
+        
+        for (const broker of connectedBrokers) {
+          const accountInfo = await realBrokerService.getAccountBalance(broker.id);
+          totalBalance += accountInfo.balance || 0;
+          totalPnL += accountInfo.profit || 0;
+          
+          const portfolio: Portfolio = {
+            id: broker.id,
+            name: `${broker.name} Portfolio`,
+            brokerIds: [broker.id],
+            totalValue: accountInfo.balance || 0,
+            totalPnL: accountInfo.profit || 0,
+            totalPnLPercent: ((accountInfo.profit || 0) / (accountInfo.balance || 1)) * 100,
+            dayChange: accountInfo.profit || 0, // This would be calculated from daily trades
+            dayChangePercent: ((accountInfo.profit || 0) / (accountInfo.balance || 1)) * 100,
+            cashBalance: accountInfo.freeMargin || 0,
+            marginUsed: accountInfo.margin || 0,
+            marginAvailable: accountInfo.freeMargin || 0,
+            exposure: ((accountInfo.margin || 0) / (accountInfo.balance || 1)),
+            withdrawals: 0, // Load from transactions
+            deposits: 0 // Load from transactions
+          };
+          
+          realPortfolios.push(portfolio);
+        }
+        
+        // Add combined portfolio
+        if (realPortfolios.length > 1) {
+          const combinedPortfolio: Portfolio = {
+            id: 'combined',
+            name: 'All Portfolios',
+            brokerIds: connectedBrokers.map(b => b.id),
+            totalValue: totalBalance,
+            totalPnL: totalPnL,
+            totalPnLPercent: (totalPnL / totalBalance) * 100,
+            dayChange: totalPnL, // Calculate from daily trades
+            dayChangePercent: (totalPnL / totalBalance) * 100,
+            cashBalance: realPortfolios.reduce((sum, p) => sum + p.cashBalance, 0),
+            marginUsed: realPortfolios.reduce((sum, p) => sum + p.marginUsed, 0),
+            marginAvailable: realPortfolios.reduce((sum, p) => sum + p.marginAvailable, 0),
+            exposure: realPortfolios.reduce((sum, p) => sum + p.exposure, 0) / realPortfolios.length,
+            withdrawals: 0,
+            deposits: 0
+          };
+          realPortfolios.unshift(combinedPortfolio);
+        }
+        
+        setPortfolios(realPortfolios);
+        setSelectedPortfolioId(realPortfolios[0].id);
+      }
+      
+      await loadTransactions();
+      await loadPositions();
+    } catch (error) {
+      console.error('Failed to load portfolios:', error);
+      toast.error('Failed to load portfolio data');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
+
+  const loadPositions = async () => {
+    if (!selectedPortfolioId) return;
+    
+    try {
+      const selectedPortfolio = portfolios.find(p => p.id === selectedPortfolioId);
+      if (!selectedPortfolio) return;
+      
+      const allPositions: Position[] = [];
+      
+      for (const brokerId of selectedPortfolio.brokerIds) {
+        const trades = await realBrokerService.fetchTradesFromBroker(brokerId);
+        // Convert trades to positions (aggregate open trades by symbol)
+        // This would be implemented based on broker-specific trade data
+      }
+      
+      setPositions(allPositions);
+    } catch (error) {
+      console.error('Failed to load positions:', error);
+    }
+  };
+
+  const loadTransactions = async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Replace Supabase transaction loading
+      let transactionData: any[] = [];
+      const storedTransactions = localStorage.getItem('portfolioTransactions');
+      if (storedTransactions) {
+        try {
+          transactionData = JSON.parse(storedTransactions);
+        } catch (e) {
+          transactionData = [];
+        }
+      }
+
+      const realTransactions: Transaction[] = transactionData.map((t: any) => ({
+        id: t.id,
+        portfolioId: t.portfolio_id || 'default',
+        type: t.type as 'deposit' | 'withdrawal',
+        amount: t.amount,
+        currency: t.currency || 'USD',
+        description: t.description || '',
+        date: t.created_at,
+        status: t.status as 'pending' | 'completed' | 'failed'
+      }));
+
+      setTransactions(realTransactions);
+      
+      // Update portfolio withdrawal/deposit totals
+      setPortfolios(prev => prev.map(portfolio => {
+        const portfolioTransactions = realTransactions.filter(t => t.portfolioId === portfolio.id);
+        const deposits = portfolioTransactions
+          .filter(t => t.type === 'deposit' && t.status === 'completed')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const withdrawals = portfolioTransactions
+          .filter(t => t.type === 'withdrawal' && t.status === 'completed')
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        return {
+          ...portfolio,
+          deposits,
+          withdrawals,
+          // Adjust total value to account for withdrawals/deposits
+          totalValue: portfolio.totalValue + deposits - withdrawals
+        };
+      }));
+    } catch (error) {
+      console.error('Failed to load transactions:', error);
+      toast.error('Failed to load transaction history');
+    }
+  };
+
+  const handleAddTransaction = async () => {
+    if (!newTransaction.amount || !newTransaction.description) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    const amount = parseFloat(newTransaction.amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    try {
+      // Replace Supabase transaction saving
+      let transactionData: any[] = [];
+      const storedTransactions = localStorage.getItem('portfolioTransactions');
+      if (storedTransactions) {
+        try {
+          transactionData = JSON.parse(storedTransactions);
+        } catch (e) {
+          transactionData = [];
+        }
+      }
+      const inserted: any = {
+        id: (transactionData.length + 1).toString(),
+        created_at: new Date().toISOString(),
+        ...newTransaction,
+        status: 'completed',
+      };
+      transactionData.push(inserted);
+      localStorage.setItem('portfolioTransactions', JSON.stringify(transactionData));
+      
+      // Add to local state
+      const transaction: Transaction = {
+        id: inserted.id,
+        portfolioId: selectedPortfolioId,
+        type: newTransaction.type,
+        amount,
+        currency: newTransaction.currency,
+        description: newTransaction.description,
+        date: inserted.created_at,
+        status: 'completed'
+      };
+      
+      setTransactions(prev => [transaction, ...prev]);
+      setNewTransaction({ type: 'deposit', amount: '', description: '', currency: 'USD' });
+      setShowTransactionDialog(false);
+      
+      // Update portfolio balance
+      await loadPortfolios();
+      
+      toast.success(`${transaction.type === 'deposit' ? 'Deposit' : 'Withdrawal'} recorded successfully`);
+    } catch (error) {
+      console.error('Failed to add transaction:', error);
+      toast.error('Failed to record transaction');
+    }
+  };
+
+  const selectedPortfolio = portfolios.find(p => p.id === selectedPortfolioId);
+
+  if (!selectedPortfolio) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-white mb-2">No Portfolio Data</h3>
+          <p className="text-slate-400 mb-4">Connect a broker to start tracking your portfolio</p>
+          <Button onClick={() => window.location.href = '/settings'}>
+            Connect Broker
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const formatCurrency = (value: number) => {
     if (hideValues) return '••••••';
@@ -174,16 +362,6 @@ const PortfolioManager = () => {
     return `${sign}${value.toFixed(2)}%`;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'excellent': return 'text-green-400';
-      case 'good': return 'text-blue-400';
-      case 'moderate': return 'text-yellow-400';
-      case 'poor': return 'text-red-400';
-      default: return 'text-slate-400';
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -193,9 +371,21 @@ const PortfolioManager = () => {
             <Wallet className="w-6 h-6 text-green-400" />
             <span>Portfolio Management</span>
           </h2>
-          <p className="text-slate-400">Live portfolio tracking and performance analytics</p>
+          <p className="text-slate-400">Live portfolio tracking from connected brokers</p>
         </div>
         <div className="flex items-center space-x-2">
+          <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select Portfolio" />
+            </SelectTrigger>
+            <SelectContent>
+              {portfolios.map(portfolio => (
+                <SelectItem key={portfolio.id} value={portfolio.id}>
+                  {portfolio.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             variant="outline"
             size="sm"
@@ -207,7 +397,7 @@ const PortfolioManager = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={refreshPortfolio}
+            onClick={loadPortfolios}
             disabled={isLoading}
             className="border-cyan-500 text-cyan-400"
           >
@@ -225,10 +415,10 @@ const PortfolioManager = () => {
               <div>
                 <p className="text-sm text-slate-400">Total Portfolio Value</p>
                 <p className="text-2xl font-bold text-white">
-                  {formatCurrency(portfolioMetrics.totalValue)}
+                  {formatCurrency(selectedPortfolio.totalValue)}
                 </p>
-                <p className={`text-sm ${portfolioMetrics.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatCurrency(portfolioMetrics.totalPnL)} ({formatPercent(portfolioMetrics.totalPnLPercent)})
+                <p className={`text-sm ${selectedPortfolio.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatCurrency(selectedPortfolio.totalPnL)} ({formatPercent(selectedPortfolio.totalPnLPercent)})
                 </p>
               </div>
               <Wallet className="h-8 w-8 text-green-400" />
@@ -241,14 +431,14 @@ const PortfolioManager = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Daily Change</p>
-                <p className={`text-2xl font-bold ${portfolioMetrics.dayChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatCurrency(portfolioMetrics.dayChange)}
+                <p className={`text-2xl font-bold ${selectedPortfolio.dayChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatCurrency(selectedPortfolio.dayChange)}
                 </p>
-                <p className={`text-sm ${portfolioMetrics.dayChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatPercent(portfolioMetrics.dayChangePercent)}
+                <p className={`text-sm ${selectedPortfolio.dayChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatPercent(selectedPortfolio.dayChangePercent)}
                 </p>
               </div>
-              {portfolioMetrics.dayChange >= 0 ? 
+              {selectedPortfolio.dayChange >= 0 ? 
                 <TrendingUp className="h-8 w-8 text-green-400" /> : 
                 <TrendingDown className="h-8 w-8 text-red-400" />
               }
@@ -262,7 +452,7 @@ const PortfolioManager = () => {
               <div>
                 <p className="text-sm text-slate-400">Cash Balance</p>
                 <p className="text-2xl font-bold text-white">
-                  {formatCurrency(portfolioMetrics.cashBalance)}
+                  {formatCurrency(selectedPortfolio.cashBalance)}
                 </p>
                 <p className="text-sm text-slate-400">Available for trading</p>
               </div>
@@ -275,11 +465,14 @@ const PortfolioManager = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Portfolio Exposure</p>
+                <p className="text-sm text-slate-400">Net Deposits</p>
                 <p className="text-2xl font-bold text-white">
-                  {hideValues ? '••••' : `${(portfolioMetrics.exposure * 100).toFixed(1)}%`}
+                  {formatCurrency(selectedPortfolio.deposits - selectedPortfolio.withdrawals)}
                 </p>
-                <p className="text-sm text-slate-400">Risk utilization</p>
+                <div className="flex items-center space-x-2 text-sm">
+                  <span className="text-green-400">+{formatCurrency(selectedPortfolio.deposits)}</span>
+                  <span className="text-red-400">-{formatCurrency(selectedPortfolio.withdrawals)}</span>
+                </div>
               </div>
               <Target className="h-8 w-8 text-purple-400" />
             </div>
@@ -287,177 +480,204 @@ const PortfolioManager = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="positions" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="positions">Positions</TabsTrigger>
-          <TabsTrigger value="allocation">Allocation</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="risk">Risk Analysis</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="positions" className="space-y-4">
-          <Card className="holo-card">
-            <CardHeader>
-              <CardTitle>Open Positions</CardTitle>
-              <CardDescription>Current market positions and P&L</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {positions.map((position) => (
-                  <div key={position.symbol} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div>
-                        <h3 className="font-semibold text-white">{position.symbol}</h3>
-                        <p className="text-sm text-slate-400">
-                          {position.quantity > 0 ? 'Long' : 'Short'} {Math.abs(position.quantity)} lots
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-slate-400">Avg Price</p>
-                        <p className="font-medium text-white">{formatCurrency(position.avgPrice)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-slate-400">Current Price</p>
-                        <p className="font-medium text-white">{formatCurrency(position.currentPrice)}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-lg font-bold ${position.unrealizedPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {formatCurrency(position.unrealizedPnL)}
-                      </p>
-                      <p className={`text-sm ${position.percentChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {formatPercent(position.percentChange)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="allocation" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="holo-card">
               <CardHeader>
-                <CardTitle>Asset Allocation</CardTitle>
+                <CardTitle>Portfolio Summary</CardTitle>
+                <CardDescription>Real-time account overview</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={assetAllocation}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}%`}
-                    >
-                      {assetAllocation.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `${value}%`} />
-                  </PieChart>
-                </ResponsiveContainer>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Total Value</span>
+                  <span className="text-xl font-bold text-white">{formatCurrency(selectedPortfolio.totalValue)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Unrealized P&L</span>
+                  <span className={`font-bold ${selectedPortfolio.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatCurrency(selectedPortfolio.totalPnL)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Margin Used</span>
+                  <span className="text-white font-medium">{formatCurrency(selectedPortfolio.marginUsed)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Margin Available</span>
+                  <span className="text-green-400 font-medium">{formatCurrency(selectedPortfolio.marginAvailable)}</span>
+                </div>
+                <div className="pt-2">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-slate-400">Portfolio Exposure</span>
+                    <span className="text-white font-medium">{(selectedPortfolio.exposure * 100).toFixed(1)}%</span>
+                  </div>
+                  <Progress value={selectedPortfolio.exposure * 100} className="h-2" />
+                </div>
               </CardContent>
             </Card>
 
             <Card className="holo-card">
               <CardHeader>
-                <CardTitle>Allocation Breakdown</CardTitle>
+                <CardTitle>Broker Connections</CardTitle>
+                <CardDescription>Connected trading accounts</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {assetAllocation.map((asset) => (
-                    <div key={asset.name} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-white font-medium">{asset.name}</span>
-                        <span className="text-slate-400">{asset.value}%</span>
+                <div className="space-y-3">
+                  {selectedPortfolio.brokerIds.map(brokerId => (
+                    <div key={brokerId} className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-green-400 rounded-full" />
+                        <span className="text-white font-medium">{brokerId}</span>
                       </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-400">{formatCurrency(asset.amount)}</span>
-                        <Progress value={asset.value} className="w-32" />
-                      </div>
+                      <Badge className="bg-green-400/10 text-green-400 border-green-400/30">
+                        Connected
+                      </Badge>
                     </div>
                   ))}
+                  {selectedPortfolio.brokerIds.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-slate-400 mb-4">No brokers connected</p>
+                      <Button variant="outline" onClick={() => window.location.href = '/settings'}>
+                        Connect Broker
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="performance" className="space-y-6">
+        <TabsContent value="transactions" className="space-y-4">
           <Card className="holo-card">
             <CardHeader>
-              <CardTitle>Portfolio Performance</CardTitle>
-              <CardDescription>30-day portfolio value trend</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Transaction History</CardTitle>
+                  <CardDescription>Deposits and withdrawals</CardDescription>
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={() => setShowTransactionDialog(true)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Transaction
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={performanceData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                  <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="risk" className="space-y-6">
-          <Card className="holo-card">
-            <CardHeader>
-              <CardTitle>Risk Analysis</CardTitle>
-              <CardDescription>Portfolio risk metrics and exposure analysis</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-white">Risk Metrics</h4>
-                  {riskMetrics.map((metric) => (
-                    <div key={metric.metric} className="flex justify-between items-center p-3 bg-slate-800/30 rounded-lg">
-                      <span className="text-slate-300">{metric.metric}</span>
+              {transactions.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-slate-400 mb-4">No transactions recorded</p>
+                  <Button onClick={() => setShowTransactionDialog(true)}>
+                    Record First Transaction
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {transactions.map(transaction => (
+                    <div key={transaction.id} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className={`p-2 rounded-lg ${transaction.type === 'deposit' ? 'bg-green-400/10' : 'bg-red-400/10'}`}>
+                          {transaction.type === 'deposit' ? 
+                            <Download className={`w-4 h-4 text-green-400`} /> : 
+                            <Upload className={`w-4 h-4 text-red-400`} />
+                          }
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">{transaction.description}</p>
+                          <p className="text-sm text-slate-400">
+                            {new Date(transaction.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
                       <div className="text-right">
-                        <span className="font-semibold text-white">{metric.value}</span>
-                        <Badge className={`ml-2 ${getStatusColor(metric.status)}`} variant="outline">
-                          {metric.status}
+                        <p className={`text-lg font-bold ${transaction.type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
+                          {transaction.type === 'deposit' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                        </p>
+                        <Badge className={`text-xs ${
+                          transaction.status === 'completed' ? 'bg-green-400/10 text-green-400' :
+                          transaction.status === 'pending' ? 'bg-yellow-400/10 text-yellow-400' :
+                          'bg-red-400/10 text-red-400'
+                        }`}>
+                          {transaction.status}
                         </Badge>
                       </div>
                     </div>
                   ))}
                 </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-white">Margin Status</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Margin Used</span>
-                      <span className="text-white font-semibold">{formatCurrency(portfolioMetrics.marginUsed)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Margin Available</span>
-                      <span className="text-green-400 font-semibold">{formatCurrency(portfolioMetrics.marginAvailable)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Margin Utilization</span>
-                      <span className="text-white font-semibold">
-                        {((portfolioMetrics.marginUsed / (portfolioMetrics.marginUsed + portfolioMetrics.marginAvailable)) * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={(portfolioMetrics.marginUsed / (portfolioMetrics.marginUsed + portfolioMetrics.marginAvailable)) * 100} 
-                      className="mt-2"
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Add other tab contents here... */}
       </Tabs>
+
+      {/* Transaction Dialog */}
+      {showTransactionDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle>Record Transaction</CardTitle>
+              <CardDescription>Add a deposit or withdrawal</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Transaction Type</Label>
+                <Select value={newTransaction.type} onValueChange={(value: 'deposit' | 'withdrawal') => 
+                  setNewTransaction(prev => ({ ...prev, type: value }))
+                }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="deposit">Deposit</SelectItem>
+                    <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Amount</Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={newTransaction.amount}
+                  onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Input
+                  placeholder="e.g., Initial deposit, Profit withdrawal"
+                  value={newTransaction.description}
+                  onChange={(e) => setNewTransaction(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+            </CardContent>
+            <div className="flex justify-end space-x-2 p-6">
+              <Button variant="outline" onClick={() => setShowTransactionDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddTransaction}>
+                Record Transaction
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

@@ -27,8 +27,7 @@ import {
   Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useUser } from '@/contexts/UserContext';
 
 interface NotificationPreferences {
   priceAlerts: boolean;
@@ -59,7 +58,7 @@ interface NotificationFilter {
 }
 
 const NotificationSystem = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
   const [isLoading, setIsLoading] = useState(false);
   const [activeNotifications, setActiveNotifications] = useState<any[]>([]);

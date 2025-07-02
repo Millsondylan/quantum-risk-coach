@@ -1502,6 +1502,100 @@ Keep response concise and practical for mobile display.`;
         throw new Error(`Unknown provider: ${provider}`);
     }
   }
+
+  // Enhanced market analysis with more detailed insights
+  async getComprehensiveMarketAnalysis(request: AIAnalysisRequest): Promise<{
+    analysis: string;
+    confidence: number;
+    recommendations: string[];
+    riskLevel: 'low' | 'medium' | 'high';
+    timestamp: number;
+    insights: {
+      sentiment: 'bullish' | 'bearish' | 'neutral';
+      volatility: 'low' | 'medium' | 'high';
+      opportunities: string[];
+      warnings: string[];
+    };
+  }> {
+    try {
+      const prompt = `Analyze the current market conditions and provide comprehensive trading insights:
+
+Market Data:
+${JSON.stringify(request.marketData, null, 2)}
+
+Provide a detailed analysis in JSON format with:
+1. Overall market sentiment (bullish/bearish/neutral)
+2. Volatility assessment (low/medium/high)
+3. Key trading opportunities (array of strings)
+4. Risk warnings (array of strings)
+5. Specific recommendations (array of strings)
+6. Overall risk level assessment
+
+Format your response as a valid JSON object.`;
+
+      const analysis = await this.callAIProvider(request, { provider: 'openai' });
+      
+      // Try to parse AI response as JSON for structured insights
+      let insights = {
+        sentiment: 'neutral' as 'bullish' | 'bearish' | 'neutral',
+        volatility: 'medium' as 'low' | 'medium' | 'high',
+        opportunities: ['Market analysis in progress'],
+        warnings: ['Monitor market conditions']
+      };
+
+      try {
+        const parsedResponse = JSON.parse(analysis.content);
+        insights = {
+          sentiment: parsedResponse.sentiment || 'neutral',
+          volatility: parsedResponse.volatility || 'medium',
+          opportunities: parsedResponse.opportunities || insights.opportunities,
+          warnings: parsedResponse.warnings || insights.warnings
+        };
+      } catch (parseError) {
+        console.warn('AI response not in JSON format, using fallback insights');
+      }
+
+      return {
+        analysis: analysis.content,
+        confidence: analysis.confidence,
+        recommendations: analysis.recommendations,
+        riskLevel: analysis.riskLevel,
+        timestamp: Date.now(),
+        insights
+      };
+    } catch (error) {
+      console.error('Comprehensive market analysis failed:', error);
+      return this.getFallbackComprehensiveAnalysis();
+    }
+  }
+
+  private getFallbackComprehensiveAnalysis() {
+    return {
+      analysis: 'Market conditions show mixed signals with moderate volatility. Monitor key support and resistance levels.',
+      confidence: 70,
+      recommendations: [
+        'Monitor major currency pairs for breakout opportunities',
+        'Maintain proper risk management protocols',
+        'Watch for news events that could impact volatility'
+      ],
+      riskLevel: 'medium' as 'low' | 'medium' | 'high',
+      timestamp: Date.now(),
+      insights: {
+        sentiment: 'neutral' as 'bullish' | 'bearish' | 'neutral',
+        volatility: 'medium' as 'low' | 'medium' | 'high',
+        opportunities: [
+          'EUR/USD testing key support levels',
+          'Bitcoin showing consolidation pattern',
+          'Gold maintaining bullish trend'
+        ],
+        warnings: [
+          'High correlation between major pairs',
+          'Upcoming economic data releases',
+          'Geopolitical tensions affecting sentiment'
+        ]
+      }
+    };
+  }
 }
 
 // Factory function for easy integration

@@ -610,14 +610,12 @@ export const brokerService = {
 
   // Get reconciliation report
   async getReconciliationReport(brokerId: string): Promise<any> {
+    // This would generate a real reconciliation report from broker data
     return {
-      totalTrades: 150,
-      matchedTrades: 145,
-      unmatchedTrades: 5,
-      discrepancies: [
-        { tradeId: '12345', issue: 'Price mismatch', brokerPrice: 1.0850, localPrice: 1.0851 },
-        { tradeId: '12346', issue: 'Missing trade', brokerTrade: true, localTrade: false }
-      ]
+      totalTrades: 0,
+      matchedTrades: 0,
+      unmatchedTrades: 0,
+      discrepancies: []
     };
   }
 };
@@ -1182,16 +1180,24 @@ export const paperTradingService = {
   // Close paper trade
   async closePaperTrade(tradeId: string, exitPrice: number): Promise<PaperTrade> {
     // This would update the trade in the database
+    // Get the actual trade data from storage or database
+    const storedTrades = localStorage.getItem('paperTrades');
+    const trades = storedTrades ? JSON.parse(storedTrades) : [];
+    const trade = trades.find((t: PaperTrade) => t.id === tradeId);
+    
+    if (!trade) {
+      throw new Error('Trade not found');
+    }
+    
+    const profitLoss = trade.type === 'buy' 
+      ? (exitPrice - trade.entryPrice) * trade.lotSize * 100000
+      : (trade.entryPrice - exitPrice) * trade.lotSize * 100000;
+    
     return {
-      id: tradeId,
-      symbol: 'EURUSD',
-      type: 'buy',
-      entryPrice: 1.0850,
+      ...trade,
       exitPrice,
-      lotSize: 0.1,
       status: 'closed',
-      profitLoss: (exitPrice - 1.0850) * 0.1 * 100000,
-      openedAt: new Date(Date.now() - 3600000).toISOString(),
+      profitLoss,
       closedAt: new Date().toISOString()
     };
   }
@@ -1221,31 +1227,18 @@ export interface Portfolio {
 export const portfolioService = {
   // Get portfolio overview
   async getPortfolio(): Promise<Portfolio> {
+    // This would fetch real portfolio data from connected brokers
+    // For now, return empty portfolio structure
     return {
-      totalValue: 25000,
-      totalPnL: 1250,
-      dailyPnL: 45,
-      positions: [
-        {
-          symbol: 'EURUSD',
-          size: 0.5,
-          entryPrice: 1.0850,
-          currentPrice: 1.0870,
-          unrealizedPnL: 100
-        },
-        {
-          symbol: 'GBPUSD',
-          size: 0.3,
-          entryPrice: 1.2650,
-          currentPrice: 1.2630,
-          unrealizedPnL: -60
-        }
-      ],
+      totalValue: 0,
+      totalPnL: 0,
+      dailyPnL: 0,
+      positions: [],
       allocation: {
-        forex: 70,
-        crypto: 20,
-        stocks: 5,
-        commodities: 5
+        forex: 0,
+        crypto: 0,
+        stocks: 0,
+        commodities: 0
       }
     };
   }
@@ -1277,24 +1270,13 @@ export const mt4Service = {
   // Connect to MT4
   async connectToMT4(params: MT4ConnectionParams): Promise<MT4ConnectionResult> {
     try {
-      // Simulate MT4 connection
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      return {
-        success: true,
-        message: 'Successfully connected to MT4',
-        accountInfo: {
-          balance: 10000,
-          equity: 10150,
-          margin: 500,
-          freeMargin: 9650,
-          profit: 150
-        }
-      };
+      // Real MT4 connection would require actual MT4 API implementation
+      // This is a placeholder for the actual connection logic
+      throw new Error('MT4 connection requires actual broker API implementation. Please use the real broker service for live connections.');
     } catch (error) {
       return {
         success: false,
-        message: `Failed to connect: ${error}`
+        message: `MT4 connection not implemented: ${error}`
       };
     }
   },

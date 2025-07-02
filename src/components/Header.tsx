@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Settings, User, LogOut, TrendingUp, Activity, Database, RefreshCw } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { Button } from './ui/button';
+import { useUser } from '@/contexts/UserContext';
+import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -112,8 +112,8 @@ const useRealTimeData = () => {
   return marketData;
 };
 
-const Header = () => {
-  const { user, signOut } = useAuth();
+const Header: React.FC = () => {
+  const { user } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
   const marketData = useRealTimeData();
@@ -160,19 +160,23 @@ const Header = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/auth');
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
-  };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await useRealTimeData();
+      // Instead of calling useRealTimeData hook here, we'll manually refresh the market data
+      const healthCheck = await realDataService.healthCheck();
+      const hasWorkingApis = Object.values(healthCheck).some(status => status);
+      
+      if (hasWorkingApis) {
+        const [cryptoData, forexData] = await Promise.all([
+          realDataService.getCryptoPrices(),
+          realDataService.getForexRates()
+        ]);
+        
+        // Update market data (this would typically trigger a re-render of the component that uses this data)
+        console.log('Market data refreshed:', { cryptoData, forexData });
+      }
+      
       setNotifications(3); // Assuming the number of notifications doesn't change on refresh
     } catch (error) {
       console.error('Error refreshing market data:', error);
@@ -292,7 +296,7 @@ const Header = () => {
               >
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="bg-slate-700 text-white text-xs">
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
+                    {user?.preferences.tradingStyle?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -307,7 +311,7 @@ const Header = () => {
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-slate-700" />
               <DropdownMenuItem
-                onClick={handleSignOut}
+                onClick={() => navigate('/auth')}
                 className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer touch-manipulation"
               >
                 <LogOut className="w-4 h-4 mr-2" />

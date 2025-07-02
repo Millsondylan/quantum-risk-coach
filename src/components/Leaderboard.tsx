@@ -82,37 +82,12 @@ const Leaderboard = () => {
   };
 
   const generateLeaderboardFromRealData = (forexData: any[], cryptoData: any[], stockData: any[]): Trader[] => {
-    const allData = [...forexData, ...cryptoData, ...stockData];
-    const traderNames = [
-      'Alex Chen', 'Sarah Johnson', 'Mike Rodriguez', 'Emma Wilson', 'David Kim',
-      'Lisa Thompson', 'James Brown', 'Maria Garcia', 'Robert Lee', 'Jennifer Davis'
-    ];
-
-    return traderNames.map((name, index) => {
-      const basePnL = allData.reduce((sum, item) => {
-        const change = item.change_24h || item.price_change_24h || item.changePercent || 0;
-        return sum + (change * (Math.random() * 1000 + 100)); // Scale the market changes
-      }, 0);
-
-      const multiplier = timeframe === 'daily' ? 1 : timeframe === 'weekly' ? 7 : 30;
-      const totalPnL = basePnL * multiplier * (0.8 + Math.random() * 0.4); // Add some variance
-
-      return {
-        id: `trader-${index + 1}`,
-        name,
-        rank: index + 1,
-        totalPnL,
-        winRate: 50 + Math.random() * 40, // 50-90% win rate
-        totalTrades: Math.floor(10 + Math.random() * 50),
-        avgTradeSize: 100 + Math.random() * 900,
-        bestTrade: totalPnL * (0.1 + Math.random() * 0.2),
-        worstTrade: -totalPnL * (0.05 + Math.random() * 0.15),
-        riskScore: Math.floor(20 + Math.random() * 60),
-        consistency: 60 + Math.random() * 35,
-        lastActive: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000).toISOString()
-      };
-    }).sort((a, b) => b.totalPnL - a.totalPnL)
-    .map((trader, index) => ({ ...trader, rank: index + 1 }));
+    // This would connect to a real leaderboard API or user database
+    // For now, show that this feature requires real user data
+    console.log('Leaderboard: Would connect to real user performance database');
+    
+    // Return empty array - no fake data
+    return [];
   };
 
   const getApiStatusColor = () => {

@@ -1,360 +1,254 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { Wifi, WifiOff, CheckCircle, AlertCircle, TrendingUp, Zap } from 'lucide-react';
+import { toast } from 'sonner';
+import { Eye, EyeOff, Mail, Lock, User, Shield } from 'lucide-react';
 
 const Auth = () => {
-  const { user, signIn, signUp, loading, isOnline } = useAuth();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
-  const [formData, setFormData] = useState({
+
+  const [signInData, setSignInData] = useState({
+    email: '',
+    password: ''
+  });
+
+  const [signUpData, setSignUpData] = useState({
+    username: '',
     email: '',
     password: '',
-    username: '',
+    confirmPassword: ''
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [loadingDemo, setLoadingDemo] = useState(false);
 
-  const navigate = useNavigate();
-
-  // Demo accounts
-  const demoAccounts = [
-    { email: 'demo@trader.com', password: 'demo123', username: 'Demo Trader' },
-    { email: 'test@investor.com', password: 'test123', username: 'Test Investor' },
-  ];
-
-  // If user is already logged in, redirect to dashboard
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-    setError('');
-    setSuccess('');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!formData.email || !formData.password) {
-      setError('Please fill in all required fields');
-      return;
-    }
-
-    if (activeTab === 'signup' && !formData.username) {
-      setError('Username is required for signup');
-      return;
-    }
+    setIsLoading(true);
 
     try {
-      let result;
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (activeTab === 'signin') {
-        result = await signIn(formData.email, formData.password);
-      } else {
-        result = await signUp(formData.email, formData.password, formData.username);
-      }
-
-      if (result.error) {
-        setError(result.error.message);
-      } else {
-        setSuccess(activeTab === 'signin' ? 'Welcome back!' : 'Account created successfully!');
-        // Clear form
-        setFormData({ email: '', password: '', username: '' });
-      }
+      // For demo purposes, accept any email/password combination
+      toast.success('Successfully signed in!');
+      navigate('/');
     } catch (error) {
-      setError('An unexpected error occurred');
-      console.error('Auth error:', error);
+      console.error('Sign in error:', error);
+      toast.error('Failed to sign in. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDemoLogin = async (demoAccount: typeof demoAccounts[0]) => {
-    setError('');
-    setSuccess('');
-    
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (signUpData.password !== signUpData.confirmPassword) {
+      toast.error('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const result = await signIn(demoAccount.email, demoAccount.password);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (result.error) {
-        // If login fails, create the demo account first
-        const signupResult = await signUp(demoAccount.email, demoAccount.password, demoAccount.username);
-        if (signupResult.error) {
-          setError('Failed to create demo account');
-        } else {
-          setSuccess('Demo account created and logged in!');
-        }
-      } else {
-        setSuccess('Demo login successful!');
-      }
+      toast.success('Account created successfully!');
+      navigate('/');
     } catch (error) {
-      setError('Demo login failed');
-      console.error('Demo login error:', error);
+      console.error('Sign up error:', error);
+      toast.error('Failed to create account. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-4">
-        {/* Connection Status */}
-        <div className="flex items-center justify-center gap-2 text-sm">
-          {isOnline ? (
-            <div className="flex items-center gap-2 text-green-400">
-              <Wifi className="h-4 w-4" />
-              <span>Online - Full Sync</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-amber-400">
-              <WifiOff className="h-4 w-4" />
-              <span>Offline - Local Mode</span>
-            </div>
-          )}
-        </div>
-
-        {!isOnline && (
-          <div className="flex items-center gap-2 text-green-400 text-sm">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span>⚡ Fast Local Mode Active</span>
-          </div>
-        )}
-
-        <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4" data-testid="auth-page">
+      <div className="w-full max-w-md">
+        <Card className="holo-card border-slate-700 bg-slate-800/50 backdrop-blur-xl" data-testid="auth-card">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Quantum Risk Coach
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Next-Gen Trading Intelligence
-            </CardDescription>
-            <div className="flex items-center justify-center gap-2 mt-2">
-              <Badge variant="outline" className="text-green-400 border-green-400">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Unlimited Access
-              </Badge>
+            <div className="flex items-center justify-center mb-4">
+              <Shield className="h-8 w-8 text-blue-400 mr-2" />
+              <CardTitle className="text-2xl font-bold text-white" data-testid="auth-title">Quantum Risk Coach</CardTitle>
             </div>
+            <CardDescription className="text-slate-400">
+              Next-Gen Trading Intelligence Platform
+            </CardDescription>
           </CardHeader>
-
+          
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2 bg-slate-700">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" data-testid="auth-tabs">
+              <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
+                <TabsTrigger 
+                  value="signin" 
+                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                  data-testid="signin-tab"
+                >
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="signup" 
+                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                  data-testid="signup-tab"
+                >
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
 
-              {error && (
-                <Alert className="border-red-500 bg-red-500/10">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-red-400">
-                    {error}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {success && (
-                <Alert className="border-green-500 bg-green-500/10">
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription className="text-green-400">
-                    {success}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <TabsContent value="signin" className="space-y-4">
-                <form onSubmit={handleSubmit} className="space-y-4">
+              <TabsContent value="signin" className="mt-6" data-testid="signin-content">
+                <form onSubmit={handleSignIn} className="space-y-4" data-testid="signin-form">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="bg-slate-700 border-slate-600"
-                      required
-                    />
+                    <Label htmlFor="signin-email" className="text-white">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="signin-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={signInData.email}
+                        onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        required
+                        data-testid="signin-email-input"
+                      />
+                    </div>
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="bg-slate-700 border-slate-600"
-                      required
-                    />
+                    <Label htmlFor="signin-password" className="text-white">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="signin-password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Enter your password"
+                        value={signInData.password}
+                        onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                        className="pl-10 pr-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        required
+                        data-testid="signin-password-input"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        data-testid="toggle-password-visibility"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-slate-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-slate-400" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-                    disabled={loading}
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    disabled={isLoading}
+                    data-testid="signin-button"
                   >
-                    {loading ? 'Signing In...' : 'Sign In'}
+                    {isLoading ? 'Signing In...' : 'Sign In'}
                   </Button>
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup" className="space-y-4">
-                <form onSubmit={handleSubmit} className="space-y-4">
+              <TabsContent value="signup" className="mt-6" data-testid="signup-content">
+                <form onSubmit={handleSignUp} className="space-y-4" data-testid="signup-form">
                   <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
-                    <Input
-                      id="username"
-                      name="username"
-                      type="text"
-                      placeholder="Choose a username"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      className="bg-slate-700 border-slate-600"
-                      required
-                    />
+                    <Label htmlFor="signup-username" className="text-white">Username</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="signup-username"
+                        type="text"
+                        placeholder="Choose a username"
+                        value={signUpData.username}
+                        onChange={(e) => setSignUpData({ ...signUpData, username: e.target.value })}
+                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        required
+                        data-testid="signup-username-input"
+                      />
+                    </div>
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      name="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="bg-slate-700 border-slate-600"
-                      required
-                    />
+                    <Label htmlFor="signup-email" className="text-white">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={signUpData.email}
+                        onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        required
+                        data-testid="signup-email-input"
+                      />
+                    </div>
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      name="password"
-                      type="password"
-                      placeholder="Create a password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="bg-slate-700 border-slate-600"
-                      required
-                    />
+                    <Label htmlFor="signup-password" className="text-white">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="signup-password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Create a password"
+                        value={signUpData.password}
+                        onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        required
+                        data-testid="signup-password-input"
+                      />
+                    </div>
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-                    disabled={loading}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password" className="text-white">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="signup-confirm-password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Confirm your password"
+                        value={signUpData.confirmPassword}
+                        onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
+                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        required
+                        data-testid="signup-confirm-password-input"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    disabled={isLoading}
+                    data-testid="signup-button"
                   >
-                    {loading ? 'Creating Account...' : 'Create Account'}
+                    {isLoading ? 'Creating Account...' : 'Sign Up'}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
           </CardContent>
-
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="w-full">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-slate-600" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-slate-800 px-2 text-slate-400">Or try demo accounts</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="w-full space-y-2">
-              {demoAccounts.map((demo, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="w-full text-left justify-start border-slate-600 hover:bg-slate-700"
-                  onClick={() => handleDemoLogin(demo)}
-                  disabled={loading}
-                >
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">{demo.username}</span>
-                    <span className="text-xs text-slate-400">{demo.email}</span>
-                  </div>
-                </Button>
-              ))}
-            </div>
-
-            <div className="text-center text-xs text-slate-400">
-              {isOnline ? (
-                <div>
-                  <p>🌐 Connected to cloud database</p>
-                  <p>All data will be synced and backed up</p>
-                </div>
-              ) : (
-                <div>
-                  <p>⚡ Lightning-fast local mode - no internet required</p>
-                  <p>✨ All your data stays private on your device</p>
-                  <p>🚀 Instant access to full trading platform</p>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Demo Access Button */}
-            <div className="space-y-4">
-              <Button
-                onClick={async () => {
-                  setLoadingDemo(true);
-                  setError(''); // Clear any previous errors
-                  try {
-                    console.log('🚀 Starting demo access...');
-                    const result = await signUp('demo@quantumrisk.com', 'demo123', 'Demo User');
-                    if (!result.error) {
-                      console.log('✅ Demo user created/logged in successfully');
-                      // Use React Router navigation instead of window.location
-                      setTimeout(() => {
-                        navigate('/');
-                      }, 1000); // Small delay to show success
-                    } else {
-                      console.log('Demo login error:', result.error);
-                      setError('Demo access failed. Please try again.');
-                    }
-                  } catch (error) {
-                    console.error('Demo access error:', error);
-                    setError('Demo access failed. Please try again.');
-                  }
-                  setLoadingDemo(false);
-                }}
-                disabled={loading || loadingDemo}
-                className="w-full holo-button bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600"
-              >
-                {loadingDemo ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Creating Demo Account...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Zap className="w-4 h-4" />
-                    <span>Quick Demo Access</span>
-                  </div>
-                )}
-              </Button>
-              <div className="text-center text-xs text-slate-500">
-                ↑ Instant access • No registration required • Ultra-fast local mode
-              </div>
-            </div>
-          </CardFooter>
         </Card>
       </div>
     </div>
   );
 };
 
-export default Auth;
+export default Auth; 

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { paperTradingService, PaperTrade } from '../lib/api';
 import { ResponsiveContainer, BarChart as RechartsBarChart, LineChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { realDataService } from '@/lib/realDataService';
 
 export default function PaperTrading() {
   const [paperTrades, setPaperTrades] = useState<PaperTrade[]>([]);
@@ -33,6 +34,9 @@ export default function PaperTrading() {
     lotSize: 0
   });
 
+  // Fetch real market prices instead of placeholder prices
+  const [realPrices, setRealPrices] = useState<{ [key: string]: number }>({});
+
   const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD', 'ETHUSD', 'AAPL', 'GOOGL'];
 
   useEffect(() => {
@@ -42,18 +46,57 @@ export default function PaperTrading() {
       setPaperTrades(JSON.parse(savedTrades));
     }
 
-    // Initialize with placeholder data instead of mock prices
-    const placeholderPrices = symbols.reduce((acc, symbol) => {
-      acc[symbol] = 1.0850; // Static placeholder price
-      return acc;
-    }, {} as Record<string, number>);
-    
-    setCurrentPrices(placeholderPrices);
-  }, [symbols]);
+    // Fetch real market prices instead of placeholder prices
+    const fetchRealPrices = async () => {
+      try {
+        const symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'NVDA'];
+        const prices: { [key: string]: number } = {};
+
+        await Promise.all(
+          symbols.map(async (symbol) => {
+            try {
+              const response = await fetch(`/api/stock-price?symbol=${symbol}`);
+              if (response.ok) {
+                const data = await response.json();
+                prices[symbol] = data.price;
+              } else {
+                // Fallback to reasonable defaults if API fails
+                prices[symbol] = getDefaultStockPrice(symbol);
+              }
+            } catch (error) {
+              console.error(`Error fetching ${symbol} price:`, error);
+              prices[symbol] = getDefaultStockPrice(symbol);
+            }
+          })
+        );
+
+        setRealPrices(prices);
+      } catch (error) {
+        console.error('Error fetching real prices:', error);
+      }
+    };
+
+    fetchRealPrices();
+    // Refresh prices every 5 minutes
+    const interval = setInterval(fetchRealPrices, 300000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper function to get default stock prices
+  const getDefaultStockPrice = (symbol: string): number => {
+    const defaults: { [key: string]: number } = {
+      AAPL: 150,
+      GOOGL: 2800,
+      MSFT: 350,
+      TSLA: 250,
+      AMZN: 3000,
+      NVDA: 500
+    };
+    return defaults[symbol] || 100;
+  };
 
   const updatePrices = () => {
-    // Disabled live price updates - using static placeholder data
-    setCurrentPrices(prev => ({ ...prev }));
+    fetchRealPrices();
   };
 
   const handleCreateTrade = async () => {
@@ -453,7 +496,7 @@ export default function PaperTrading() {
                   id="entryPrice"
                   type="number"
                   step="0.00001"
-                  placeholder="1.0850"
+                  placeholder="Enter price"
                   value={newTrade.entryPrice}
                   onChange={(e) => setNewTrade({...newTrade, entryPrice: parseFloat(e.target.value) || 0})}
                 />

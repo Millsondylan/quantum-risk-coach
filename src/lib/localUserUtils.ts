@@ -1,5 +1,7 @@
-// Local User Management Utilities
-// Access these functions in browser console for debugging
+// Production User Management Utilities
+// Real user operations only - no demo or fake data
+
+import { Preferences } from '@capacitor/preferences';
 
 interface LocalUser {
   id: string;
@@ -31,41 +33,7 @@ export const localUserUtils = {
     }
   },
 
-  // Create a new demo user
-  createDemoUser(username: string, email: string, password: string = 'demo123'): boolean {
-    try {
-      const userId = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const newUser: LocalUser = {
-        id: userId,
-        email,
-        username,
-        created_at: new Date().toISOString(),
-        subscription_status: 'unlimited',
-        posts_remaining: 999999
-      };
-
-      // Add to user registry
-      const users = this.getAllUsers();
-      const existingIndex = users.findIndex(u => u.email === email);
-      
-      if (existingIndex >= 0) {
-        console.warn('User already exists:', email);
-        return false;
-      }
-
-      users.push(newUser);
-      localStorage.setItem('quantum_risk_coach_all_users', JSON.stringify(users));
-      localStorage.setItem(`quantum_risk_coach_password_${userId}`, password);
-      
-      console.log('✅ Demo user created:', { username, email, password });
-      return true;
-    } catch (error) {
-      console.error('Failed to create demo user:', error);
-      return false;
-    }
-  },
-
-  // Delete a user by email
+  // Delete a user by email (production use only)
   deleteUser(email: string): boolean {
     try {
       const users = this.getAllUsers();
@@ -99,7 +67,7 @@ export const localUserUtils = {
     }
   },
 
-  // Clear all local data
+  // Clear all local data (emergency use only)
   clearAllData(): void {
     try {
       const keys = Object.keys(localStorage).filter(key => 
@@ -142,63 +110,57 @@ export const localUserUtils = {
     }
   },
 
-  // Get password for debugging (use carefully)
-  getPassword(email: string): string | null {
-    const users = this.getAllUsers();
-    const user = users.find(u => u.email === email);
-    if (user) {
-      return localStorage.getItem(`quantum_risk_coach_password_${user.id}`);
-    }
-    return null;
+  // Production user validation
+  validateUserSession(): boolean {
+    const user = this.getCurrentUser();
+    return user !== null && user.id && user.email;
   },
 
-  // Quick setup for testing
-  setupDemoData(): void {
-    console.log('🚀 Setting up demo data...');
-    
-    const demoUsers = [
-      { username: 'Demo Trader', email: 'demo@trader.com', password: 'demo123' },
-      { username: 'Test Investor', email: 'test@investor.com', password: 'test123' },
-      { username: 'Alpha Trader', email: 'alpha@trading.com', password: 'alpha123' },
-      { username: 'Pro Investor', email: 'pro@investor.com', password: 'pro123' },
-    ];
+  // Get user preferences
+  getUserPreferences(): any {
+    try {
+      const user = this.getCurrentUser();
+      if (!user) return {};
+      
+      const stored = localStorage.getItem(`quantum_risk_coach_prefs_${user.id}`);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  },
 
-    let created = 0;
-    demoUsers.forEach(demo => {
-      if (this.createDemoUser(demo.username, demo.email, demo.password)) {
-        created++;
-      }
-    });
-
-    console.log(`✅ Created ${created} demo accounts`);
-    console.log('📖 Available accounts:');
-    console.table(demoUsers);
+  // Save user preferences
+  saveUserPreferences(preferences: any): boolean {
+    try {
+      const user = this.getCurrentUser();
+      if (!user) return false;
+      
+      localStorage.setItem(`quantum_risk_coach_prefs_${user.id}`, JSON.stringify(preferences));
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   // Help function
   help(): void {
     console.log(`
-🔧 Local User Management Console Commands:
+🔧 Production User Management Console Commands:
 
 📊 Information:
 • localUserUtils.showUserInfo()          - Show current user and all users
 • localUserUtils.getCurrentUser()        - Get current logged-in user
-• localUserUtils.getAllUsers()           - Get all registered users
+• localUserUtils.validateUserSession()   - Check if user session is valid
 
 👤 User Management:
-• localUserUtils.createDemoUser(username, email, password)  - Create new demo user
 • localUserUtils.deleteUser(email)       - Delete user by email
-• localUserUtils.getPassword(email)      - Get password for debugging
+• localUserUtils.getUserPreferences()    - Get user preferences
+• localUserUtils.saveUserPreferences()   - Save user preferences
 
-🔄 Setup & Reset:
-• localUserUtils.setupDemoData()         - Create default demo accounts
-• localUserUtils.clearAllData()          - Clear all local data (reset app)
+🔄 Emergency:
+• localUserUtils.clearAllData()          - Clear all local data (DANGER!)
 
-Example usage:
-localUserUtils.createDemoUser("New Trader", "new@trader.com", "pass123")
-localUserUtils.showUserInfo("demo@trader.com")
-localUserUtils.deleteUser("old@trader.com")
-
+Note: Demo functionality removed for production security.
 Type localUserUtils.help() to see this again.
     `);
   }
@@ -207,5 +169,22 @@ Type localUserUtils.help() to see this again.
 // Make available globally for console access
 if (typeof window !== 'undefined') {
   (window as any).localUserUtils = localUserUtils;
-  console.log('🔧 Local User Utils loaded! Type "localUserUtils.help()" for commands.');
-} 
+  console.log('🔧 Production User Utils loaded! Type "localUserUtils.help()" for commands.');
+}
+
+export const saveUserData = async (key: string, value: any) => {
+  await Preferences.set({ key, value: JSON.stringify(value) });
+};
+
+export const getUserData = async (key: string) => {
+  const { value } = await Preferences.get({ key });
+  return value ? JSON.parse(value) : null;
+};
+
+export const removeUserData = async (key: string) => {
+  await Preferences.remove({ key });
+};
+
+export const clearAllUserData = async () => {
+  await Preferences.clear();
+}; 

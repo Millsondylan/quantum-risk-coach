@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, TrendingUp, DollarSign, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useTrades } from '@/hooks/useTrades';
 
 interface DayData {
   date: string;
@@ -16,57 +17,62 @@ interface DayData {
 
 const PerformanceCalendar = () => {
   const navigate = useNavigate();
+  const { trades } = useTrades();
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Generate realistic calendar data for the last 30 days
+  // Generate calendar data from REAL USER TRADES
   const generateCalendarData = (): DayData[] => {
     const data: DayData[] = [];
     const today = new Date();
     
+    // Group trades by date
+    const tradesByDate = new Map<string, any[]>();
+    
+    trades.forEach(trade => {
+      const tradeDate = new Date(trade.createdAt).toISOString().split('T')[0];
+      if (!tradesByDate.has(tradeDate)) {
+        tradesByDate.set(tradeDate, []);
+      }
+      tradesByDate.get(tradeDate)!.push(trade);
+    });
+    
     for (let i = 29; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
       
-      // Generate realistic trading data
-      const hasTrades = Math.random() > 0.3; // 70% chance of having trades
-      const trades = hasTrades ? Math.floor(Math.random() * 8) + 1 : 0;
-      const winRate = hasTrades ? Math.floor(Math.random() * 40) + 50 : 0; // 50-90%
-      const volume = hasTrades ? Math.floor(Math.random() * 5) + 1 : 0;
+      const dayTrades = tradesByDate.get(dateString) || [];
       
-      let pnl = 0;
-      let bestTrade = 0;
-      let worstTrade = 0;
-      
-      if (hasTrades) {
-        // Generate realistic PnL based on win rate
-        const wins = Math.floor((trades * winRate) / 100);
-        const losses = trades - wins;
+      if (dayTrades.length === 0) {
+        data.push({
+          date: dateString,
+          pnl: 0,
+          trades: 0,
+          winRate: 0,
+          volume: 0,
+          bestTrade: 0,
+          worstTrade: 0
+        });
+      } else {
+        const pnl = dayTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
+        const winningTrades = dayTrades.filter(trade => (trade.profitLoss || 0) > 0);
+        const winRate = dayTrades.length > 0 ? (winningTrades.length / dayTrades.length) * 100 : 0;
+        const volume = dayTrades.reduce((sum, trade) => sum + (trade.quantity || 0), 0);
+        const tradePnLs = dayTrades.map(trade => trade.profitLoss || 0);
+        const bestTrade = Math.max(...tradePnLs);
+        const worstTrade = Math.min(...tradePnLs);
         
-        // Simulate individual trade results
-        const tradeResults = [];
-        for (let j = 0; j < trades; j++) {
-          const isWin = j < wins;
-          const tradePnL = isWin 
-            ? Math.random() * 50 + 10 // $10-$60 profit
-            : -(Math.random() * 30 + 5); // $5-$35 loss
-          tradeResults.push(tradePnL);
-        }
-        
-        pnl = tradeResults.reduce((sum, trade) => sum + trade, 0);
-        bestTrade = Math.max(...tradeResults);
-        worstTrade = Math.min(...tradeResults);
+        data.push({
+          date: dateString,
+          pnl,
+          trades: dayTrades.length,
+          winRate,
+          volume,
+          bestTrade,
+          worstTrade
+        });
       }
-      
-      data.push({
-        date: date.toISOString().split('T')[0],
-        pnl,
-        trades,
-        winRate,
-        volume,
-        bestTrade,
-        worstTrade
-      });
     }
     return data;
   };

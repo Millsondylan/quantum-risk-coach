@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -98,6 +98,67 @@ const TradeBuilder = () => {
     { value: 'indicator', label: 'Technical Indicator', icon: TrendingUp },
     { value: 'news', label: 'News Event', icon: AlertTriangle }
   ];
+
+  // Fetch real market data for symbols
+  const [marketData, setMarketData] = useState<{ [key: string]: { price: number; change: number } }>({});
+
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD', 'ETHUSD', 'GOLD'];
+        const data: { [key: string]: { price: number; change: number } } = {};
+
+        await Promise.all(
+          symbols.map(async (symbol) => {
+            try {
+              const response = await fetch(`/api/market-data?symbol=${symbol}`);
+              if (response.ok) {
+                const marketInfo = await response.json();
+                data[symbol] = {
+                  price: marketInfo.price,
+                  change: marketInfo.change
+                };
+              } else {
+                // Fallback to reasonable defaults
+                data[symbol] = {
+                  price: getDefaultPrice(symbol),
+                  change: 0
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching ${symbol} data:`, error);
+              data[symbol] = {
+                price: getDefaultPrice(symbol),
+                change: 0
+              };
+            }
+          })
+        );
+
+        setMarketData(data);
+      } catch (error) {
+        console.error('Error fetching market data:', error);
+      }
+    };
+
+    fetchMarketData();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchMarketData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper function to get default prices
+  const getDefaultPrice = (symbol: string): number => {
+    const defaults: { [key: string]: number } = {
+      EURUSD: 1.08,
+      GBPUSD: 1.26,
+      USDJPY: 150,
+      BTCUSD: 45000,
+      ETHUSD: 3000,
+      GOLD: 2000
+    };
+    return defaults[symbol] || 1.0;
+  };
 
   const handleInputChange = (field: keyof TradeSetup, value: any) => {
     setTradeSetup(prev => ({

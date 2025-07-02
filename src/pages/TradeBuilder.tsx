@@ -122,8 +122,8 @@ const TradeBuilder = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
-      <main className="container mx-auto px-6 py-8">
+    <div data-testid="page-container" className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
+      <main data-testid="main-content" className="container mx-auto px-6 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <Button
@@ -279,7 +279,7 @@ const TradeBuilder = () => {
                         id="entryPrice"
                         type="number"
                         step="0.00001"
-                        placeholder="1.0850"
+                        placeholder="Enter price"
                         value={newSetup.entryPrice}
                         onChange={(e) => setNewSetup({...newSetup, entryPrice: e.target.value})}
                       />
@@ -290,7 +290,7 @@ const TradeBuilder = () => {
                         id="stopLoss"
                         type="number"
                         step="0.00001"
-                        placeholder="1.0800"
+                        placeholder="Stop loss price"
                         value={newSetup.stopLoss}
                         onChange={(e) => setNewSetup({...newSetup, stopLoss: e.target.value})}
                       />
@@ -301,7 +301,7 @@ const TradeBuilder = () => {
                         id="takeProfit"
                         type="number"
                         step="0.00001"
-                        placeholder="1.0900"
+                        placeholder="Take profit price"
                         value={newSetup.takeProfit}
                         onChange={(e) => setNewSetup({...newSetup, takeProfit: e.target.value})}
                       />

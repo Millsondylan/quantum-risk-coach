@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTrades } from '@/hooks/useTrades';
 
 interface TradingPattern {
   id: string;
@@ -36,110 +37,172 @@ interface Strategy {
 }
 
 const StrategyAnalyzer = () => {
+  const { trades } = useTrades();
   const [patterns, setPatterns] = useState<TradingPattern[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
 
-  // Generate simulated trading patterns
+  // Generate patterns based on REAL trading data
   const generatePatterns = (): TradingPattern[] => {
-    const patternTemplates = [
-      {
-        name: 'London Breakout',
-        description: 'Entering trades during London session opening with strong momentum',
-        category: 'Session Trading',
-        timeOfDay: '08:00-10:00 GMT',
-        currencyPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY'],
-        marketConditions: ['High Volatility', 'Clear Trend'],
-        riskLevel: 'medium' as const
-      },
-      {
-        name: 'News Scalping',
-        description: 'Quick trades around high-impact news releases',
-        category: 'News Trading',
-        timeOfDay: '13:30-14:30 GMT',
-        currencyPairs: ['USD/JPY', 'EUR/USD'],
-        marketConditions: ['News Events', 'High Spread'],
-        riskLevel: 'high' as const
-      },
-      {
-        name: 'Support/Resistance Bounce',
-        description: 'Trading bounces off key support and resistance levels',
-        category: 'Technical Analysis',
-        timeOfDay: 'Any Time',
-        currencyPairs: ['EUR/USD', 'GBP/USD', 'USD/CHF'],
-        marketConditions: ['Ranging Market', 'Key Levels'],
-        riskLevel: 'low' as const
-      },
-      {
-        name: 'Trend Following',
-        description: 'Following established market trends with momentum',
-        category: 'Trend Trading',
-        timeOfDay: 'Any Time',
-        currencyPairs: ['All Major Pairs'],
-        marketConditions: ['Strong Trend', 'Low Volatility'],
-        riskLevel: 'medium' as const
-      },
-      {
-        name: 'Scalping Range',
-        description: 'Quick trades within established ranges',
-        category: 'Scalping',
-        timeOfDay: '09:00-17:00 GMT',
-        currencyPairs: ['EUR/USD', 'GBP/USD'],
-        marketConditions: ['Ranging Market', 'Low Spread'],
-        riskLevel: 'low' as const
-      }
-    ];
+    if (trades.length === 0) {
+      return []; // No patterns if no trades
+    }
 
-    return patternTemplates.map((template, index) => ({
-      id: `pattern-${index}`,
-      name: template.name,
-      description: template.description,
-      confidence: Math.floor(Math.random() * 30) + 70, // 70-100%
-      frequency: Math.floor(Math.random() * 50) + 20, // 20-70 occurrences
-      avgProfit: Math.random() * 40 + 10, // $10-$50
-      winRate: Math.floor(Math.random() * 30) + 60, // 60-90%
-      timeOfDay: template.timeOfDay,
-      currencyPairs: template.currencyPairs,
-      marketConditions: template.marketConditions,
-      riskLevel: template.riskLevel,
-      category: template.category
-    }));
+    // Analyze real trading patterns
+    const patterns: TradingPattern[] = [];
+    
+    // Pattern 1: Time-based analysis
+    const tradesByHour = new Map<number, any[]>();
+    trades.forEach(trade => {
+      const hour = new Date(trade.createdAt).getHours();
+      if (!tradesByHour.has(hour)) {
+        tradesByHour.set(hour, []);
+      }
+      tradesByHour.get(hour)!.push(trade);
+    });
+
+    // Find best performing hour
+    let bestHour = 0;
+    let bestWinRate = 0;
+    tradesByHour.forEach((hourTrades, hour) => {
+      const winningTrades = hourTrades.filter(t => (t.profitLoss || 0) > 0);
+      const winRate = hourTrades.length > 0 ? (winningTrades.length / hourTrades.length) * 100 : 0;
+      if (winRate > bestWinRate) {
+        bestWinRate = winRate;
+        bestHour = hour;
+      }
+    });
+
+    if (bestWinRate > 50) {
+      patterns.push({
+        id: 'time-pattern',
+        name: 'Time-Based Performance',
+        description: `Your trades perform best during ${bestHour}:00 hours with ${bestWinRate.toFixed(1)}% win rate`,
+        confidence: Math.min(95, bestWinRate + 20),
+        frequency: tradesByHour.get(bestHour)?.length || 0,
+        avgProfit: tradesByHour.get(bestHour)?.reduce((sum, t) => sum + (t.profitLoss || 0), 0) / (tradesByHour.get(bestHour)?.length || 1),
+        winRate: bestWinRate,
+        timeOfDay: `${bestHour}:00`,
+        currencyPairs: [...new Set(tradesByHour.get(bestHour)?.map(t => t.symbol) || [])],
+        marketConditions: ['Time-based'],
+        riskLevel: bestWinRate > 70 ? 'low' : bestWinRate > 60 ? 'medium' : 'high',
+        category: 'Timing'
+      });
+    }
+
+    // Pattern 2: Symbol performance
+    const tradesBySymbol = new Map<string, any[]>();
+    trades.forEach(trade => {
+      if (!tradesBySymbol.has(trade.symbol)) {
+        tradesBySymbol.set(trade.symbol, []);
+      }
+      tradesBySymbol.get(trade.symbol)!.push(trade);
+    });
+
+    tradesBySymbol.forEach((symbolTrades, symbol) => {
+      if (symbolTrades.length >= 3) { // Only analyze symbols with 3+ trades
+        const winningTrades = symbolTrades.filter(t => (t.profitLoss || 0) > 0);
+        const winRate = (winningTrades.length / symbolTrades.length) * 100;
+        const avgProfit = symbolTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0) / symbolTrades.length;
+
+        if (winRate > 60 || avgProfit > 0) {
+          patterns.push({
+            id: `symbol-${symbol}`,
+            name: `${symbol} Performance`,
+            description: `${symbol} shows ${winRate.toFixed(1)}% win rate with ${avgProfit > 0 ? 'positive' : 'negative'} average profit`,
+            confidence: Math.min(95, Math.abs(winRate - 50) * 2 + 50),
+            frequency: symbolTrades.length,
+            avgProfit,
+            winRate,
+            timeOfDay: 'Any time',
+            currencyPairs: [symbol],
+            marketConditions: ['Symbol-specific'],
+            riskLevel: winRate > 70 ? 'low' : winRate > 60 ? 'medium' : 'high',
+            category: 'Symbol'
+          });
+        }
+      }
+    });
+
+    // Pattern 3: Overall performance
+    const totalTrades = trades.length;
+    const winningTrades = trades.filter(t => (t.profitLoss || 0) > 0);
+    const overallWinRate = totalTrades > 0 ? (winningTrades.length / totalTrades) * 100 : 0;
+    const totalProfit = trades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
+    const avgProfit = totalTrades > 0 ? totalProfit / totalTrades : 0;
+
+    if (totalTrades > 0) {
+      patterns.push({
+        id: 'overall-pattern',
+        name: 'Overall Performance',
+        description: `Overall win rate of ${overallWinRate.toFixed(1)}% with ${avgProfit > 0 ? 'positive' : 'negative'} average profit`,
+        confidence: Math.min(95, Math.abs(overallWinRate - 50) * 2 + 50),
+        frequency: totalTrades,
+        avgProfit,
+        winRate: overallWinRate,
+        timeOfDay: 'All hours',
+        currencyPairs: [...new Set(trades.map(t => t.symbol))],
+        marketConditions: ['General'],
+        riskLevel: overallWinRate > 70 ? 'low' : overallWinRate > 60 ? 'medium' : 'high',
+        category: 'Overall'
+      });
+    }
+
+    return patterns;
   };
 
-  // Generate strategies based on patterns
+  // Generate strategies based on REAL patterns
   const generateStrategies = (patterns: TradingPattern[]): Strategy[] => {
-    const strategyTemplates = [
-      {
-        name: 'Multi-Session Scalper',
-        description: 'Aggressive scalping strategy across multiple sessions',
-        patterns: patterns.slice(0, 2)
-      },
-      {
-        name: 'News Event Trader',
-        description: 'Specialized strategy for trading around news events',
-        patterns: patterns.slice(1, 2)
-      },
-      {
-        name: 'Technical Swing Trader',
-        description: 'Medium-term trades based on technical analysis',
-        patterns: patterns.slice(2, 4)
-      }
-    ];
+    if (patterns.length === 0) {
+      return []; // No strategies if no patterns
+    }
 
-    return strategyTemplates.map((template, index) => ({
-      id: `strategy-${index}`,
-      name: template.name,
-      description: template.description,
-      patterns: template.patterns,
-      totalTrades: Math.floor(Math.random() * 200) + 50,
-      successRate: Math.floor(Math.random() * 25) + 65, // 65-90%
-      avgReturn: Math.random() * 3 + 1, // 1-4%
-      maxDrawdown: -(Math.random() * 15 + 5), // -5% to -20%
-      sharpeRatio: Math.random() * 2 + 0.5, // 0.5-2.5
-      isActive: Math.random() > 0.3,
-      lastUsed: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
-    }));
+    const strategies: Strategy[] = [];
+
+    // Strategy 1: Focus on best performing symbols
+    const symbolPatterns = patterns.filter(p => p.category === 'Symbol');
+    if (symbolPatterns.length > 0) {
+      const bestSymbolPattern = symbolPatterns.reduce((best, current) => 
+        current.winRate > best.winRate ? current : best
+      );
+
+      strategies.push({
+        id: 'symbol-focus',
+        name: 'Symbol Focus Strategy',
+        description: `Focus trading on ${bestSymbolPattern.currencyPairs.join(', ')} which shows ${bestSymbolPattern.winRate.toFixed(1)}% win rate`,
+        patterns: [bestSymbolPattern],
+        totalTrades: bestSymbolPattern.frequency,
+        successRate: bestSymbolPattern.winRate,
+        avgReturn: bestSymbolPattern.avgProfit,
+        maxDrawdown: -Math.abs(bestSymbolPattern.avgProfit) * 2, // Estimate
+        sharpeRatio: bestSymbolPattern.winRate / 100 * 2, // Estimate
+        isActive: true,
+        lastUsed: new Date()
+      });
+    }
+
+    // Strategy 2: Time-based optimization
+    const timePatterns = patterns.filter(p => p.category === 'Timing');
+    if (timePatterns.length > 0) {
+      const bestTimePattern = timePatterns[0]; // Should be the best one
+
+      strategies.push({
+        id: 'time-optimization',
+        name: 'Time Optimization Strategy',
+        description: `Trade primarily during ${bestTimePattern.timeOfDay} when win rate is ${bestTimePattern.winRate.toFixed(1)}%`,
+        patterns: [bestTimePattern],
+        totalTrades: bestTimePattern.frequency,
+        successRate: bestTimePattern.winRate,
+        avgReturn: bestTimePattern.avgProfit,
+        maxDrawdown: -Math.abs(bestTimePattern.avgProfit) * 2, // Estimate
+        sharpeRatio: bestTimePattern.winRate / 100 * 2, // Estimate
+        isActive: true,
+        lastUsed: new Date()
+      });
+    }
+
+    return strategies;
   };
 
   const analyzeTradingData = async () => {

@@ -3,9 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { UserProvider, useUser } from "./contexts/UserContext";
+import { ErrorBoundary } from "react-error-boundary";
+import Onboarding from "./components/Onboarding";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MT4Connection from "./pages/MT4Connection";
@@ -15,9 +17,7 @@ import TradeBuilder from "./pages/TradeBuilder";
 import PerformanceCalendar from "./pages/PerformanceCalendar";
 import StrategyAnalyzer from "./pages/StrategyAnalyzer";
 import NotFound from "./pages/NotFound";
-import AuthDebug from "./pages/AuthDebug";
 import MobileBottomNav from "./components/MobileBottomNav";
-import { authDebug } from "@/lib/authDebug";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,14 +28,11 @@ const queryClient = new QueryClient({
   },
 });
 
-// Protected Route Component with improved error handling
+// Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, initialized } = useAuth();
+  const { user, isLoading } = useUser();
   
-  console.log('ProtectedRoute - loading:', loading, 'initialized:', initialized, 'user:', user?.email);
-  
-  // Show simple loading during initialization
-  if (loading || !initialized) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 flex items-center justify-center">
         <div className="text-center">
@@ -46,25 +43,118 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  // Redirect to auth if no user
   if (!user) {
-    console.log('No user, redirecting to auth');
-    return <Navigate to="/auth" replace />;
+    return <Auth />;
+  }
+  
+  if (!user.onboardingCompleted) {
+    return <Onboarding />;
   }
   
   return <>{children}</>;
 };
 
-const App = () => {
-  // Make debug functions globally available
-  if (typeof window !== 'undefined') {
-    (window as any).authDebug = authDebug;
-    (window as any).runAuthDiagnostic = authDebug.runFullDiagnostic;
-    (window as any).testSignup = authDebug.testSpecificSignup;
-    (window as any).testSignin = authDebug.testSpecificSignin;
-    (window as any).checkCurrentUser = authDebug.checkCurrentUser;
+// App Content Component
+const AppContent = () => {
+  const { user, isLoading } = useUser();
+  const location = useLocation();
+  
+  // Show loading during initialization
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading Quantum Risk Coach...</p>
+        </div>
+      </div>
+    );
   }
+  
+  // Define valid routes
+  const validRoutes = [
+    '/',
+    '/auth',
+    '/connect-mt4',
+    '/connect-mt5', 
+    '/connect-ctrader',
+    '/connect-tradingview',
+    '/settings',
+    '/journal',
+    '/journal/add',
+    '/journal/analytics',
+    '/journal/tags',
+    '/journal/export',
+    '/trade-builder',
+    '/performance-calendar',
+    '/strategy-analyzer'
+  ];
+  
+  // Check if current route is valid
+  const isValidRoute = validRoutes.some(route => {
+    if (route === '/') return location.pathname === '/';
+    return location.pathname === route || location.pathname.startsWith(route + '/');
+  });
+  
+  // If route is invalid, show 404
+  if (!isValidRoute) {
+    return <NotFound />;
+  }
+  
+  // If user is not authenticated and trying to access protected routes, show auth
+  if (!user && location.pathname !== '/auth') {
+    return <Auth />;
+  }
+  
+  // If user is authenticated but hasn't completed onboarding, show onboarding
+  if (user && !user.onboardingCompleted) {
+    return <Onboarding />;
+  }
+  
+  // Show main app
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/connect-mt4" element={<MT4Connection />} />
+        <Route path="/connect-mt5" element={<MT4Connection platform="MT5" />} />
+        <Route path="/connect-ctrader" element={<MT4Connection platform="cTrader" />} />
+        <Route path="/connect-tradingview" element={<MT4Connection platform="TradingView" />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/journal" element={<Journal />} />
+        <Route path="/journal/add" element={<Journal defaultTab="add" />} />
+        <Route path="/journal/analytics" element={<Journal defaultTab="analytics" />} />
+        <Route path="/journal/tags" element={<Journal defaultTab="tags" />} />
+        <Route path="/journal/export" element={<Journal defaultTab="export" />} />
+        <Route path="/trade-builder" element={<TradeBuilder />} />
+        <Route path="/performance-calendar" element={<PerformanceCalendar />} />
+        <Route path="/strategy-analyzer" element={<StrategyAnalyzer />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <MobileBottomNav />
+    </div>
+  );
+};
 
+const ErrorFallback = ({ error }: { error: Error }) => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900/20 to-slate-900 flex items-center justify-center">
+      <div className="text-center">
+        <h2 className="text-xl font-bold text-red-400 mb-4">Something went wrong</h2>
+        <p className="text-slate-400 mb-4">{error.message}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Reload Page
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const App = () => {
   return (
     <ThemeProvider
       attribute="class"
@@ -73,92 +163,17 @@ const App = () => {
       disableTransitionOnChange={false}
     >
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
+        <UserProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <div className="flex flex-col min-h-screen">
-                <Routes>
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/" element={
-                    <ProtectedRoute>
-                      <Index />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/connect-mt4" element={
-                    <ProtectedRoute>
-                      <MT4Connection />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/connect-mt5" element={
-                    <ProtectedRoute>
-                      <MT4Connection platform="MT5" />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/connect-ctrader" element={
-                    <ProtectedRoute>
-                      <MT4Connection platform="cTrader" />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/connect-tradingview" element={
-                    <ProtectedRoute>
-                      <MT4Connection platform="TradingView" />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/settings" element={
-                    <ProtectedRoute>
-                      <Settings />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/journal" element={
-                    <ProtectedRoute>
-                      <Journal />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/journal/add" element={
-                    <ProtectedRoute>
-                      <Journal defaultTab="add" />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/journal/analytics" element={
-                    <ProtectedRoute>
-                      <Journal defaultTab="analytics" />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/journal/tags" element={
-                    <ProtectedRoute>
-                      <Journal defaultTab="tags" />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/journal/export" element={
-                    <ProtectedRoute>
-                      <Journal defaultTab="export" />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/trade-builder" element={
-                    <ProtectedRoute>
-                      <TradeBuilder />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/performance-calendar" element={
-                    <ProtectedRoute>
-                      <PerformanceCalendar />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/strategy-analyzer" element={
-                    <ProtectedRoute>
-                      <StrategyAnalyzer />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/debug" element={<AuthDebug />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <MobileBottomNav />
-              </div>
-            </BrowserRouter>
+            <ErrorBoundary FallbackComponent={ErrorFallback}>
+              <BrowserRouter>
+                <AppContent />
+              </BrowserRouter>
+            </ErrorBoundary>
           </TooltipProvider>
-        </AuthProvider>
+        </UserProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

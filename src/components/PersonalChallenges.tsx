@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,433 +18,467 @@ import {
   Zap,
   Star,
   Calendar,
-  BarChart3
+  BarChart3,
+  Award,
+  Flame,
+  PlayCircle,
+  ChevronRight,
+  Sparkles,
+  Gift,
+  Shield,
+  Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import { AIStreamService } from '@/lib/aiStreamService';
+import { useTrades } from '@/hooks/useTrades';
 
 interface Challenge {
-  id: string;
+  id: number;
   title: string;
   description: string;
-  type: 'simulation' | 'mini-objective' | 'redemption' | 'skill-building';
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  duration: string;
-  reward: string;
+  type: 'behavioral' | 'performance' | 'risk' | 'psychology' | 'technical';
   progress: number;
-  status: 'active' | 'completed' | 'paused' | 'failed';
-  startDate: Date;
-  endDate?: Date;
-  requirements: string[];
-  metrics: ChallengeMetric[];
-  aiGenerated: boolean;
-}
-
-interface ChallengeMetric {
-  name: string;
   target: number;
-  current: number;
-  unit: string;
+  reward: string;
+  timeLeft: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  xp: number;
+  status: 'active' | 'completed' | 'almost_complete' | 'failed';
+  aiGenerated: boolean;
+  insights?: string[];
+  category: string;
 }
 
 const PersonalChallenges = () => {
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
+  const { trades, getTradeStats } = useTrades();
+  const [selectedTab, setSelectedTab] = useState('active');
+  const [aiService] = useState(() => new AIStreamService({}));
+  const [totalXP, setTotalXP] = useState(2340);
+  const [level, setLevel] = useState(12);
+  const [badges, setBadges] = useState([
+    { name: "First Profit", icon: "💰", earned: true },
+    { name: "Week Warrior", icon: "⚡", earned: true },
+    { name: "Risk Guardian", icon: "🛡️", earned: true },
+    { name: "Patience Master", icon: "🧘", earned: false },
+    { name: "News Ninja", icon: "📰", earned: false },
+    { name: "Session Expert", icon: "🎯", earned: false }
+  ]);
 
+  // Calculate level from XP
   useEffect(() => {
-    // Initialize with AI-generated challenges based on weaknesses
-    const aiChallenges: Challenge[] = [
-      {
-        id: '1',
-        title: 'News Trading Discipline',
-        description: 'Practice staying out of the market 30 minutes before and after major news releases. Your analysis shows 40% lower win rate during news events.',
-        type: 'skill-building',
-        difficulty: 'intermediate',
-        duration: '7 days',
-        reward: 'Improved discipline score + 15%',
-        progress: 0,
-        status: 'active',
-        startDate: new Date(),
-        requirements: ['No trades during news windows', 'Document market reactions', 'Review news impact'],
-        metrics: [
-          { name: 'News-free days', target: 7, current: 0, unit: 'days' },
-          { name: 'Discipline score', target: 85, current: 45, unit: '%' }
+    const newLevel = Math.floor(totalXP / 200) + 1;
+    setLevel(newLevel);
+  }, [totalXP]);
+
+  // CALCULATE REAL USER CHALLENGES based on actual trading performance
+  const challenges = useMemo(() => {
+    const stats = getTradeStats();
+    const userChallenges: Challenge[] = [];
+    
+    // Challenge 1: Win Rate Improvement
+    if (stats.winRate < 60) {
+      userChallenges.push({
+        id: 1,
+        title: "Improve Win Rate",
+        description: `Your current win rate is ${stats.winRate.toFixed(1)}%. Aim for 60%+ by focusing on high-probability setups and avoiding low-quality trades.`,
+        type: "performance",
+        progress: Math.min(stats.winRate, 60),
+        target: 60,
+        reward: "Consistency Badge",
+        timeLeft: "Ongoing",
+        difficulty: "Medium",
+        xp: 200,
+        status: "active",
+        aiGenerated: true,
+        insights: [
+          `Current win rate: ${stats.winRate.toFixed(1)}%`,
+          "Focus on setups with clear entry/exit signals",
+          "Avoid trading during low-probability market conditions"
         ],
-        aiGenerated: true
-      },
-      {
-        id: '2',
-        title: 'London Session Mastery',
-        description: 'Focus on trading only during your best performing hours (08:00-12:00 GMT) to maximize your 78% win rate in this timeframe.',
-        type: 'mini-objective',
-        difficulty: 'beginner',
-        duration: '5 days',
-        reward: 'Better win rate + 10%',
-        progress: 60,
-        status: 'active',
-        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        requirements: ['Trade only 08:00-12:00 GMT', 'Minimum 3 trades per day', 'Document session performance'],
-        metrics: [
-          { name: 'London session trades', target: 15, current: 9, unit: 'trades' },
-          { name: 'Win rate', target: 80, current: 78, unit: '%' }
+        category: "Performance Optimization"
+      });
+    }
+    
+    // Challenge 2: Trade Frequency
+    if (stats.totalTrades < 10) {
+      userChallenges.push({
+        id: 2,
+        title: "Increase Activity",
+        description: `You've taken ${stats.totalTrades} trades. Aim for at least 10 trades to build experience and establish trading patterns.`,
+        type: "behavioral",
+        progress: Math.min(stats.totalTrades * 10, 100),
+        target: 100,
+        reward: "Active Trader Badge",
+        timeLeft: "Ongoing",
+        difficulty: "Easy",
+        xp: 100,
+        status: "active",
+        aiGenerated: true,
+        insights: [
+          `Total trades taken: ${stats.totalTrades}`,
+          "Look for 2-3 high-quality setups per week",
+          "Focus on major currency pairs for consistency"
         ],
-        aiGenerated: true
-      },
-      {
-        id: '3',
-        title: 'Risk Management Redemption',
-        description: 'Your recent trades show overexposure. Complete this simulation to practice proper position sizing and risk management.',
-        type: 'simulation',
-        difficulty: 'advanced',
-        duration: '3 days',
-        reward: 'Risk management certification',
-        progress: 0,
-        status: 'paused',
-        startDate: new Date(),
-        requirements: ['Max 2% risk per trade', 'Maintain 1:2 R:R ratio', 'No consecutive losses > 3'],
-        metrics: [
-          { name: 'Risk per trade', target: 2, current: 0, unit: '%' },
-          { name: 'R:R ratio', target: 2, current: 0, unit: ':1' }
+        category: "Behavioral Control"
+      });
+    }
+    
+    // Challenge 3: Consistency
+    if (stats.totalTrades >= 10 && stats.winRate > 50) {
+      userChallenges.push({
+        id: 3,
+        title: "Maintain Consistency",
+        description: `Great start! Maintain your ${stats.winRate.toFixed(1)}% win rate while increasing trade frequency for better results.`,
+        type: "psychology",
+        progress: Math.min(stats.winRate, 80),
+        target: 80,
+        reward: "Consistency Master Badge",
+        timeLeft: "Ongoing",
+        difficulty: "Medium",
+        xp: 180,
+        status: "active",
+        aiGenerated: true,
+        insights: [
+          `Current win rate: ${stats.winRate.toFixed(1)}%`,
+          "Stick to your proven trading strategy",
+          "Avoid emotional decisions during losses"
         ],
-        aiGenerated: true
-      },
-      {
-        id: '4',
-        title: 'Emotional Control Challenge',
-        description: 'Practice trading with emotional awareness. Your journal entries show anxiety affects decision-making.',
-        type: 'skill-building',
-        difficulty: 'intermediate',
-        duration: '10 days',
-        reward: 'Emotional balance badge',
-        progress: 30,
-        status: 'active',
-        startDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        requirements: ['Daily mood tracking', 'No trades when anxious', 'Journal every trade'],
-        metrics: [
-          { name: 'Calm trading days', target: 10, current: 3, unit: 'days' },
-          { name: 'Anxiety-free trades', target: 20, current: 6, unit: 'trades' }
-        ],
-        aiGenerated: true
-      }
-    ];
+        category: "Psychology"
+      });
+    }
+    
+    return userChallenges;
+  }, [getTradeStats]);
 
-    setChallenges(aiChallenges);
-  }, []);
-
-  const startChallenge = (challenge: Challenge) => {
-    setChallenges(prev => prev.map(c => 
-      c.id === challenge.id 
-        ? { ...c, status: 'active', startDate: new Date() }
-        : c
-    ));
-    setActiveChallenge(challenge);
-    toast.success(`Started: ${challenge.title}`);
-  };
-
-  const pauseChallenge = (challenge: Challenge) => {
-    setChallenges(prev => prev.map(c => 
-      c.id === challenge.id 
-        ? { ...c, status: 'paused' }
-        : c
-    ));
-    toast.info(`Paused: ${challenge.title}`);
-  };
-
-  const completeChallenge = (challenge: Challenge) => {
-    setChallenges(prev => prev.map(c => 
-      c.id === challenge.id 
-        ? { ...c, status: 'completed', progress: 100, endDate: new Date() }
-        : c
-    ));
-    toast.success(`🎉 Completed: ${challenge.title}! Reward: ${challenge.reward}`);
-  };
-
-  const resetChallenge = (challenge: Challenge) => {
-    setChallenges(prev => prev.map(c => 
-      c.id === challenge.id 
-        ? { ...c, status: 'active', progress: 0, startDate: new Date() }
-        : c
-    ));
-    toast.info(`Reset: ${challenge.title}`);
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return 'text-green-400';
-      case 'intermediate': return 'text-yellow-400';
-      case 'advanced': return 'text-red-400';
-      default: return 'text-slate-400';
+  // Generate new AI challenges based on trading performance
+  const generateAIChallenge = async () => {
+    try {
+      toast.info('AI challenge generation coming soon!');
+    } catch (error) {
+      console.error('Failed to generate AI challenge:', error);
+      toast.error('Failed to generate AI challenge');
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  const completeChallenge = (challengeId: number) => {
+    toast.success('Challenge completed! XP awarded.');
+    // In a real app, this would update the database
+  };
+
+  const startChallenge = (challengeId: number) => {
+    toast.info('Challenge started!');
+    // In a real app, this would update the database
+  };
+
+  const getStatusColor = (status: Challenge['status']) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500';
+      case 'almost_complete': return 'bg-yellow-500';
+      case 'active': return 'bg-blue-500';
+      case 'failed': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getDifficultyColor = (difficulty: Challenge['difficulty']) => {
+    switch (difficulty) {
+      case 'Easy': return 'text-green-400 bg-green-400/10';
+      case 'Medium': return 'text-yellow-400 bg-yellow-400/10';
+      case 'Hard': return 'text-red-400 bg-red-400/10';
+      default: return 'text-gray-400 bg-gray-400/10';
+    }
+  };
+
+  const getTypeIcon = (type: Challenge['type']) => {
     switch (type) {
-      case 'simulation': return <Play className="w-4 h-4" />;
-      case 'mini-objective': return <Target className="w-4 h-4" />;
-      case 'redemption': return <RotateCcw className="w-4 h-4" />;
-      case 'skill-building': return <Brain className="w-4 h-4" />;
+      case 'behavioral': return <Brain className="w-4 h-4" />;
+      case 'performance': return <TrendingUp className="w-4 h-4" />;
+      case 'risk': return <Shield className="w-4 h-4" />;
+      case 'psychology': return <Eye className="w-4 h-4" />;
+      case 'technical': return <Target className="w-4 h-4" />;
       default: return <Star className="w-4 h-4" />;
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'text-green-400';
-      case 'completed': return 'text-blue-400';
-      case 'paused': return 'text-yellow-400';
-      case 'failed': return 'text-red-400';
-      default: return 'text-slate-400';
-    }
-  };
-
-  const activeChallenges = challenges.filter(c => c.status === 'active');
-  const completedChallenges = challenges.filter(c => c.status === 'completed');
-  const aiGeneratedChallenges = challenges.filter(c => c.aiGenerated);
+  const filteredChallenges = challenges.filter(challenge => {
+    if (selectedTab === 'active') return challenge.status === 'active' || challenge.status === 'almost_complete';
+    if (selectedTab === 'completed') return challenge.status === 'completed';
+    if (selectedTab === 'all') return true;
+    return true;
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Personal Challenges</h2>
-          <p className="text-slate-400">AI-powered challenges to improve your trading skills</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-blue-400">
-            <Brain className="w-3 h-3 mr-1" />
-            AI Generated
-          </Badge>
-          <Badge variant="outline">
-            {activeChallenges.length} Active
-          </Badge>
-        </div>
-      </div>
-
-      {/* Challenge Stats */}
+    <div className="space-y-6" data-testid="challenges-section">
+      {/* Header with Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="holo-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Target className="w-5 h-5 text-blue-400" />
-              <div>
-                <p className="text-sm text-slate-400">Active Challenges</p>
-                <p className="text-2xl font-bold text-white">{activeChallenges.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="holo-card">
-          <CardContent className="pt-6">
+          <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Trophy className="w-5 h-5 text-yellow-400" />
               <div>
-                <p className="text-sm text-slate-400">Completed</p>
-                <p className="text-2xl font-bold text-white">{completedChallenges.length}</p>
+                <p className="text-sm text-gray-400">Total XP</p>
+                <p className="text-2xl font-bold text-white">{totalXP.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="holo-card">
-          <CardContent className="pt-6">
+          <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Brain className="w-5 h-5 text-purple-400" />
+              <Star className="w-5 h-5 text-blue-400" />
               <div>
-                <p className="text-sm text-slate-400">AI Generated</p>
-                <p className="text-2xl font-bold text-white">{aiGeneratedChallenges.length}</p>
+                <p className="text-sm text-gray-400">Level</p>
+                <p className="text-2xl font-bold text-white">{level}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="holo-card">
-          <CardContent className="pt-6">
+          <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <BarChart3 className="w-5 h-5 text-green-400" />
+              <Award className="w-5 h-5 text-green-400" />
               <div>
-                <p className="text-sm text-slate-400">Success Rate</p>
-                <p className="text-2xl font-bold text-white">
-                  {challenges.length > 0 ? Math.round((completedChallenges.length / challenges.length) * 100) : 0}%
+                <p className="text-sm text-gray-400">Badges</p>
+                <p className="text-2xl font-bold text-white badge-count">{badges.filter(b => b.earned).length}/{badges.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="holo-card">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Flame className="w-5 h-5 text-orange-400" />
+              <div>
+                <p className="text-sm text-gray-400">Active</p>
+                <p className="text-2xl font-bold text-white">{challenges.filter(c => c.status === 'active').length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Badges Section */}
+      <Card className="holo-card">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Gift className="w-5 h-5 text-yellow-400" />
+            <span>Achievement Badges</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            {badges.map((badge, index) => (
+              <div 
+                key={index}
+                className={cn(
+                  "flex flex-col items-center p-3 rounded-lg border transition-all duration-200 badge",
+                  badge.earned 
+                    ? "bg-gradient-to-br from-yellow-400/20 to-orange-400/20 border-yellow-400/30" 
+                    : "bg-gray-800/50 border-gray-700/50 opacity-50"
+                )}
+                data-testid={`badge-${index}`}
+                data-earned={badge.earned}
+              >
+                <div className="text-2xl mb-1">{badge.icon}</div>
+                <p className={cn(
+                  "text-xs text-center font-medium",
+                  badge.earned ? "text-yellow-400" : "text-gray-500"
+                )}>
+                  {badge.name}
                 </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Active Challenges */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-          <Play className="w-5 h-5 text-green-400" />
-          <span>Active Challenges</span>
-        </h3>
-        
-        {activeChallenges.map(challenge => (
-          <Card key={challenge.id} className="holo-card">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    {getTypeIcon(challenge.type)}
-                    <h4 className="font-medium text-white">{challenge.title}</h4>
-                    <Badge variant="outline" className={getDifficultyColor(challenge.difficulty)}>
+      {/* Challenge Tabs */}
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+        <div className="flex justify-between items-center mb-4">
+          <TabsList className="grid w-auto grid-cols-3 bg-black/50">
+            <TabsTrigger value="active" className="data-[state=active]:bg-blue-600">
+              Active ({challenges.filter(c => c.status === 'active').length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="data-[state=active]:bg-green-600">
+              Completed ({challenges.filter(c => c.status === 'completed').length})
+            </TabsTrigger>
+            <TabsTrigger value="all" className="data-[state=active]:bg-purple-600">
+              All ({challenges.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <Button
+            onClick={generateAIChallenge}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            size="sm"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Generate AI Challenge
+          </Button>
+        </div>
+
+        <TabsContent value="active" className="space-y-4">
+          {filteredChallenges.length === 0 ? (
+            <Card className="holo-card">
+              <CardContent className="p-8 text-center">
+                <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-white mb-2">No Active Challenges</h3>
+                <p className="text-gray-400 mb-4">Great job! You've completed all your current challenges.</p>
+                <Button onClick={generateAIChallenge} className="bg-blue-600 hover:bg-blue-700">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate New Challenge
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredChallenges.map((challenge) => (
+              <Card key={challenge.id} className="holo-card challenge-card">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-blue-500/20">
+                        {getTypeIcon(challenge.type)}
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg text-white">{challenge.title}</CardTitle>
+                        <CardDescription className="text-gray-400">
+                          {challenge.description}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge className={getDifficultyColor(challenge.difficulty)}>
+                        {challenge.difficulty}
+                      </Badge>
+                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                        {challenge.xp} XP
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Progress</span>
+                      <span className="text-white">{challenge.progress.toFixed(1)}%</span>
+                    </div>
+                    <Progress value={challenge.progress} className="h-2 progress-bar" />
+                  </div>
+
+                  {challenge.insights && challenge.insights.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-white">AI Insights</h4>
+                      <div className="space-y-1">
+                        {challenge.insights.map((insight, index) => (
+                          <div key={index} className="flex items-start space-x-2 text-sm">
+                            <Brain className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-300">{insight}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="flex items-center space-x-4 text-sm text-gray-400">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{challenge.timeLeft}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Trophy className="w-4 h-4" />
+                        <span>{challenge.reward}</span>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={() => startChallenge(challenge.id)}
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-500/30 text-blue-400 hover:bg-blue-500/20"
+                      >
+                        <Play className="w-4 h-4 mr-1" />
+                        Start
+                      </Button>
+                      <Button
+                        onClick={() => completeChallenge(challenge.id)}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Complete
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="completed" className="space-y-4">
+          {challenges.filter(c => c.status === 'completed').length === 0 ? (
+            <Card className="holo-card">
+              <CardContent className="p-8 text-center">
+                <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-white mb-2">No Completed Challenges</h3>
+                <p className="text-gray-400">Complete your first challenge to see it here!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            challenges
+              .filter(c => c.status === 'completed')
+              .map((challenge) => (
+                <Card key={challenge.id} className="holo-card bg-green-500/10 border-green-500/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <CheckCircle className="w-6 h-6 text-green-400" />
+                        <div>
+                          <h4 className="font-medium text-white">{challenge.title}</h4>
+                          <p className="text-sm text-gray-400">Completed • {challenge.xp} XP earned</p>
+                        </div>
+                      </div>
+                      <Trophy className="w-5 h-5 text-yellow-400" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="all" className="space-y-4">
+          {challenges.map((challenge) => (
+            <Card key={challenge.id} className="holo-card">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={cn(
+                      "w-3 h-3 rounded-full",
+                      getStatusColor(challenge.status)
+                    )} />
+                    <div>
+                      <h4 className="font-medium text-white">{challenge.title}</h4>
+                      <p className="text-sm text-gray-400">{challenge.category}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getDifficultyColor(challenge.difficulty)}>
                       {challenge.difficulty}
                     </Badge>
-                    {challenge.aiGenerated && (
-                      <Badge variant="outline" className="text-blue-400">
-                        <Brain className="w-3 h-3 mr-1" />
-                        AI
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-slate-300 text-sm mb-3">{challenge.description}</p>
-                  
-                  <div className="flex items-center space-x-4 text-sm text-slate-400 mb-3">
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{challenge.duration}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Trophy className="w-4 h-4" />
-                      <span>{challenge.reward}</span>
-                    </div>
-                  </div>
-
-                  {/* Progress */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="text-slate-400">Progress</span>
-                      <span className="text-white">{challenge.progress}%</span>
-                    </div>
-                    <Progress value={challenge.progress} className="h-2" />
-                  </div>
-
-                  {/* Metrics */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    {challenge.metrics.map((metric, index) => (
-                      <div key={index} className="p-3 bg-slate-800/30 rounded-lg">
-                        <p className="text-xs text-slate-400">{metric.name}</p>
-                        <p className="text-sm font-medium text-white">
-                          {metric.current} / {metric.target} {metric.unit}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Requirements */}
-                  <div className="mb-4">
-                    <p className="text-xs text-slate-400 mb-2">Requirements:</p>
-                    <div className="space-y-1">
-                      {challenge.requirements.map((req, index) => (
-                        <div key={index} className="flex items-center space-x-2 text-sm">
-                          <CheckCircle className="w-3 h-3 text-green-400" />
-                          <span className="text-slate-300">{req}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col space-y-2 ml-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => pauseChallenge(challenge)}
-                  >
-                    <Pause className="w-4 h-4 mr-2" />
-                    Pause
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => completeChallenge(challenge)}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Complete
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Paused Challenges */}
-      {challenges.filter(c => c.status === 'paused').length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-            <Pause className="w-5 h-5 text-yellow-400" />
-            <span>Paused Challenges</span>
-          </h3>
-          
-          {challenges.filter(c => c.status === 'paused').map(challenge => (
-            <Card key={challenge.id} className="holo-card opacity-75">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-white">{challenge.title}</h4>
-                    <p className="text-slate-400 text-sm">{challenge.description}</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startChallenge(challenge)}
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Resume
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => resetChallenge(challenge)}
-                    >
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Reset
-                    </Button>
+                    <span className="text-sm text-gray-400">{challenge.xp} XP</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))}
-        </div>
-      )}
-
-      {/* Completed Challenges */}
-      {completedChallenges.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-            <Trophy className="w-5 h-5 text-yellow-400" />
-            <span>Completed Challenges</span>
-          </h3>
-          
-          {completedChallenges.map(challenge => (
-            <Card key={challenge.id} className="holo-card bg-green-900/20 border-green-600/30">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Trophy className="w-5 h-5 text-yellow-400" />
-                      <h4 className="font-medium text-white">{challenge.title}</h4>
-                      <Badge variant="outline" className="text-green-400">
-                        Completed
-                      </Badge>
-                    </div>
-                    <p className="text-slate-300 text-sm">{challenge.description}</p>
-                    <p className="text-green-400 text-sm mt-2">
-                      🎉 Reward: {challenge.reward}
-                    </p>
-                  </div>
-                  <div className="text-right text-sm text-slate-400">
-                    <p>Completed on</p>
-                    <p>{challenge.endDate?.toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
