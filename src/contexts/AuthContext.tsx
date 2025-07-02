@@ -75,6 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(authUser);
       localStorage.setItem('quantum_risk_coach_user', JSON.stringify(authUser));
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -120,6 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(authUser);
       localStorage.setItem('quantum_risk_coach_user', JSON.stringify(authUser));
     } catch (error) {
+      console.error('Signup error:', error);
       throw error;
     } finally {
       setIsLoading(false);
