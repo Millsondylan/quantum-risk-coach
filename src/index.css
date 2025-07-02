@@ -100,25 +100,76 @@
     user-select: text;
   }
   
-  /* Enhanced mobile-specific button styles */
-  @media (max-width: 768px) {
+  /* Universal button styles for all device sizes */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  input, select, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px 16px;
+    border-radius: 8px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Small mobile phones (320px - 375px) */
+  @media (max-width: 375px) {
     button, [role="button"] {
       min-height: 48px;
       min-width: 48px;
       padding: 12px 16px;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 500;
+      font-size: 15px;
     }
     
-    input, select, textarea {
-      font-size: 16px; /* Prevents zoom on iOS */
-      padding: 12px 16px;
-      border-radius: 8px;
-      min-height: 48px;
+    .grid-cols-4 {
+      gap: 8px;
     }
+    
+    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+      margin-top: 1rem;
+    }
+    
+    .px-4 {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+  }
 
-    /* Mobile-optimized form elements */
+  /* Standard mobile phones (375px - 414px) */
+  @media (min-width: 375px) and (max-width: 414px) {
+    button, [role="button"] {
+      min-height: 48px;
+      min-width: 48px;
+      padding: 12px 16px;
+      font-size: 16px;
+    }
+  }
+
+  /* Large mobile phones (414px - 768px) */
+  @media (min-width: 414px) and (max-width: 768px) {
+    button, [role="button"] {
+      min-height: 50px;
+      min-width: 50px;
+      padding: 14px 18px;
+      font-size: 16px;
+    }
+  }
+
+  /* Enhanced mobile-specific button styles */
+  @media (max-width: 768px) {
     .form-input, .form-select, .form-textarea {
       font-size: 16px;
       padding: 12px 16px;
@@ -144,6 +195,117 @@
 
     .space-y-8 > :not([hidden]) ~ :not([hidden]) {
       margin-top: 2rem;
+    }
+  }
+
+  /* Ultra-small phones (iPhone SE, older Android) */
+  @media (max-width: 320px) {
+    .grid-cols-4 {
+      gap: 4px;
+    }
+    
+    .px-4 {
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    
+    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+      margin-top: 0.75rem;
+    }
+    
+    .text-xs {
+      font-size: 0.7rem;
+    }
+  }
+
+  /* Tablets (768px - 1024px) */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    button, [role="button"] {
+      min-height: 48px;
+      min-width: 48px;
+      padding: 12px 20px;
+      font-size: 16px;
+    }
+    
+    .grid-cols-4 {
+      gap: 16px;
+    }
+  }
+
+  /* Touch-specific enhancements */
+  @media (hover: none) and (pointer: coarse) {
+    button, [role="button"], .touch-target {
+      min-height: 48px;
+      min-width: 48px;
+      padding: 14px 18px;
+    }
+    
+    /* Enhanced visual feedback for touch */
+    button:active, [role="button"]:active {
+      transform: scale(0.95);
+      transition: transform 0.1s ease-in-out;
+    }
+  }
+
+  /* Ultra-small phones (iPhone SE, older Android) */
+  @media (max-width: 320px) {
+    .grid-cols-4 {
+      gap: 4px;
+    }
+    
+    .px-4 {
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    
+    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+      margin-top: 0.75rem;
+    }
+    
+    .text-xs {
+      font-size: 0.7rem;
+    }
+  }
+
+  /* Tablets (768px - 1024px) */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    button, [role="button"] {
+      min-height: 48px;
+      min-width: 48px;
+      padding: 12px 20px;
+      font-size: 16px;
+    }
+    
+    .grid-cols-4 {
+      gap: 16px;
+    }
+  }
+
+  /* Large tablets and small laptops (1024px+) */
+  @media (min-width: 1024px) {
+    .mobile-only {
+      display: none;
+    }
+    
+    button, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+      padding: 10px 16px;
+    }
+  }
+
+  /* Touch-specific enhancements */
+  @media (hover: none) and (pointer: coarse) {
+    button, [role="button"], .touch-target {
+      min-height: 48px;
+      min-width: 48px;
+      padding: 14px 18px;
+    }
+    
+    /* Enhanced visual feedback for touch */
+    button:active, [role="button"]:active {
+      transform: scale(0.95);
+      transition: transform 0.1s ease-in-out;
     }
   }
 }
@@ -478,6 +640,24 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Touch-friendly utilities */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+
+  .touch-target-large {
+    min-height: 56px;
+    min-width: 56px;
+    touch-action: manipulation;
+  }
+
+  /* Prevent zoom on double tap */
+  .no-zoom {
+    touch-action: manipulation;
+  }
 }
 
 /* Mobile-first responsive containers */
@@ -578,10 +758,6 @@
 
 /* Mobile-optimized touch targets */
 @layer components {
-  .touch-target {
-    @apply min-h-[44px] min-w-[44px];
-  }
-
   .mobile-button {
     @apply touch-target px-4 py-3 text-base font-medium;
     @apply rounded-lg border transition-all duration-200;

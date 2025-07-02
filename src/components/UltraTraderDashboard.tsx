@@ -45,6 +45,13 @@ const UltraTraderDashboard = () => {
   const [marketData, setMarketData] = useState<any>({});
   const [selectedTimeframe, setSelectedTimeframe] = useState('1D');
   const [refreshing, setRefreshing] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [realTimeData, setRealTimeData] = useState({
+    BTCUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
+    ETHUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
+    EURUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
+    GBPUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' }
+  });
 
   // Mock data matching UltraTrader's structure
   const portfolioData = {
@@ -64,11 +71,118 @@ const UltraTraderDashboard = () => {
     { symbol: 'NVDA', qty: 50, avgPrice: 445.30, currentPrice: 467.89, pnl: 1129.50, pnlPercent: 5.07 }
   ];
 
+  // Fetch real market data
+  useEffect(() => {
+    const fetchRealMarketData = async () => {
+      try {
+        setRefreshing(true);
+        
+        // Check API health first
+        const healthCheck = await realDataService.healthCheck();
+        const hasWorkingApis = Object.values(healthCheck).some(status => status);
+        
+        if (!hasWorkingApis) {
+          setApiStatus('error');
+          return;
+        }
+
+        // Fetch real data from multiple sources
+        const [cryptoData, forexData] = await Promise.all([
+          realDataService.getCryptoPrices(),
+          realDataService.getForexRates()
+        ]);
+
+        const updatedData = { ...realTimeData };
+
+        // Update crypto data
+        if (cryptoData.length > 0) {
+          const btcData = cryptoData.find(d => d.symbol === 'BTC');
+          const ethData = cryptoData.find(d => d.symbol === 'ETH');
+          
+          if (btcData) {
+            updatedData.BTCUSD = {
+              price: btcData.current_price,
+              change: btcData.price_change_24h,
+              changePercent: btcData.price_change_percentage_24h,
+              status: 'connected'
+            };
+          }
+          
+          if (ethData) {
+            updatedData.ETHUSD = {
+              price: ethData.current_price,
+              change: ethData.price_change_24h,
+              changePercent: ethData.price_change_percentage_24h,
+              status: 'connected'
+            };
+          }
+        }
+
+        // Update forex data
+        forexData.forEach(data => {
+          if (data.target === 'EUR') {
+            updatedData.EURUSD = {
+              price: data.rate,
+              change: data.change_24h || 0,
+              changePercent: ((data.change_24h || 0) / data.rate) * 100,
+              status: 'connected'
+            };
+          } else if (data.target === 'GBP') {
+            updatedData.GBPUSD = {
+              price: data.rate,
+              change: data.change_24h || 0,
+              changePercent: ((data.change_24h || 0) / data.rate) * 100,
+              status: 'connected'
+            };
+          }
+        });
+
+        setRealTimeData(updatedData);
+        setApiStatus('connected');
+      } catch (error) {
+        console.error('Error fetching real market data:', error);
+        setApiStatus('error');
+      } finally {
+        setRefreshing(false);
+      }
+    };
+
+    fetchRealMarketData();
+    const interval = setInterval(fetchRealMarketData, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Convert real-time data to watchlist format
   const watchlist = [
-    { symbol: 'BTC/USD', price: 43567.89, change: 1234.56, changePercent: 2.91 },
-    { symbol: 'ETH/USD', price: 2876.34, change: -45.23, changePercent: -1.55 },
-    { symbol: 'EUR/USD', price: 1.0845, change: 0.0023, changePercent: 0.21 },
-    { symbol: 'GBP/USD', price: 1.2634, change: -0.0045, changePercent: -0.35 }
+    {
+      symbol: 'BTC/USD',
+      price: realTimeData.BTCUSD.price || 43567.89,
+      change: realTimeData.BTCUSD.change || 0,
+      changePercent: realTimeData.BTCUSD.changePercent || 0,
+      status: realTimeData.BTCUSD.status
+    },
+    {
+      symbol: 'ETH/USD',
+      price: realTimeData.ETHUSD.price || 2876.34,
+      change: realTimeData.ETHUSD.change || 0,
+      changePercent: realTimeData.ETHUSD.changePercent || 0,
+      status: realTimeData.ETHUSD.status
+    },
+    {
+      symbol: 'EUR/USD',
+      price: realTimeData.EURUSD.price || 1.0845,
+      change: realTimeData.EURUSD.change || 0,
+      changePercent: realTimeData.EURUSD.changePercent || 0,
+      status: realTimeData.EURUSD.status
+    },
+    {
+      symbol: 'GBP/USD',
+      price: realTimeData.GBPUSD.price || 1.2634,
+      change: realTimeData.GBPUSD.change || 0,
+      changePercent: realTimeData.GBPUSD.changePercent || 0,
+      status: realTimeData.GBPUSD.status
+    }
   ];
 
   const recentTrades = [
@@ -80,8 +194,71 @@ const UltraTraderDashboard = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      // Refresh market data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check API health first
+      const healthCheck = await realDataService.healthCheck();
+      const hasWorkingApis = Object.values(healthCheck).some(status => status);
+      
+      if (!hasWorkingApis) {
+        setApiStatus('error');
+        return;
+      }
+
+      // Fetch real data from multiple sources
+      const [cryptoData, forexData] = await Promise.all([
+        realDataService.getCryptoPrices(),
+        realDataService.getForexRates()
+      ]);
+
+      const updatedData = { ...realTimeData };
+
+      // Update crypto data
+      if (cryptoData.length > 0) {
+        const btcData = cryptoData.find(d => d.symbol === 'BTC');
+        const ethData = cryptoData.find(d => d.symbol === 'ETH');
+        
+        if (btcData) {
+          updatedData.BTCUSD = {
+            price: btcData.current_price,
+            change: btcData.price_change_24h,
+            changePercent: btcData.price_change_percentage_24h,
+            status: 'connected'
+          };
+        }
+        
+        if (ethData) {
+          updatedData.ETHUSD = {
+            price: ethData.current_price,
+            change: ethData.price_change_24h,
+            changePercent: ethData.price_change_percentage_24h,
+            status: 'connected'
+          };
+        }
+      }
+
+      // Update forex data
+      forexData.forEach(data => {
+        if (data.target === 'EUR') {
+          updatedData.EURUSD = {
+            price: data.rate,
+            change: data.change_24h || 0,
+            changePercent: ((data.change_24h || 0) / data.rate) * 100,
+            status: 'connected'
+          };
+        } else if (data.target === 'GBP') {
+          updatedData.GBPUSD = {
+            price: data.rate,
+            change: data.change_24h || 0,
+            changePercent: ((data.change_24h || 0) / data.rate) * 100,
+            status: 'connected'
+          };
+        }
+      });
+
+      setRealTimeData(updatedData);
+      setApiStatus('connected');
+    } catch (error) {
+      console.error('Error refreshing market data:', error);
+      setApiStatus('error');
     } finally {
       setRefreshing(false);
     }
@@ -95,8 +272,18 @@ const UltraTraderDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold text-white">Overview</h1>
-              <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20">
-                Live
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "transition-colors",
+                  apiStatus === 'connected' && "bg-green-500/10 text-green-400 border-green-500/20",
+                  apiStatus === 'error' && "bg-red-500/10 text-red-400 border-red-500/20",
+                  apiStatus === 'disconnected' && "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                )}
+              >
+                {apiStatus === 'connected' && 'LIVE DATA'}
+                {apiStatus === 'error' && 'API ERROR'}
+                {apiStatus === 'disconnected' && 'CONNECTING'}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
@@ -194,31 +381,39 @@ const UltraTraderDashboard = () => {
         </Card>
 
         {/* Quick Actions - UltraTrader Style */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
           <Button
             onClick={() => navigate('/trade-builder')}
-            className="h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex-col gap-1 shadow-lg shadow-blue-600/20"
+            className="h-16 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl flex-col gap-1 shadow-lg shadow-blue-600/20 touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
+            size="lg"
+            aria-label="Open Trade Builder"
           >
             <Plus className="w-5 h-5" />
             <span className="text-xs font-medium">Buy</span>
           </Button>
           <Button
             onClick={() => navigate('/journal')}
-            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E]"
+            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] active:bg-[#3A3B3E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E] touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
+            size="lg"
+            aria-label="Open Trading Journal"
           >
             <BookOpen className="w-5 h-5" />
             <span className="text-xs font-medium">Journal</span>
           </Button>
           <Button
             onClick={() => navigate('/performance-calendar')}
-            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E]"
+            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] active:bg-[#3A3B3E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E] touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
+            size="lg"
+            aria-label="Open Performance Analytics"
           >
             <BarChart3 className="w-5 h-5" />
             <span className="text-xs font-medium">Analytics</span>
           </Button>
           <Button
             onClick={() => navigate('/strategy-analyzer')}
-            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E]"
+            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] active:bg-[#3A3B3E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E] touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
+            size="lg"
+            aria-label="Open Strategy Analyzer"
           >
             <Target className="w-5 h-5" />
             <span className="text-xs font-medium">Strategy</span>
@@ -231,13 +426,31 @@ const UltraTraderDashboard = () => {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold text-white">Performance</CardTitle>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-400">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-3 text-xs text-slate-400 hover:text-white touch-manipulation active:scale-95 min-h-[32px] min-w-[40px]"
+                  onClick={() => setSelectedTimeframe('1D')}
+                  aria-label="View 1 day performance"
+                >
                   1D
                 </Button>
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-blue-400 bg-blue-500/10">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-3 text-xs text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 touch-manipulation active:scale-95 min-h-[32px] min-w-[40px]"
+                  onClick={() => setSelectedTimeframe('1W')}
+                  aria-label="View 1 week performance"
+                >
                   1W
                 </Button>
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-400">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-3 text-xs text-slate-400 hover:text-white touch-manipulation active:scale-95 min-h-[32px] min-w-[40px]"
+                  onClick={() => setSelectedTimeframe('1M')}
+                  aria-label="View 1 month performance"
+                >
                   1M
                 </Button>
               </div>
@@ -275,7 +488,8 @@ const UltraTraderDashboard = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/journal')}
-                className="text-xs text-blue-400 hover:text-blue-300"
+                className="text-xs text-blue-400 hover:text-blue-300 touch-manipulation active:scale-95 transition-all duration-150"
+                aria-label="View all positions"
               >
                 View All
                 <ChevronRight className="w-3 h-3 ml-1" />
@@ -321,7 +535,8 @@ const UltraTraderDashboard = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-blue-400 hover:text-blue-300"
+                className="text-xs text-blue-400 hover:text-blue-300 touch-manipulation active:scale-95 transition-all duration-150"
+                aria-label="Edit watchlist"
               >
                 Edit
                 <Settings className="w-3 h-3 ml-1" />

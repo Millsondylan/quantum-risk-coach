@@ -68,16 +68,16 @@ const AICoachCard = () => {
     setIsLoading(true);
     try {
       const performanceData = getPerformanceMetrics();
-      const tradingData = {
-        recentTrades: trades.slice(0, 10),
-        totalTrades: trades.length,
-        winRate: performanceData.winRate,
-        totalPnL: performanceData.totalPnL,
-        avgTrade: performanceData.avgTrade,
-        riskRewardRatio: performanceData.riskRewardRatio,
-        maxDrawdown: performanceData.maxDrawdown,
-        tradingFrequency: trades.length > 0 ? trades.length / 30 : 0
-      };
+             const tradingData = {
+         recentTrades: trades.slice(0, 10),
+         totalTrades: trades.length,
+         winRate: performanceData.winRate,
+         totalPnL: performanceData.totalProfit,
+         avgTrade: performanceData.averageProfit,
+         riskRewardRatio: performanceData.profitFactor,
+         maxDrawdown: performanceData.maxDrawdown,
+         tradingFrequency: trades.length > 0 ? trades.length / 30 : 0
+       };
 
       const coachingResponse = await aiService.getAICoaching(tradingData);
       
@@ -311,8 +311,8 @@ const AICoachCard = () => {
                   <Target className="w-4 h-4 text-blue-400" />
                   <span className="text-sm text-slate-400">Total P&L</span>
                 </div>
-                <p className={`text-lg font-semibold ${getPerformanceMetrics().totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  ${getPerformanceMetrics().totalPnL.toFixed(2)}
+                <p className={`text-lg font-semibold ${getPerformanceMetrics().totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  ${getPerformanceMetrics().totalProfit.toFixed(2)}
                 </p>
               </div>
             </div>

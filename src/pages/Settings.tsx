@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Settings as SettingsIcon, Bell, Shield, Palette, Database, Key, Eye, EyeOff, Save, TestTube, User } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Bell, Shield, Palette, Database, Key, Eye, EyeOff, Save, TestTube, User, LogOut, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { user, updateProfile } = useAuth();
-  const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
+  const { user, updateProfile, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [notifications, setNotifications] = useState({
+    trades: true,
+    market: true,
+    news: false,
+    email: true,
+    push: true
+  });
   const [autoSync, setAutoSync] = useState(true);
   const [riskLevel, setRiskLevel] = useState('medium');
   const [currency, setCurrency] = useState('USD');
@@ -35,6 +45,7 @@ const Settings = () => {
   });
   const [showKeys, setShowKeys] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     // Load API keys from localStorage
@@ -45,6 +56,7 @@ const Settings = () => {
   }, []);
 
   const handleSaveSettings = async () => {
+    setSaving(true);
     try {
       // Save profile data
       if (profileData.username !== user?.user_metadata?.username) {
@@ -56,12 +68,20 @@ const Settings = () => {
       toast.success('Settings saved successfully!');
     } catch (error) {
       toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleResetSettings = () => {
-    setNotifications(true);
-    setDarkMode(true);
+    setNotifications({
+      trades: true,
+      market: true,
+      news: false,
+      email: true,
+      push: true
+    });
+    setTheme('dark');
     setAutoSync(true);
     setRiskLevel('medium');
     setCurrency('USD');
@@ -96,19 +116,37 @@ const Settings = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(-1)}
+              className="h-10 w-10 p-0 text-slate-400 hover:text-white touch-manipulation active:scale-95 transition-all duration-150"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-xl font-semibold text-white">Settings</h1>
+          </div>
+        </div>
+      </div>
+
       <main className="container mx-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="mb-6 text-slate-400 hover:text-white"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-
           <div className="grid gap-6">
             {/* Profile Settings */}
             <Card className="holo-card">
@@ -164,24 +202,61 @@ const Settings = () => {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="notifications">Push Notifications</Label>
-                    <p className="text-sm text-slate-400">Receive alerts for important trading events</p>
+                    <Label className="text-white">Trade Alerts</Label>
+                    <p className="text-sm text-slate-400">Get notified when trades are executed</p>
                   </div>
-                  <Switch 
-                    id="notifications" 
-                    checked={notifications} 
-                    onCheckedChange={setNotifications} 
+                  <Switch
+                    checked={notifications.trades}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, trades: checked }))}
+                    className="touch-manipulation"
                   />
                 </div>
+                <Separator className="bg-slate-700" />
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="autoSync">Auto Sync</Label>
-                    <p className="text-sm text-slate-400">Automatically sync data from connected accounts</p>
+                    <Label className="text-white">Market Updates</Label>
+                    <p className="text-sm text-slate-400">Real-time market movements</p>
                   </div>
-                  <Switch 
-                    id="autoSync" 
-                    checked={autoSync} 
-                    onCheckedChange={setAutoSync} 
+                  <Switch
+                    checked={notifications.market}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, market: checked }))}
+                    className="touch-manipulation"
+                  />
+                </div>
+                <Separator className="bg-slate-700" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">News Alerts</Label>
+                    <p className="text-sm text-slate-400">Breaking financial news</p>
+                  </div>
+                  <Switch
+                    checked={notifications.news}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, news: checked }))}
+                    className="touch-manipulation"
+                  />
+                </div>
+                <Separator className="bg-slate-700" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Email Notifications</Label>
+                    <p className="text-sm text-slate-400">Receive updates via email</p>
+                  </div>
+                  <Switch
+                    checked={notifications.email}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, email: checked }))}
+                    className="touch-manipulation"
+                  />
+                </div>
+                <Separator className="bg-slate-700" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Push Notifications</Label>
+                    <p className="text-sm text-slate-400">Mobile push notifications</p>
+                  </div>
+                  <Switch
+                    checked={notifications.push}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, push: checked }))}
+                    className="touch-manipulation"
                   />
                 </div>
               </CardContent>
@@ -203,8 +278,8 @@ const Settings = () => {
                   </div>
                   <Switch 
                     id="darkMode" 
-                    checked={darkMode} 
-                    onCheckedChange={setDarkMode} 
+                    checked={theme === 'dark'} 
+                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} 
                   />
                 </div>
               </CardContent>
@@ -382,13 +457,33 @@ const Settings = () => {
             </Card>
 
             <div className="flex space-x-4">
-              <Button onClick={handleSaveSettings} className="holo-button flex-1">
-                Save Settings
+              <Button onClick={handleSaveSettings} className="holo-button flex-1" disabled={saving}>
+                {saving ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
               <Button variant="outline" onClick={handleResetSettings} className="flex-1">
                 Reset to Defaults
               </Button>
             </div>
+
+            {/* Sign Out */}
+            <Card className="bg-red-500/10 border-red-500/20">
+              <CardContent className="pt-6">
+                <Button
+                  onClick={handleSignOut}
+                  variant="destructive"
+                  className="w-full touch-manipulation active:scale-95 transition-all duration-150"
+                  size="lg"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
