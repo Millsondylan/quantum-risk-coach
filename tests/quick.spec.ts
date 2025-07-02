@@ -52,14 +52,16 @@ test.describe('Critical App Tests', () => {
     
     // Now we should be on the auth page
     await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
+    // Click signin tab to make password input visible
+    await page.click('[data-testid="signin-tab"]');
+    await expect(page.locator('[data-testid="signin-password-input"]')).toBeVisible();
     
     // Test form input
     await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
+    await page.fill('[data-testid="signin-password-input"]', 'password123');
     
     await expect(page.locator('input[type="email"]')).toHaveValue('test@example.com');
-    await expect(page.locator('input[type="password"]')).toHaveValue('password123');
+    await expect(page.locator('[data-testid="signin-password-input"]')).toHaveValue('password123');
   });
 
   test('404 page works', async ({ page }) => {

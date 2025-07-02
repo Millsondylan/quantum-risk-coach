@@ -149,13 +149,86 @@ const PersonalChallenges = () => {
       });
     }
     
+    // Challenge 4: Max Drawdown Reduction
+    if (stats.maxDrawdown > 10) {
+      userChallenges.push({
+        id: 4,
+        title: "Reduce Max Drawdown",
+        description: `Your max drawdown is ${stats.maxDrawdown.toFixed(1)}%. Aim to reduce it below 10% by implementing stricter risk management.`, 
+        type: "risk",
+        progress: Math.min(100 - (stats.maxDrawdown * 5), 100), // Invert for progress
+        target: 10,
+        reward: "Risk Manager Badge",
+        timeLeft: "Ongoing",
+        difficulty: "Hard",
+        xp: 250,
+        status: "active",
+        aiGenerated: true,
+        insights: [
+          `Current max drawdown: ${stats.maxDrawdown.toFixed(1)}%`,
+          "Implement fixed stop-loss for every trade",
+          "Avoid over-leveraging and large position sizes"
+        ],
+        category: "Risk Management"
+      });
+    }
+
+    // Challenge 5: Profit Factor Improvement
+    if (stats.profitFactor < 1.5) {
+      userChallenges.push({
+        id: 5,
+        title: "Increase Profit Factor",
+        description: `Your profit factor is ${stats.profitFactor.toFixed(2)}. Aim for 1.5+ by improving your trade selection and exit strategies.`, 
+        type: "performance",
+        progress: Math.min((stats.profitFactor / 1.5) * 100, 100),
+        target: 1.5,
+        reward: "Profit Maximizer Badge",
+        timeLeft: "Ongoing",
+        difficulty: "Medium",
+        xp: 220,
+        status: "active",
+        aiGenerated: true,
+        insights: [
+          `Current profit factor: ${stats.profitFactor.toFixed(2)}`,
+          "Let winners run, cut losers short",
+          "Review losing trades for common patterns"
+        ],
+        category: "Performance Optimization"
+      });
+    }
+
+    // Challenge 6: Daily Trading Goal
+    if (stats.tradingDays < 5) {
+      userChallenges.push({
+        id: 6,
+        title: "Consistent Trading Days",
+        description: `You have traded on ${stats.tradingDays} days this month. Aim for at least 5 trading days per month to build consistency.`, 
+        type: "behavioral",
+        progress: Math.min((stats.tradingDays / 5) * 100, 100),
+        target: 5,
+        reward: "Daily Streak Badge",
+        timeLeft: "Monthly",
+        difficulty: "Easy",
+        xp: 120,
+        status: "active",
+        aiGenerated: true,
+        insights: [
+          `Trading days this month: ${stats.tradingDays}`,
+          "Dedicate specific hours each day for trading analysis",
+          "Use a trading plan to guide your daily actions"
+        ],
+        category: "Behavioral Control"
+      });
+    }
+    
     return userChallenges;
   }, [getTradeStats]);
 
   // Generate new AI challenges based on trading performance
   const generateAIChallenge = async () => {
     try {
-      toast.info('AI challenge generation coming soon!');
+      console.log('AI challenge generation is a future feature, not yet implemented.');
+      toast.info('AI challenge generation is coming soon!');
     } catch (error) {
       console.error('Failed to generate AI challenge:', error);
       toast.error('Failed to generate AI challenge');

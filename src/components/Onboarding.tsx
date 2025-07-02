@@ -80,7 +80,7 @@ const Onboarding = () => {
                     type="text"
                     className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={username}
-                    onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 20))}
+                    onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20))}
                     placeholder="Enter a username"
                     autoFocus
                     data-testid="onboarding-username-input"

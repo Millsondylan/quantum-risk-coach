@@ -1,15 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { applyTheme } from '@/lib/theme';
+import { NotificationPreferences } from '@/lib/pushNotificationService';
 
-interface UserPreferences {
+export interface UserPreferences {
   tradingStyle: 'scalping' | 'day-trading' | 'swing-trading' | 'position-trading';
   riskTolerance: 'conservative' | 'moderate' | 'aggressive';
   preferredMarkets: string[];
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
-  notifications: {
-    tradeAlerts: boolean;
-    marketUpdates: boolean;
-    riskWarnings: boolean;
-  };
+  notifications: NotificationPreferences;
   theme: 'light' | 'dark' | 'auto';
   language: string;
 }
@@ -107,9 +105,31 @@ const getDefaultPreferences = (): UserPreferences => ({
   preferredMarkets: [],
   experienceLevel: 'beginner',
   notifications: {
-    tradeAlerts: true,
-    marketUpdates: true,
+    priceAlerts: true,
+    newsAlerts: true,
+    aiInsights: true,
+    tradeSignals: true,
+    economicEvents: true,
+    portfolioAlerts: true,
     riskWarnings: true,
+    pushNotifications: true,
+    telegram: false,
+    soundEnabled: true,
+    marketUpdates: true,
+    tradeAlerts: true,
+    marketSentiment: true,
+    quietHours: {
+      enabled: false,
+      start: '22:00',
+      end: '08:00'
+    },
+    weekends: true,
+    minimumImpact: 'medium',
+    frequency: 'instant',
+    personalizedSymbols: [],
+    tradingStyle: 'day',
+    riskTolerance: 'moderate',
+    experience: 'intermediate'
   },
   theme: 'auto',
   language: 'en',
@@ -126,6 +146,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = await storage.get('user');
         if (userData) {
           setUser(userData);
+          applyTheme(userData.preferences?.theme || 'auto');
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -148,6 +169,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     await storage.set('user', updatedUser);
     setUser(updatedUser);
+    if (newPreferences.theme) {
+      applyTheme(newPreferences.theme as any);
+    }
   };
 
   const completeOnboarding = async (preferences: UserPreferences) => {
@@ -173,6 +197,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     await storage.set('user', newUser);
     setUser(newUser);
+    applyTheme(preferences.theme || 'auto');
   };
 
   const updateLastActive = async () => {

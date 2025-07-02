@@ -184,7 +184,10 @@ test.describe('Final Comprehensive Validation', () => {
   });
 
   test('form validation works', async ({ page }) => {
-    await page.goto(`${BASE}/`);
+    await page.goto(`${BASE}/auth`);
+    
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
     
     // Try to sign in with empty fields
     await page.click('[data-testid="signin-button"]');
@@ -193,7 +196,10 @@ test.describe('Final Comprehensive Validation', () => {
   });
 
   test('input types work correctly', async ({ page }) => {
-    await page.goto(`${BASE}/`);
+    await page.goto(`${BASE}/auth`);
+    
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
     
     const emailInput = page.locator('[data-testid="signin-email-input"]');
     await expect(emailInput).toHaveAttribute('type', 'email');
@@ -218,6 +224,8 @@ test.describe('Final Comprehensive Validation', () => {
 
   test('XSS protection', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
     const emailInput = page.locator('[data-testid="signin-email-input"]');
     await emailInput.fill('<script>alert("XSS")</script>');
     await page.click('[data-testid="signin-button"]');
@@ -299,7 +307,9 @@ test.describe('Final Comprehensive Validation', () => {
   });
 
   test('performance - form input response', async ({ page }) => {
-    await page.goto(`${BASE}/`);
+    await page.goto(`${BASE}/auth`);
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
     const startTime = Date.now();
     await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
     const responseTime = Date.now() - startTime;
@@ -332,7 +342,9 @@ test.describe('Final Comprehensive Validation', () => {
   });
 
   test('initial form submission response', async ({ page }) => {
-    await page.goto(`${BASE}/`);
+    await page.goto(`${BASE}/auth`);
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
     const startTime = Date.now();
     await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
     await page.fill('[data-testid="signin-password-input"]', 'password123');
@@ -350,13 +362,17 @@ test.describe('Final Comprehensive Validation', () => {
   });
 
   test('input focus works', async ({ page }) => {
-    await page.goto(`${BASE}/`);
+    await page.goto(`${BASE}/auth`);
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
     await page.focus('[data-testid="signin-email-input"]');
     await expect(page.locator('[data-testid="signin-email-input"]')).toBeFocused();
   });
 
   test('form fields accept text', async ({ page }) => {
-    await page.goto(`${BASE}/`);
+    await page.goto(`${BASE}/auth`);
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
     await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
     await expect(page.locator('[data-testid="signin-email-input"]')).toHaveValue('test@example.com');
   });
@@ -425,7 +441,9 @@ test.describe('Final Comprehensive Validation', () => {
   });
 
   test('input response time', async ({ page }) => {
-    await page.goto(`${BASE}/`);
+    await page.goto(`${BASE}/auth`);
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
     const startTime = Date.now();
     await page.fill('[data-testid="signin-email-input"]', 'test');
     const responseTime = Date.now() - startTime;

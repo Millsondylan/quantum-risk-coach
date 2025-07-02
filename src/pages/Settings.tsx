@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,12 +19,24 @@ import {
   Download, 
   Trash2,
   Save,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  TestTube
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { pushNotificationService } from '@/lib/pushNotificationService';
+import ApiStatusCard from '@/components/ApiStatusCard';
 
 const Settings: React.FC = () => {
   const { user, updatePreferences } = useUser();
   const [activeTab, setActiveTab] = useState('profile');
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+
+  useEffect(() => {
+    // Check current notification permission
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
 
   const handlePreferenceUpdate = async (key: string, value: any) => {
     if (!user) return;
@@ -43,6 +55,33 @@ const Settings: React.FC = () => {
     }
     
     await updatePreferences(updates);
+    toast.success('Settings updated successfully!');
+  };
+
+  const handleEnableNotifications = async () => {
+    try {
+      const permission = await pushNotificationService.requestPermission();
+      setNotificationPermission(permission);
+      
+      if (permission === 'granted') {
+        toast.success('Push notifications enabled successfully!');
+      } else {
+        toast.error('Push notification permission denied');
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+      toast.error('Failed to enable notifications');
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await pushNotificationService.sendTestNotification();
+      toast.success('Test notification sent!');
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      toast.error('Failed to send test notification');
+    }
   };
 
   const handleExportData = () => {
@@ -61,12 +100,14 @@ const Settings: React.FC = () => {
     a.download = `qlarity-data-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success('Data exported successfully!');
   };
 
   const handleClearData = () => {
     if (confirm('Are you sure you want to clear all your data? This action cannot be undone.')) {
       localStorage.clear();
-      window.location.reload();
+      toast.success('All data cleared');
+      setTimeout(() => window.location.reload(), 1000);
     }
   };
 
@@ -81,7 +122,7 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div data-testid="settings-page" className="container mx-auto p-4 space-y-6">
       <div className="flex items-center gap-2">
         <SettingsIcon className="h-6 w-6" />
         <h1 className="text-3xl font-bold">Settings</h1>
@@ -112,7 +153,7 @@ const Settings: React.FC = () => {
                     value={user.preferences.tradingStyle} 
                     onValueChange={(value) => handlePreferenceUpdate('tradingStyle', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="trading-style-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -129,7 +170,7 @@ const Settings: React.FC = () => {
                     value={user.preferences.riskTolerance} 
                     onValueChange={(value) => handlePreferenceUpdate('riskTolerance', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="risk-tolerance-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -145,7 +186,7 @@ const Settings: React.FC = () => {
                     value={user.preferences.experienceLevel} 
                     onValueChange={(value) => handlePreferenceUpdate('experienceLevel', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="experience-level-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -161,7 +202,7 @@ const Settings: React.FC = () => {
                     value={user.preferences.language} 
                     onValueChange={(value) => handlePreferenceUpdate('language', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="language-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -173,11 +214,60 @@ const Settings: React.FC = () => {
                   </Select>
                 </div>
               </div>
+              <Button 
+                onClick={() => toast.success('Profile updated!')} 
+                className="flex items-center gap-2"
+                data-testid="save-profile-button"
+              >
+                <Save className="h-4 w-4" />
+                Save Profile
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Push Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <h3 className="font-medium">Browser Notifications</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Status: {notificationPermission === 'granted' ? 'Enabled' : 
+                             notificationPermission === 'denied' ? 'Blocked' : 'Not enabled'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {notificationPermission !== 'granted' && (
+                    <Button 
+                      onClick={handleEnableNotifications}
+                      data-testid="enable-notifications-button"
+                    >
+                      Enable Notifications
+                    </Button>
+                  )}
+                  {notificationPermission === 'granted' && (
+                    <Button 
+                      variant="outline"
+                      onClick={handleTestNotification}
+                      data-testid="test-notification-button"
+                      className="flex items-center gap-2"
+                    >
+                      <TestTube className="h-4 w-4" />
+                      Send Test
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -195,6 +285,7 @@ const Settings: React.FC = () => {
                   <Switch 
                     checked={user.preferences.notifications.tradeAlerts}
                     onCheckedChange={(checked) => handlePreferenceUpdate('notifications.tradeAlerts', checked)}
+                    data-testid="trade-alerts-switch"
                   />
                 </div>
                 <Separator />
@@ -206,6 +297,7 @@ const Settings: React.FC = () => {
                   <Switch 
                     checked={user.preferences.notifications.marketUpdates}
                     onCheckedChange={(checked) => handlePreferenceUpdate('notifications.marketUpdates', checked)}
+                    data-testid="market-updates-switch"
                   />
                 </div>
                 <Separator />
@@ -217,9 +309,18 @@ const Settings: React.FC = () => {
                   <Switch 
                     checked={user.preferences.notifications.riskWarnings}
                     onCheckedChange={(checked) => handlePreferenceUpdate('notifications.riskWarnings', checked)}
+                    data-testid="risk-warnings-switch"
                   />
                 </div>
               </div>
+              <Button 
+                onClick={() => toast.success('Notification preferences saved!')} 
+                className="w-full"
+                data-testid="save-notifications-button"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Preferences
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -239,7 +340,7 @@ const Settings: React.FC = () => {
                   value={user.preferences.theme} 
                   onValueChange={(value) => handlePreferenceUpdate('theme', value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="theme-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -249,11 +350,20 @@ const Settings: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <Button 
+                onClick={() => toast.success('Theme updated!')} 
+                data-testid="save-appearance-button"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Apply Theme
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="data" className="space-y-4">
+          <ApiStatusCard />
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -268,7 +378,11 @@ const Settings: React.FC = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     Download all your trading data, preferences, and settings as a JSON file.
                   </p>
-                  <Button onClick={handleExportData} className="flex items-center gap-2">
+                  <Button 
+                    onClick={handleExportData} 
+                    className="flex items-center gap-2"
+                    data-testid="export-data-button"
+                  >
                     <Download className="h-4 w-4" />
                     Export All Data
                   </Button>
@@ -283,6 +397,7 @@ const Settings: React.FC = () => {
                     variant="destructive" 
                     onClick={handleClearData}
                     className="flex items-center gap-2"
+                    data-testid="clear-data-button"
                   >
                     <Trash2 className="h-4 w-4" />
                     Clear All Data
@@ -306,6 +421,7 @@ const Settings: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">Version 1.0.0</Badge>
                   <Badge variant="outline">Local Storage</Badge>
+                  <Badge variant="outline">Push Notifications</Badge>
                 </div>
               </div>
               <Separator />
@@ -317,6 +433,8 @@ const Settings: React.FC = () => {
                   <li>• Comprehensive trade journal and analytics</li>
                   <li>• Risk management tools and alerts</li>
                   <li>• Performance tracking and optimization</li>
+                  <li>• Live trade monitoring and alerts</li>
+                  <li>• Push notification system</li>
                 </ul>
               </div>
             </CardContent>

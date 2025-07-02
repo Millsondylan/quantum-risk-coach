@@ -112,34 +112,6 @@ const ValidationTestDashboard = () => {
     }
   ];
 
-  // Market watchlist with live data
-  const watchlist = [
-    {
-      symbol: 'BTC/USD',
-      price: realTimeData.BTCUSD.price,
-      change: realTimeData.BTCUSD.change,
-      changePercent: realTimeData.BTCUSD.changePercent
-    },
-    {
-      symbol: 'ETH/USD',
-      price: realTimeData.ETHUSD.price,
-      change: realTimeData.ETHUSD.change,
-      changePercent: realTimeData.ETHUSD.changePercent
-    },
-    {
-      symbol: 'EUR/USD',
-      price: realTimeData.EURUSD.price,
-      change: realTimeData.EURUSD.change,
-      changePercent: realTimeData.EURUSD.changePercent
-    },
-    {
-      symbol: 'GBP/USD',
-      price: realTimeData.GBPUSD.price,
-      change: realTimeData.GBPUSD.change,
-      changePercent: realTimeData.GBPUSD.changePercent
-    }
-  ];
-
   // Risk metrics
   const riskMetrics = {
     currentRisk: 23.5,
@@ -500,46 +472,6 @@ const ValidationTestDashboard = () => {
                   )}>
                     {position.pnlPercent >= 0 ? '+' : ''}{position.pnlPercent.toFixed(2)}%
                   </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Live Market Data with Real Price Values */}
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-white">Live Market Data</CardTitle>
-              <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20">
-                Real-time
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            {watchlist.map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-[#151619] rounded-lg price-element" data-symbol={item.symbol}>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">{item.symbol.substring(0, 2)}</span>
-                  </div>
-                  <div>
-                    <div className="font-medium text-white text-sm">{item.symbol}</div>
-                    <div className="text-xs text-slate-400 real-price-value" data-price={item.price}>
-                      ${item.price.toFixed(item.symbol.includes('/') ? 4 : 2)}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={cn(
-                    "text-sm font-medium",
-                    item.changePercent >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%
-                  </div>
-                  <Badge variant="outline" className="text-xs mt-1 bg-green-500/10 text-green-400 border-green-500/20">
-                    live
-                  </Badge>
                 </div>
               </div>
             ))}

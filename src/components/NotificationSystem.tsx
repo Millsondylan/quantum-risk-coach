@@ -24,21 +24,16 @@ import {
   Volume2,
   VolumeX,
   Filter,
-  Zap
+  Zap,
+  TestTube
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUser } from '@/contexts/UserContext';
+import { Separator } from '@/components/ui/separator';
+import { pushNotificationService } from '@/lib/pushNotificationService';
+import { UserPreferences } from '@/contexts/UserContext';
 
-interface NotificationPreferences {
-  priceAlerts: boolean;
-  newsAlerts: boolean;
-  aiInsights: boolean;
-  tradeSignals: boolean;
-  economicEvents: boolean;
-  marketSentiment: boolean;
-  portfolioAlerts: boolean;
-  riskWarnings: boolean;
-}
+type NotificationPreferences = UserPreferences['notifications'];
 
 interface NotificationChannel {
   id: string;
@@ -57,22 +52,37 @@ interface NotificationFilter {
   timeRange: 'realtime' | '15min' | '1hour' | '4hour' | 'daily';
 }
 
+interface RecentNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  timestamp: Date;
+  priority: 'high' | 'medium' | 'low';
+  read: boolean;
+  icon: React.ReactNode;
+}
+
 const NotificationSystem = () => {
-  const { user } = useUser();
+  const { user, updatePreferences } = useUser();
   const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
   const [isLoading, setIsLoading] = useState(false);
   const [activeNotifications, setActiveNotifications] = useState<any[]>([]);
   
-  const [preferences, setPreferences] = useState<NotificationPreferences>({
-    priceAlerts: true,
-    newsAlerts: true,
-    aiInsights: false,
-    tradeSignals: true,
-    economicEvents: true,
-    marketSentiment: false,
-    portfolioAlerts: true,
-    riskWarnings: true,
-  });
+  const [preferences, setPreferences] = useState<NotificationPreferences>(() => 
+    user?.preferences.notifications || {
+      tradeAlerts: true,
+      marketUpdates: true,
+      riskWarnings: true,
+      priceAlerts: true,
+      newsAlerts: true,
+      aiInsights: true,
+      tradeSignals: true,
+      economicEvents: true,
+      marketSentiment: true,
+      portfolioAlerts: true,
+    }
+  );
 
   const [channels, setChannels] = useState<NotificationChannel[]>([
     {
@@ -100,7 +110,7 @@ const NotificationSystem = () => {
     timeRange: 'realtime'
   });
 
-  const [recentNotifications, setRecentNotifications] = useState([
+  const [recentNotifications, setRecentNotifications] = useState<RecentNotification[]>([
     {
       id: '1',
       type: 'price_alert',
@@ -135,7 +145,9 @@ const NotificationSystem = () => {
 
   useEffect(() => {
     checkNotificationPermission();
-    loadUserPreferences();
+    if (user?.preferences.notifications) {
+      setPreferences(user.preferences.notifications);
+    }
   }, [user]);
 
   const checkNotificationPermission = () => {
@@ -152,12 +164,11 @@ const NotificationSystem = () => {
 
     setIsLoading(true);
     try {
-      const permission = await Notification.requestPermission();
+      const permission = await pushNotificationService.requestPermission();
       setPushPermission(permission);
       
       if (permission === 'granted') {
         toast.success('Browser notifications enabled!');
-        await registerServiceWorker();
         updateChannelStatus('browser', true);
       } else {
         toast.error('Notification permission denied');
@@ -170,23 +181,12 @@ const NotificationSystem = () => {
     }
   };
 
-  const registerServiceWorker = async () => {
-    if ('serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('Service Worker registered:', registration);
-      } catch (error) {
-        console.error('Service Worker registration failed:', error);
-      }
-    }
-  };
-
-  const sendTestNotification = () => {
+  const sendTestNotification = async () => {
     if (pushPermission === 'granted') {
-      new Notification('Test Notification', {
+      await pushNotificationService.sendNotification({
+        title: 'Test Notification',
         body: 'Your Qlarity notifications are working!',
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
+        icon: '/qlarity-icon.png',
         tag: 'test-notification'
       });
       toast.success('Test notification sent!');
@@ -195,41 +195,12 @@ const NotificationSystem = () => {
     }
   };
 
-  const loadUserPreferences = async () => {
-    if (!user) return;
-
-    try {
-      // Try to load from local storage first as fallback
-      const localPrefs = localStorage.getItem(`notification_prefs_${user.id}`);
-      if (localPrefs) {
-        setPreferences(JSON.parse(localPrefs));
-        return;
-      }
-
-      // Use default preferences if no stored preferences
-      const defaultPrefs: NotificationPreferences = {
-        priceAlerts: true,
-        newsAlerts: true,
-        aiInsights: true,
-        tradeSignals: true,
-        economicEvents: true,
-        marketSentiment: false,
-        portfolioAlerts: true,
-        riskWarnings: true,
-      };
-      setPreferences(defaultPrefs);
-    } catch (error) {
-      console.error('Error loading notification preferences:', error);
-    }
-  };
-
   const saveUserPreferences = async (newPreferences: NotificationPreferences) => {
     if (!user) return;
 
     try {
-      // Save to local storage as primary storage
-      localStorage.setItem(`notification_prefs_${user.id}`, JSON.stringify(newPreferences));
-      
+      await updatePreferences({ notifications: newPreferences });
+
       setPreferences(newPreferences);
       toast.success('Notification preferences saved!');
     } catch (error) {
@@ -393,11 +364,11 @@ const NotificationSystem = () => {
                     <Label className="text-white font-medium">Sound Notifications</Label>
                     <p className="text-sm text-slate-400">Play sound for high priority alerts</p>
                   </div>
+                  <Switch 
+                    checked={preferences.riskWarnings}
+                    onCheckedChange={() => togglePreference('riskWarnings')}
+                  />
                 </div>
-                <Switch 
-                  checked={preferences.riskWarnings}
-                  onCheckedChange={() => togglePreference('riskWarnings')}
-                />
               </div>
             </CardContent>
           </Card>
@@ -466,10 +437,23 @@ const NotificationSystem = () => {
                       <p className="text-sm text-slate-400">{config.desc}</p>
                     </div>
                   </div>
-                  <Switch 
-                    checked={preferences[key as keyof NotificationPreferences]}
-                    onCheckedChange={() => togglePreference(key as keyof NotificationPreferences)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Switch 
+                      checked={preferences[key as keyof NotificationPreferences]}
+                      onCheckedChange={() => togglePreference(key as keyof NotificationPreferences)}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={async () => await pushNotificationService.sendNotification({
+                        title: config.label,
+                        body: config.desc
+                      })}
+                      className="h-8 w-8 p-0"
+                    >
+                      <TestTube className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>

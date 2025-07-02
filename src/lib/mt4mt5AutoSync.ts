@@ -630,8 +630,8 @@ class MT4MT5AutoSync {
   // Calculate risk level for AI coach
   private calculateRiskLevel(trade: MT4MT5Trade): 'low' | 'medium' | 'high' {
     const riskAmount = Math.abs(trade.profit);
-    const accountBalance = 100000; // Default balance
-    const riskPercentage = (riskAmount / accountBalance) * 100;
+    const accountBalance = trade.balance || 1; // Use actual account balance or minimal default
+    const riskPercentage = accountBalance > 0 ? (riskAmount / accountBalance) * 100 : 100;
     
     if (riskPercentage < 1) return 'low';
     if (riskPercentage < 5) return 'medium';

@@ -97,6 +97,7 @@ import { realDataService } from '@/lib/realDataService';
 import { liveTradeTracker } from '@/lib/liveTradeTracker';
 import { marketSessionAnalyzer } from '@/lib/marketSessionAnalyzer';
 import { pushNotificationService } from '@/lib/pushNotificationService';
+import { useUser } from '@/contexts/UserContext';
 
 interface PortfolioStats {
   totalBalance: number;
@@ -131,6 +132,7 @@ interface TradeEntry {
 }
 
 const UltraTraderDashboard = () => {
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState('home');
   const [portfolioStats, setPortfolioStats] = useState<PortfolioStats>({
     totalBalance: 10000,
@@ -869,11 +871,11 @@ const UltraTraderDashboard = () => {
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold">U</span>
+                  <span className="text-white font-bold">{user?.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
                   </div>
                 <div>
-                  <p className="text-white font-medium">UltraTrader</p>
-                  <p className="text-sm text-slate-400">Professional Trader</p>
+                  <p className="text-white font-medium">{user?.name || 'Guest Trader'}</p>
+                  <p className="text-sm text-slate-400">{user?.preferences?.experienceLevel || 'Novice Trader'}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

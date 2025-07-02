@@ -13,6 +13,13 @@ export interface SetupStatus {
   instructions: string[];
 }
 
+export interface ApiKeyStatus {
+  key: string;
+  configured: boolean;
+  provider: string;
+  type: 'market-data' | 'forex' | 'crypto' | 'news' | 'ai';
+}
+
 export const verifyCompleteSetup = async (): Promise<SetupStatus> => {
   const status: SetupStatus = {
     environment: false,
@@ -205,4 +212,93 @@ if (typeof window !== 'undefined') {
   console.log('- window.verifySetup() // Complete setup verification');
   console.log('- window.quickHealthCheck() // Quick health check');
   console.log('- window.getSetupInstructions() // Get setup help');
+}
+
+export async function verifyApiKeys(): Promise<ApiKeyStatus[]> {
+  const apiKeyStatus: ApiKeyStatus[] = [];
+  
+  // Check Data API Keys
+  const dataApiKeys = [
+    { name: 'VITE_ALPHA_VANTAGE_API_KEY', provider: 'Alpha Vantage', type: 'market-data' },
+    { name: 'VITE_POLYGON_API_KEY', provider: 'Polygon.io', type: 'market-data' },
+    { name: 'VITE_EXCHANGERATE_API_KEY', provider: 'ExchangeRate API', type: 'forex' },
+    { name: 'VITE_FIXER_API_KEY', provider: 'Fixer', type: 'forex' },
+    { name: 'VITE_FMP_API_KEY', provider: 'Financial Modeling Prep', type: 'market-data' },
+    { name: 'VITE_ETHERSCAN_API_KEY', provider: 'Etherscan', type: 'crypto' },
+    { name: 'VITE_FINNHUB_API_KEY', provider: 'Finnhub', type: 'market-data' },
+    { name: 'VITE_COINGECKO_API_KEY', provider: 'CoinGecko', type: 'crypto' },
+    { name: 'VITE_NEWS_API_KEY', provider: 'NewsAPI', type: 'news' },
+    { name: 'VITE_YFINANCE_API_KEY', provider: 'Yahoo Finance', type: 'market-data' }
+  ];
+  
+  // Check AI API Keys
+  const aiApiKeys = [
+    { name: 'VITE_OPENAI_API_KEY', provider: 'OpenAI', type: 'ai' },
+    { name: 'VITE_GROQ_API_KEY', provider: 'Groq', type: 'ai' },
+    { name: 'VITE_GEMINI_API_KEY', provider: 'Gemini', type: 'ai' }
+  ];
+  
+  // Check all data API keys
+  for (const keyInfo of dataApiKeys) {
+    const value = import.meta.env[keyInfo.name];
+    const configured = value && value !== '' && value !== 'your-api-key-here';
+    
+    apiKeyStatus.push({
+      key: keyInfo.name,
+      configured,
+      provider: keyInfo.provider,
+      type: keyInfo.type as any
+    });
+  }
+  
+  // Check all AI API keys
+  for (const keyInfo of aiApiKeys) {
+    const value = import.meta.env[keyInfo.name];
+    const configured = value && value !== '' && value !== 'your-api-key-here';
+    
+    apiKeyStatus.push({
+      key: keyInfo.name,
+      configured,
+      provider: keyInfo.provider,
+      type: keyInfo.type as any
+    });
+  }
+  
+  return apiKeyStatus;
+}
+
+export async function testApiConnection(apiKey: ApiKeyStatus): Promise<boolean> {
+  try {
+    // Test specific APIs based on provider
+    switch (apiKey.provider) {
+      case 'CoinGecko':
+        const cgResponse = await fetch('https://api.coingecko.com/api/v3/ping');
+        return cgResponse.ok;
+        
+      case 'NewsAPI':
+        if (import.meta.env.VITE_NEWS_API_KEY) {
+          const newsResponse = await fetch(`https://newsapi.org/v2/sources?apiKey=${import.meta.env.VITE_NEWS_API_KEY}`);
+          return newsResponse.ok;
+        }
+        return false;
+        
+      case 'OpenAI':
+        if (import.meta.env.VITE_OPENAI_API_KEY) {
+          const openaiResponse = await fetch('https://api.openai.com/v1/models', {
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+            }
+          });
+          return openaiResponse.ok;
+        }
+        return false;
+        
+      // Add more specific tests as needed
+      default:
+        return apiKey.configured;
+    }
+  } catch (error) {
+    console.error(`Error testing ${apiKey.provider} API:`, error);
+    return false;
+  }
 } 

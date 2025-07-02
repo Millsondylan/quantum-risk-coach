@@ -11,32 +11,59 @@ import { useUser } from '@/contexts/UserContext';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { createUser } = useUser();
+  const { createUser, completeOnboarding } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('signup');
 
-  // Form state
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Form state - username only
+  const [username, setUsername] = useState('');
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!name.trim()) {
-      toast.error('Please enter your name');
+    // Username validation only
+    if (!username.trim()) {
+      toast.error('Please enter your username');
+      setIsLoading(false);
+      return;
+    }
+
+    if (username.trim().length < 3) {
+      toast.error('Username must be at least 3 characters long');
       setIsLoading(false);
       return;
     }
 
     try {
-      await createUser(name.trim());
-      toast.success(`Welcome, ${name}!`);
-      navigate('/');
+      // Create user with username only
+      await createUser(username.trim());
+      
+      // Complete onboarding automatically with sensible defaults
+      const defaultPreferences = {
+        tradingStyle: 'day-trading' as const,
+        riskTolerance: 'moderate' as const,
+        preferredMarkets: ['Forex (FX)', 'Stocks'],
+        experienceLevel: 'intermediate' as const,
+        notifications: {
+          tradeAlerts: true,
+          marketUpdates: true,
+          riskWarnings: true,
+        },
+        theme: 'dark' as const,
+        language: 'en',
+      };
+      
+      await completeOnboarding(defaultPreferences);
+      
+      // Wait a moment for state to update before navigating
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      toast.success(`Welcome, ${username}! Account created successfully.`);
+      navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Create user error:', error);
-      toast.error('Failed to start. Please try again.');
+      toast.error('Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -46,17 +73,38 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!email.trim() || !password.trim()) {
-      toast.error('Please enter both email and password');
+    if (!username.trim()) {
+      toast.error('Please enter your username');
       setIsLoading(false);
       return;
     }
 
     try {
-      // For testing purposes, simulate sign in
-      await createUser(email.split('@')[0] || 'User');
+      // For sign in, create/load the user and complete onboarding
+      await createUser(username.trim());
+      
+      // Auto-complete onboarding for existing users
+      const defaultPreferences = {
+        tradingStyle: 'day-trading' as const,
+        riskTolerance: 'moderate' as const,
+        preferredMarkets: ['Forex (FX)', 'Stocks'],
+        experienceLevel: 'intermediate' as const,
+        notifications: {
+          tradeAlerts: true,
+          marketUpdates: true,
+          riskWarnings: true,
+        },
+        theme: 'dark' as const,
+        language: 'en',
+      };
+      
+      await completeOnboarding(defaultPreferences);
+      
+      // Wait for state update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       toast.success('Welcome back!');
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Sign in error:', error);
       toast.error('Sign in failed. Please try again.');
@@ -75,7 +123,7 @@ const Auth = () => {
               <CardTitle className="text-2xl font-bold text-white" data-testid="auth-title">Quantum Risk Coach</CardTitle>
             </div>
             <CardDescription className="text-slate-400">
-              Next-Gen Trading Intelligence Platform
+              Username-Only Access • No Email Required
             </CardDescription>
           </CardHeader>
           
@@ -93,7 +141,7 @@ const Auth = () => {
                   className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
                   data-testid="signup-tab"
                 >
-                  Sign Up
+                  Create Account
                 </TabsTrigger>
                 <TabsTrigger 
                   value="signin" 
@@ -108,69 +156,32 @@ const Auth = () => {
               <TabsContent value="signup" className="mt-6" data-testid="signup-content">
                 <form onSubmit={handleSignUp} className="space-y-4" data-testid="signup-form">
                   <div className="space-y-2">
-                    <Label htmlFor="username" className="text-white">Username</Label>
+                    <Label htmlFor="signup-username" className="text-white">Username</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                       <Input
-                        id="username"
+                        id="signup-username"
                         type="text"
-                        placeholder="Enter your username"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Choose your username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                         className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                         required
                         data-testid="signup-username-input"
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email" className="text-white">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                      required
-                      data-testid="signup-email-input"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password" className="text-white">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                      required
-                      data-testid="signup-password-input"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-confirm-password" className="text-white">Confirm Password</Label>
-                    <Input
-                      id="signup-confirm-password"
-                      type="password"
-                      placeholder="Confirm your password"
-                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                      required
-                      data-testid="signup-confirm-password-input"
-                    />
+                    <p className="text-xs text-slate-400">
+                      No email or password required. Just pick a username and start trading!
+                    </p>
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     disabled={isLoading}
-                    data-testid="signup-button"
+                    data-testid="signup-submit-button"
                   >
-                    {isLoading ? 'Loading...' : 'Sign Up'}
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
                   </Button>
                 </form>
               </TabsContent>
@@ -179,44 +190,44 @@ const Auth = () => {
               <TabsContent value="signin" className="mt-6" data-testid="signin-content">
                 <form onSubmit={handleSignIn} className="space-y-4" data-testid="signin-form">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email" className="text-white">Email</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                      required
-                      data-testid="signin-email-input"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password" className="text-white">Password</Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                      required
-                      data-testid="signin-password-input"
-                    />
+                    <Label htmlFor="signin-username" className="text-white">Username</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="signin-username"
+                        type="text"
+                        placeholder="Enter your username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        required
+                        data-testid="signin-username-input"
+                      />
+                    </div>
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     disabled={isLoading}
-                    data-testid="signin-button"
+                    data-testid="signin-submit-button"
                   >
-                    {isLoading ? 'Loading...' : 'Sign In'}
+                    {isLoading ? 'Signing In...' : 'Sign In'}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
+
+            <div className="mt-6 pt-6 border-t border-slate-600">
+              <div className="text-center">
+                <p className="text-xs text-slate-400">
+                  ✨ Privacy-first design • No personal data required
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Your trading data stays secure and anonymous
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -14,6 +14,12 @@ export interface NotificationPreferences {
   economicEvents: boolean;
   portfolioAlerts: boolean;
   riskWarnings: boolean;
+  pushNotifications: boolean;
+  telegram: boolean;
+  soundEnabled: boolean;
+  marketUpdates: boolean;
+  tradeAlerts: boolean;
+  marketSentiment: boolean;
   quietHours: {
     enabled: boolean;
     start: string; // HH:MM format
@@ -87,6 +93,12 @@ class PushNotificationService {
       economicEvents: true,
       portfolioAlerts: true,
       riskWarnings: true,
+      pushNotifications: true,
+      telegram: false,
+      soundEnabled: true,
+      marketUpdates: true,
+      tradeAlerts: true,
+      marketSentiment: true,
       quietHours: {
         enabled: false,
         start: '22:00',
@@ -582,14 +594,4 @@ class PushNotificationService {
 }
 
 // Create singleton instance
-export const pushNotificationService = new PushNotificationService();
-
-// Export types
-export type { 
-  PushNotificationConfig, 
-  NotificationPreferences, 
-  PersonalizationProfile,
-  CustomAlert,
-  AlertCondition,
-  AlertAction
-}; 
+export const pushNotificationService = new PushNotificationService(); 

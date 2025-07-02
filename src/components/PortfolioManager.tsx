@@ -36,12 +36,18 @@ import {
   Plus,
   Minus,
   Download,
-  Upload
+  Upload,
+  CheckCircle2,
+  Shield,
+  Award,
+  BookOpen,
+  Pencil
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useTrades } from '@/hooks/useTrades';
 import realBrokerService from '@/lib/realBrokerService';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface Position {
   symbol: string;
@@ -99,10 +105,27 @@ const PortfolioManager = () => {
     description: '',
     currency: 'USD'
   });
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newPortfolioName, setNewPortfolioName] = useState('');
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [portfolioToRename, setPortfolioToRename] = useState<Portfolio | null>(null);
 
   // Load real portfolios and data
   useEffect(() => {
     loadPortfolios();
+
+    // Load user-created portfolios from localStorage
+    const storedCustom = localStorage.getItem('custom_portfolios');
+    if (storedCustom) {
+      try {
+        const parsed: Portfolio[] = JSON.parse(storedCustom);
+        if (parsed.length) {
+          setPortfolios(prev => [...prev, ...parsed]);
+        }
+      } catch (error) {
+        console.error('Failed to parse stored portfolios:', error);
+      }
+    }
   }, [user]);
 
   const loadPortfolios = async () => {
@@ -187,7 +210,7 @@ const PortfolioManager = () => {
         }
         
         setPortfolios(realPortfolios);
-        setSelectedPortfolioId(realPortfolios[0].id);
+        setSelectedPortfolioId(realPortfolios[0]?.id || '');
       }
       
       await loadTransactions();
@@ -331,6 +354,68 @@ const PortfolioManager = () => {
     }
   };
 
+  const handleCreatePortfolio = () => {
+    if (!newPortfolioName.trim()) {
+      toast.error('Please enter a name');
+      return;
+    }
+    // Check if a portfolio with the same name already exists
+    if (portfolios.some(p => p.name.toLowerCase() === newPortfolioName.trim().toLowerCase())) {
+        toast.error('A portfolio with this name already exists.');
+        return;
+    }
+    const newPortfolio: Portfolio = {
+      id: `custom_${Date.now()}`,
+      name: newPortfolioName.trim(),
+      brokerIds: [],
+      totalValue: 0,
+      totalPnL: 0,
+      totalPnLPercent: 0,
+      dayChange: 0,
+      dayChangePercent: 0,
+      cashBalance: 0,
+      marginUsed: 0,
+      marginAvailable: 0,
+      exposure: 0,
+      withdrawals: 0,
+      deposits: 0
+    };
+
+    setPortfolios(prev => {
+      const updated = [...prev, newPortfolio];
+      localStorage.setItem('custom_portfolios', JSON.stringify(updated.filter(p => p.id.startsWith('custom_'))));
+      return updated;
+    });
+    setSelectedPortfolioId(newPortfolio.id);
+    setNewPortfolioName('');
+    setShowAddDialog(false);
+    toast.success('Portfolio created');
+  };
+
+  const handleRenamePortfolio = () => {
+    if (!portfolioToRename || !newPortfolioName.trim()) {
+      toast.error('Invalid portfolio or name');
+      return;
+    }
+
+    if (portfolios.some(p => p.id !== portfolioToRename.id && p.name.toLowerCase() === newPortfolioName.trim().toLowerCase())) {
+      toast.error('A portfolio with this name already exists.');
+      return;
+    }
+
+    setPortfolios(prev => {
+      const updated = prev.map(p =>
+        p.id === portfolioToRename.id ? { ...p, name: newPortfolioName.trim() } : p
+      );
+      localStorage.setItem('custom_portfolios', JSON.stringify(updated.filter(p => p.id.startsWith('custom_'))));
+      return updated;
+    });
+    setNewPortfolioName('');
+    setShowRenameDialog(false);
+    setPortfolioToRename(null);
+    toast.success('Portfolio renamed');
+  };
+
   const selectedPortfolio = portfolios.find(p => p.id === selectedPortfolioId);
 
   if (!selectedPortfolio) {
@@ -364,6 +449,14 @@ const PortfolioManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with add portfolio button */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Portfolios</h2>
+        <Button size="sm" variant="outline" onClick={() => setShowAddDialog(true)}>
+          <Plus className="w-4 h-4 mr-1" /> Add Portfolio
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -380,8 +473,23 @@ const PortfolioManager = () => {
             </SelectTrigger>
             <SelectContent>
               {portfolios.map(portfolio => (
-                <SelectItem key={portfolio.id} value={portfolio.id}>
+                <SelectItem key={portfolio.id} value={portfolio.id} className="flex items-center justify-between">
                   {portfolio.name}
+                  {portfolio.id.startsWith('custom_') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-2 h-auto p-1 text-slate-400 hover:text-white"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent select item from closing
+                        setPortfolioToRename(portfolio);
+                        setNewPortfolioName(portfolio.name);
+                        setShowRenameDialog(true);
+                      }}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                  )}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -678,6 +786,50 @@ const PortfolioManager = () => {
           </Card>
         </div>
       )}
+
+      {/* Add Portfolio Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Portfolio</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Portfolio name"
+              value={newPortfolioName}
+              onChange={(e) => setNewPortfolioName(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreatePortfolio}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Portfolio Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename Portfolio</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="New portfolio name"
+              value={newPortfolioName}
+              onChange={(e) => setNewPortfolioName(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenamePortfolio}>Rename</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

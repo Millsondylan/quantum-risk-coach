@@ -98,6 +98,8 @@ const MT4MT5AutoSyncDashboard: React.FC<MT4MT5AutoSyncDashboardProps> = ({ class
   const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
   // Connection form state
   const [connectionForm, setConnectionForm] = useState<MT4MT5Credentials>({
@@ -253,14 +255,12 @@ const MT4MT5AutoSyncDashboard: React.FC<MT4MT5AutoSyncDashboardProps> = ({ class
   const handleManualSync = async (connectionId: string) => {
     setIsSyncing(true);
     try {
-      const result = await mt4mt5AutoSync.syncTrades(connectionId, {
-        syncHistorical: true,
-        daysBack: 30
-      });
+      const result = await mt4mt5AutoSync.syncTrades(connectionId);
       
       if (result.success) {
         toast.success(`Sync completed: ${result.tradesSynced} trades synced`);
         loadConnections();
+        setLastSync(new Date());
       } else {
         toast.error(`Sync failed: ${result.message}`);
       }
@@ -345,6 +345,34 @@ const MT4MT5AutoSyncDashboard: React.FC<MT4MT5AutoSyncDashboardProps> = ({ class
       case 'offline': return 'bg-red-500';
       case 'maintenance': return 'bg-yellow-500';
       default: return 'bg-gray-500';
+    }
+  };
+
+  // Auto-refresh every 60s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (connections.length) {
+        connections.forEach(conn => handleSync(conn.id));
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [connections]);
+
+  const handleSync = async (connectionId: string) => {
+    try {
+      setSyncing(true);
+      const result = await mt4mt5AutoSync.syncTrades(connectionId);
+      if (result.success) {
+        toast.success(`Sync completed: ${result.tradesSynced} trades`);
+        setLastSync(new Date());
+        loadConnections();
+      } else {
+        toast.error('Sync failed');
+      }
+    } catch (e) {
+      toast.error('Sync error');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -475,6 +503,14 @@ const MT4MT5AutoSyncDashboard: React.FC<MT4MT5AutoSyncDashboardProps> = ({ class
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           {/* Connection Status Cards */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Broker Connections</h2>
+            {lastSync && (
+              <Badge variant="outline" className="text-xs">
+                Last sync {Math.floor((Date.now()-lastSync.getTime())/1000)}s ago
+              </Badge>
+            )}
+          </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {connections.map((connection) => {
               const status = syncStatuses.get(connection.id);

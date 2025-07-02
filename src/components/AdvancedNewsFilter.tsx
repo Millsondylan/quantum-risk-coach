@@ -745,6 +745,46 @@ const AdvancedNewsFilter = () => {
           </p>
         </CardContent>
       </Card>
+
+      {/* News List */}
+      <div className="space-y-4" data-testid="news-list">
+        {filteredNews.length === 0 && (
+          <p className="text-center text-slate-400">No articles match your filters.</p>
+        )}
+        {filteredNews.map((item) => (
+          <Card key={item.id} className="holo-card">
+            <CardContent className="p-4 flex gap-4">
+              {item.urlToImage && (
+                <img
+                  src={item.urlToImage}
+                  alt={item.title}
+                  className="w-24 h-24 object-cover rounded"
+                />
+              )}
+              <div className="flex flex-col flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-white font-semibold leading-snug line-clamp-2">
+                    {item.title}
+                  </h3>
+                  <span className="text-xs text-slate-400 whitespace-nowrap">
+                    {new Date(item.publishedAt).toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-300 mt-1 line-clamp-3">
+                  {item.description}
+                </p>
+                <div className="flex items-center gap-2 mt-2 text-xs flex-wrap">
+                  <Badge variant="outline">{item.source}</Badge>
+                  <Badge variant="outline" className="uppercase">
+                    {item.impact}
+                  </Badge>
+                  {item.sentiment && <Badge variant="outline">{item.sentiment}</Badge>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

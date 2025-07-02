@@ -1,227 +1,243 @@
-import React, { Suspense, lazy, memo } from 'react';
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
-import { UserProvider, useUser } from "./contexts/UserContext";
-import { AuthProvider } from "./contexts/AuthContext";
-import { ErrorBoundary } from "react-error-boundary";
-import MobileBottomNav from "./components/MobileBottomNav";
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { useUser } from './contexts/UserContext';
+import { useIsMobile } from './hooks/use-mobile';
+import Onboarding from './components/Onboarding';
+import MobileBottomNav from './components/MobileBottomNav';
 
 // Lazy load components for better performance
-const Onboarding = lazy(() => import("./components/Onboarding"));
-const Index = lazy(() => import("./pages/Index"));
-const Auth = lazy(() => import("./pages/Auth"));
-const MT4Connection = lazy(() => import("./pages/MT4Connection"));
-const Settings = lazy(() => import("./pages/Settings"));
-const Journal = lazy(() => import("./pages/Journal"));
-const TradeBuilder = lazy(() => import("./pages/TradeBuilder"));
-const PerformanceCalendar = lazy(() => import("./pages/PerformanceCalendar"));
-const StrategyAnalyzer = lazy(() => import("./pages/StrategyAnalyzer"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const MT4MT5AutoSyncDashboard = lazy(() => import("./components/MT4MT5AutoSyncDashboard"));
+const Auth = lazy(() => import('./pages/Auth'));
+const Index = lazy(() => import('./pages/Index'));
 const LiveTrades = lazy(() => import('./pages/LiveTrades'));
 const AddTrade = lazy(() => import('./pages/AddTrade'));
 const History = lazy(() => import('./pages/History'));
 const Alarms = lazy(() => import('./pages/Alarms'));
+const Journal = lazy(() => import('./pages/Journal'));
+const TradeBuilder = lazy(() => import('./pages/TradeBuilder'));
+const StrategyAnalyzer = lazy(() => import('./pages/StrategyAnalyzer'));
+const Settings = lazy(() => import('./pages/Settings'));
+const PerformanceCalendar = lazy(() => import('./pages/PerformanceCalendar'));
+const MT4Connection = lazy(() => import('./pages/MT4Connection'));
+const ValidationTest = lazy(() => import('./pages/ValidationTest'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const AICoach = lazy(() => import('./pages/AICoach'));
 
-// Optimized QueryClient with better defaults
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-      refetchOnMount: false,
-      refetchOnReconnect: false,
-    },
-    mutations: {
-      retry: 1,
-    },
-  },
-});
-
-// Loading component with better UX
-const LoadingSpinner = memo(() => (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
+// Loading component
+const LoadingSpinner = () => (
+  <div className="min-h-screen bg-[#0A0B0D] flex items-center justify-center">
     <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4" />
-      <p className="text-slate-400">Loading Qlarity...</p>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+      <p className="text-slate-400">Loading...</p>
     </div>
   </div>
-));
+);
 
-LoadingSpinner.displayName = 'LoadingSpinner';
-
-// Protected Route Component with memoization
-const ProtectedRoute = memo(({ children }: { children: React.ReactNode }) => {
+// Protected Route component - only checks if user exists (has completed onboarding)
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useUser();
-  
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
-  
+
+  // If no user exists, redirect to auth
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-  
-  return <>{children}</>;
-});
 
-ProtectedRoute.displayName = 'ProtectedRoute';
-
-// App Content Component with optimized rendering
-const AppContent = memo(() => {
-  const { user, isLoading } = useUser();
-  
-  // Show loading during initialization
-  if (isLoading) {
-    return <LoadingSpinner />;
+  // If onboarding not completed, show onboarding
+  if (!user.onboardingCompleted) {
+    return <Onboarding />;
   }
-  
-  // Show main app with proper routing
+
+  return <>{children}</>;
+};
+
+// Layout wrapper for protected routes
+const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isMobile = useIsMobile();
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="min-h-screen bg-[#0A0B0D] text-white">
+      {children}
+      {isMobile && <MobileBottomNav />}
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <div className="App">
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
-          {/* Home: show auth page for non-authenticated users */}
-          <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
+          {/* Auth Route */}
           <Route path="/auth" element={<Auth />} />
-          <Route path="/connect-mt4" element={
-            <ProtectedRoute>
-              <MT4Connection />
-            </ProtectedRoute>
-          } />
-          <Route path="/connect-mt5" element={
-            <ProtectedRoute>
-              <MT4Connection platform="MT5" />
-            </ProtectedRoute>
-          } />
-          <Route path="/connect-ctrader" element={
-            <ProtectedRoute>
-              <MT4Connection platform="cTrader" />
-            </ProtectedRoute>
-          } />
-          <Route path="/connect-tradingview" element={
-            <ProtectedRoute>
-              <MT4Connection platform="TradingView" />
-            </ProtectedRoute>
-          } />
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Settings />
-            </ProtectedRoute>
-          } />
-          <Route path="/journal" element={
-            <ProtectedRoute>
-              <Journal />
-            </ProtectedRoute>
-          } />
-          <Route path="/journal/add" element={
-            <ProtectedRoute>
-              <Journal defaultTab="add" />
-            </ProtectedRoute>
-          } />
-          <Route path="/journal/analytics" element={
-            <ProtectedRoute>
-              <Journal defaultTab="analytics" />
-            </ProtectedRoute>
-          } />
-          <Route path="/journal/tags" element={
-            <ProtectedRoute>
-              <Journal defaultTab="tags" />
-            </ProtectedRoute>
-          } />
-          <Route path="/journal/export" element={
-            <ProtectedRoute>
-              <Journal defaultTab="export" />
-            </ProtectedRoute>
-          } />
-          <Route path="/trade-builder" element={
-            <ProtectedRoute>
-              <TradeBuilder />
-            </ProtectedRoute>
-          } />
-          <Route path="/performance-calendar" element={
-            <ProtectedRoute>
-              <PerformanceCalendar />
-            </ProtectedRoute>
-          } />
-          <Route path="/strategy-analyzer" element={
-            <ProtectedRoute>
-              <StrategyAnalyzer />
-            </ProtectedRoute>
-          } />
-          <Route path="/mt4mt5-sync" element={
-            <ProtectedRoute>
-              <MT4MT5AutoSyncDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/live-trades" element={<ProtectedRoute><LiveTrades /></ProtectedRoute>} />
-          <Route path="/add-trade" element={<ProtectedRoute><AddTrade /></ProtectedRoute>} />
-          <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-          <Route path="/alarms" element={<ProtectedRoute><Alarms /></ProtectedRoute>} />
+          
+          {/* Main Routes - All protected by username/onboarding */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Index />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Bottom Navigation Routes */}
+          <Route 
+            path="/live-trades" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <LiveTrades />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/add-trade" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <AddTrade />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/history" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <History />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/alarms" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Alarms />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Additional Feature Routes */}
+          <Route 
+            path="/journal" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Journal />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/trade-builder" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <TradeBuilder />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/strategy-analyzer" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <StrategyAnalyzer />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Settings />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/performance-calendar" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <PerformanceCalendar />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/ai-coach" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <AICoach />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/mt4-connection" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <MT4Connection />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/validation-test" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <ValidationTest />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Catch all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-      {!isLoading && user && <MobileBottomNav />}
+
+      {/* Toast notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#1A1B1E',
+            color: '#FFFFFF',
+            border: '1px solid #2A2B2E',
+          },
+        }}
+      />
     </div>
   );
-});
-
-AppContent.displayName = 'AppContent';
-
-// Error Fallback Component
-const ErrorFallback = memo(({ error }: { error: Error }) => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900/20 to-slate-900 flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-xl font-bold text-red-400 mb-4">Something went wrong</h2>
-        <p className="text-slate-400 mb-4">{error.message}</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Reload Page
-        </button>
-      </div>
-    </div>
-  );
-});
-
-ErrorFallback.displayName = 'ErrorFallback';
-
-// Main App Component
-const App = memo(() => {
-  return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem={true}
-      disableTransitionOnChange={false}
-    >
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <UserProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <ErrorBoundary FallbackComponent={ErrorFallback}>
-                <BrowserRouter>
-                  <AppContent />
-                </BrowserRouter>
-              </ErrorBoundary>
-            </TooltipProvider>
-          </UserProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
-  );
-});
-
-App.displayName = 'App';
+}
 
 export default App;

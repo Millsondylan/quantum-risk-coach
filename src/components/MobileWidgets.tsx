@@ -38,7 +38,7 @@ import { useUser } from '@/contexts/UserContext';
 
 interface WidgetProps {
   id: string;
-  type: 'portfolio' | 'watchlist' | 'recent-trades' | 'performance' | 'risk-meter' | 'quick-actions';
+  type: 'portfolio' | 'recent-trades' | 'performance' | 'risk-meter' | 'quick-actions';
   size: 'small' | 'medium' | 'large';
   position: { x: number; y: number };
   settings?: any;
@@ -54,12 +54,6 @@ interface WidgetData {
     winRate: number;
     totalTrades: number;
   };
-  watchlist: Array<{
-    symbol: string;
-    price: number;
-    change: number;
-    changePercent: number;
-  }>;
   recentTrades: Array<{
     id: string;
     symbol: string;
@@ -296,86 +290,6 @@ const PortfolioWidget: React.FC<WidgetProps> = ({ size, settings, onSettings }) 
               Settings
             </Button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Watchlist Widget Component
-const WatchlistWidget: React.FC<WidgetProps> = ({ size, settings }) => {
-  const [watchlist] = useState([
-    { symbol: 'BTC/USD', price: 43567.89, change: 1245.67, changePercent: 2.94 },
-    { symbol: 'ETH/USD', price: 2876.34, change: 89.23, changePercent: 3.21 },
-    { symbol: 'EUR/USD', price: 1.0845, change: 0.0023, changePercent: 0.21 },
-    { symbol: 'GBP/USD', price: 1.2634, change: -0.0012, changePercent: -0.09 },
-    { symbol: 'USD/JPY', price: 148.76, change: 0.34, changePercent: 0.23 },
-    { symbol: 'XAU/USD', price: 2034.56, change: 12.34, changePercent: 0.61 }
-  ]);
-
-  const displayItems = size === 'small' ? 2 : size === 'medium' ? 4 : 6;
-
-  if (size === 'small') {
-    return (
-      <Card className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-green-500/30 h-32">
-        <CardContent className="p-3 h-full flex flex-col justify-between">
-          <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-green-400" />
-            <span className="text-xs font-medium text-white">Watchlist</span>
-          </div>
-          
-          <div className="space-y-2">
-            {watchlist.slice(0, displayItems).map((item) => (
-              <div key={item.symbol} className="flex items-center justify-between">
-                <span className="text-xs font-medium text-white">{item.symbol}</span>
-                <div className="text-right">
-                  <div className="text-xs text-white">${item.price.toFixed(2)}</div>
-                  <div className={cn(
-                    "text-xs",
-                    item.changePercent >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {item.changePercent >= 0 ? '+' : ''}{item.changePercent}%
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-green-500/30 h-48">
-      <CardContent className="p-4 h-full flex flex-col justify-between">
-        <div className="flex items-center gap-2">
-          <Globe className="w-5 h-5 text-green-400" />
-          <span className="font-medium text-white">Watchlist</span>
-        </div>
-        
-        <div className="space-y-3">
-          {watchlist.slice(0, displayItems).map((item) => (
-            <div key={item.symbol} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
-              <div>
-                <div className="font-medium text-white text-sm">{item.symbol}</div>
-                <div className="text-xs text-slate-400">${item.price.toFixed(2)}</div>
-              </div>
-              <div className="text-right">
-                <div className={cn(
-                  "text-sm font-semibold",
-                  item.changePercent >= 0 ? "text-green-400" : "text-red-400"
-                )}>
-                  {item.changePercent >= 0 ? '+' : ''}{item.changePercent}%
-                </div>
-                <div className={cn(
-                  "text-xs",
-                  item.changePercent >= 0 ? "text-green-400" : "text-red-400"
-                )}>
-                  {item.change >= 0 ? '+' : ''}${Math.abs(item.change).toFixed(2)}
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </CardContent>
     </Card>
@@ -689,7 +603,6 @@ const QuickActionsWidget: React.FC<WidgetProps> = ({ size }) => {
 const MobileWidgets: React.FC = () => {
   const [widgets, setWidgets] = useState<WidgetProps[]>([
     { id: '1', type: 'portfolio', size: 'medium', position: { x: 0, y: 0 } },
-    { id: '2', type: 'watchlist', size: 'small', position: { x: 0, y: 1 } },
     { id: '3', type: 'recent-trades', size: 'small', position: { x: 1, y: 1 } },
     { id: '4', type: 'performance', size: 'small', position: { x: 0, y: 2 } },
     { id: '5', type: 'risk-meter', size: 'small', position: { x: 1, y: 2 } },
@@ -703,8 +616,6 @@ const MobileWidgets: React.FC = () => {
     switch (widget.type) {
       case 'portfolio':
         return <PortfolioWidget {...widget} onSettings={() => setSelectedWidget(widget)} />;
-      case 'watchlist':
-        return <WatchlistWidget {...widget} />;
       case 'recent-trades':
         return <RecentTradesWidget {...widget} />;
       case 'performance':
@@ -788,7 +699,6 @@ const MobileWidgets: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { type: 'portfolio', label: 'Portfolio', icon: DollarSign },
-                  { type: 'watchlist', label: 'Watchlist', icon: Globe },
                   { type: 'recent-trades', label: 'Recent Trades', icon: Activity },
                   { type: 'performance', label: 'Performance', icon: BarChart3 },
                   { type: 'risk-meter', label: 'Risk Meter', icon: Shield },

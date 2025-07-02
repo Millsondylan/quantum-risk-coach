@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useTrades } from '@/hooks/useTrades';
 import { realDataService } from '@/lib/realDataService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser } from '@/contexts/UserContext';
 import { 
   Shield, 
   AlertTriangle, 
@@ -75,7 +75,7 @@ interface RiskAlert {
 }
 
 const RiskAnalyzer = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { trades } = useTrades();
   const [selectedTab, setSelectedTab] = useState('overview');
   const [showAdvanced, setShowAdvanced] = useState(false);

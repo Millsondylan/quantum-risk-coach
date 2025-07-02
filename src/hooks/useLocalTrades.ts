@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { saveUserData, getUserData } from '@/lib/localUserUtils';
+import { supabase } from '@/integrations/supabase/client'; // Import Supabase client
+import { toast } from 'sonner'; // For notifications
 
 export interface Trade {
   id: string;
@@ -21,6 +22,7 @@ export interface Trade {
   status: 'open' | 'closed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
+  commission?: number;
 }
 
 export const useLocalTrades = () => {
@@ -28,70 +30,152 @@ export const useLocalTrades = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load trades from local storage
+  const TRADES_TABLE = 'trades'; // Supabase table name for trades
+
+  // Load trades from Supabase
   const loadTrades = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const storedTrades = await getUserData('trades');
-      if (storedTrades) {
-        setTrades(storedTrades);
+      const { data, error } = await supabase
+        .from(TRADES_TABLE)
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+      if (error) {
+        throw error;
       }
-    } catch (err) {
-      setError('Failed to load trades');
+
+      if (data) {
+        // Ensure dates are parsed correctly
+        setTrades(data.map(trade => ({
+          ...trade,
+          entryDate: trade.entryDate || '',
+          createdAt: trade.createdAt || '',
+          updatedAt: trade.updatedAt || '',
+        })) as Trade[]);
+      }
+    } catch (err: any) {
+      setError(`Failed to load trades: ${err.message}`);
+      toast.error(`Failed to load trades: ${err.message}`);
       console.error('Error loading trades:', err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Save trades to local storage
+  // Save trades to Supabase (not directly used for all operations, but good for batch/sync)
   const saveTrades = useCallback(async (newTrades: Trade[]) => {
+    // In a Supabase context, we typically interact with specific operations (insert, update, delete)
+    // rather than saving the entire array. This function might be refactored or removed if not needed.
+    // For now, it will act as a placeholder or a utility for bulk operations if designed.
     try {
-      await saveUserData('trades', newTrades);
+      // This operation is generally not used for real-time sync in Supabase; individual adds/updates are preferred.
+      // Consider removing or adapting this if a bulk upsert is not intended.
+      console.warn('saveTrades: This function should ideally be replaced by explicit add/update/delete operations with Supabase.');
+      // Example for bulk upsert (if needed):
+      // const { error } = await supabase.from(TRADES_TABLE).upsert(newTrades, { onConflict: 'id' });
+      // if (error) throw error;
       setTrades(newTrades);
-    } catch (err) {
-      setError('Failed to save trades');
+    } catch (err: any) {
+      setError(`Failed to save trades: ${err.message}`);
+      toast.error(`Failed to save trades: ${err.message}`);
       console.error('Error saving trades:', err);
     }
   }, []);
 
   // Add a new trade
-  const addTrade = useCallback(async (trade: Omit<Trade, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newTrade: Trade = {
+  const addTrade = useCallback(async (trade: Omit<Trade, 'id' | 'createdAt' | 'updatedAt' | 'profitLoss' | 'profitLossPercent'>) => {
+    const newTrade: Omit<Trade, 'id'> = {
       ...trade,
-      id: `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      status: trade.status || 'open', // Default status
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      // Ensure numeric values are numbers, not undefined
+      entryPrice: Number(trade.entryPrice) || 0,
+      quantity: Number(trade.quantity) || 0,
+      stopLoss: trade.stopLoss !== undefined ? Number(trade.stopLoss) : undefined,
+      takeProfit: trade.takeProfit !== undefined ? Number(trade.takeProfit) : undefined,
+      commission: 0, // Assuming 0 if not provided or calculated elsewhere
     };
 
-    const updatedTrades = [...trades, newTrade];
-    await saveTrades(updatedTrades);
-    return newTrade;
-  }, [trades, saveTrades]);
+    try {
+      const { data, error } = await supabase
+        .from(TRADES_TABLE)
+        .insert([newTrade])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        const addedTrade = data[0];
+        setTrades(prevTrades => [...prevTrades, addedTrade as Trade]);
+        toast.success('Trade added successfully!');
+        return addedTrade as Trade;
+      }
+      return null; 
+    } catch (err: any) {
+      setError(`Failed to add trade: ${err.message}`);
+      toast.error(`Failed to add trade: ${err.message}`);
+      console.error('Error adding trade:', err);
+      return null;
+    }
+  }, [trades]);
 
   // Update an existing trade
   const updateTrade = useCallback(async (id: string, updates: Partial<Trade>) => {
-    const updatedTrades = trades.map(trade => 
-      trade.id === id 
-        ? { ...trade, ...updates, updatedAt: new Date().toISOString() }
-        : trade
-    );
-    await saveTrades(updatedTrades);
-  }, [trades, saveTrades]);
+    try {
+      const { error } = await supabase
+        .from(TRADES_TABLE)
+        .update({ ...updates, updatedAt: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      setTrades(prevTrades =>
+        prevTrades.map(trade =>
+          trade.id === id ? { ...trade, ...updates, updatedAt: new Date().toISOString() } : trade
+        )
+      );
+      toast.success('Trade updated successfully!');
+    } catch (err: any) {
+      setError(`Failed to update trade: ${err.message}`);
+      toast.error(`Failed to update trade: ${err.message}`);
+      console.error('Error updating trade:', err);
+    }
+  }, [trades]);
 
   // Delete a trade
   const deleteTrade = useCallback(async (id: string) => {
-    const updatedTrades = trades.filter(trade => trade.id !== id);
-    await saveTrades(updatedTrades);
-  }, [trades, saveTrades]);
+    try {
+      const { error } = await supabase
+        .from(TRADES_TABLE)
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      setTrades(prevTrades => prevTrades.filter(trade => trade.id !== id));
+      toast.success('Trade deleted successfully!');
+    } catch (err: any) {
+      setError(`Failed to delete trade: ${err.message}`);
+      toast.error(`Failed to delete trade: ${err.message}`);
+      console.error('Error deleting trade:', err);
+    }
+  }, [trades]);
 
   // Close a trade
   const closeTrade = useCallback(async (id: string, exitPrice: number, exitDate?: string) => {
     const trade = trades.find(t => t.id === id);
     if (!trade) return;
 
-    const profitLoss = trade.type === 'buy' 
+    const profitLoss = trade.type === 'buy'
       ? (exitPrice - trade.entryPrice) * trade.quantity
       : (trade.entryPrice - exitPrice) * trade.quantity;
 
@@ -118,8 +202,37 @@ export const useLocalTrades = () => {
     const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
     const averageProfitLoss = totalTrades > 0 ? totalProfitLoss / totalTrades : 0;
-    const largestWin = Math.max(...closedTrades.map(trade => trade.profitLoss || 0));
-    const largestLoss = Math.min(...closedTrades.map(trade => trade.profitLoss || 0));
+    const largestWin = Math.max(0, ...closedTrades.map(trade => trade.profitLoss || 0));
+    const largestLoss = Math.min(0, ...closedTrades.map(trade => trade.profitLoss || 0));
+
+    // Calculate max drawdown
+    let maxDrawdown = 0;
+    let peak = 0;
+    let currentBalance = 0; // Assuming starting balance is 0 for P&L calculation here, adjust if needed
+
+    // Sort trades by date to accurately calculate drawdown over time
+    const sortedTrades = [...closedTrades].sort((a, b) => new Date(a.exitDate || a.entryDate).getTime() - new Date(b.exitDate || b.entryDate).getTime());
+
+    for (const trade of sortedTrades) {
+      currentBalance += (trade.profitLoss || 0);
+      if (currentBalance > peak) {
+        peak = currentBalance;
+      }
+      // Ensure peak is not zero to avoid division by zero errors
+      const drawdown = peak > 0 ? (peak - currentBalance) / peak : 0;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
+    }
+    maxDrawdown = maxDrawdown * 100; // Convert to percentage
+
+    // Calculate profit factor
+    const grossProfits = closedTrades.filter(trade => (trade.profitLoss || 0) > 0).reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
+    const grossLosses = closedTrades.filter(trade => (trade.profitLoss || 0) < 0).reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0);
+    const profitFactor = grossLosses > 0 ? (grossProfits / grossLosses) : (grossProfits > 0 ? Infinity : 0);
+
+    // Calculate trading days
+    const tradingDays = new Set(closedTrades.map(trade => new Date(trade.exitDate || trade.entryDate).toDateString())).size;
 
     return {
       totalProfitLoss,
@@ -131,6 +244,9 @@ export const useLocalTrades = () => {
       largestWin,
       largestLoss,
       openTrades: openTrades.length,
+      maxDrawdown,
+      profitFactor,
+      tradingDays,
     };
   }, [trades]);
 

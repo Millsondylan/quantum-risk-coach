@@ -1,5 +1,5 @@
 // Production User Management Utilities
-// Real user operations only - no demo or fake data
+// Manages user data and preferences with persistent storage.
 
 import { Preferences } from '@capacitor/preferences';
 
@@ -160,7 +160,6 @@ export const localUserUtils = {
 🔄 Emergency:
 • localUserUtils.clearAllData()          - Clear all local data (DANGER!)
 
-Note: Demo functionality removed for production security.
 Type localUserUtils.help() to see this again.
     `);
   }
@@ -172,6 +171,7 @@ if (typeof window !== 'undefined') {
   console.log('🔧 Production User Utils loaded! Type "localUserUtils.help()" for commands.');
 }
 
+// These utility functions now use Capacitor Preferences for persistent storage.
 export const saveUserData = async (key: string, value: any) => {
   await Preferences.set({ key, value: JSON.stringify(value) });
 };

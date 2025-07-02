@@ -111,7 +111,8 @@ const EnhancedTradingJournal = () => {
   const { user } = useUser();
   const { trades: realTrades, isLoading: tradesLoading, addTrade, updateTrade, deleteTrade } = useTrades();
   
-  // Convert real trades to TradeEntry format
+  // Trades data is now sourced from useTrades hook, which connects to Supabase for persistence.
+  // This ensures real, persistent trade data for the journal.
   const trades = useMemo(() => {
     return realTrades.map(trade => ({
       id: trade.id,
@@ -123,7 +124,7 @@ const EnhancedTradingJournal = () => {
       quantity: trade.quantity || 0,
       stopLoss: trade.stopLoss || undefined,
       takeProfit: trade.takeProfit || undefined,
-      commission: 0, // Not available in Trade interface
+      commission: trade.commission || 0,
       pnl: trade.profitLoss || undefined,
       duration: trade.exitDate && trade.createdAt ? 
         new Date(trade.exitDate).getTime() - new Date(trade.createdAt).getTime() : undefined,
@@ -148,7 +149,7 @@ const EnhancedTradingJournal = () => {
     })) as TradeEntry[];
   }, [realTrades]);
 
-  // Get real performance metrics from useTrades hook
+  // Performance metrics are calculated from the real trade data provided by the useTrades hook.
   const performanceMetrics = useMemo(() => {
     const closedTrades = trades.filter(t => t.status === 'closed' && t.pnl !== undefined);
     

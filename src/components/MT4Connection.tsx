@@ -49,7 +49,7 @@ interface MT4Account {
   accountNumber: string;
   serverName: string;
   brokerName: string;
-  accountType: 'Demo' | 'Live';
+  accountType: 'Live';
   balance: number;
   equity: number;
   margin: number;
@@ -118,10 +118,10 @@ const MT4Connection = () => {
     useSSL: true
   });
 
-  // MT4 Account Data - No hardcoded data
+  // MT4 Account Data
   const [account, setAccount] = useState<MT4Account | null>(null);
 
-  // Live Positions - No hardcoded data
+  // Live Positions
   const [positions, setPositions] = useState<MT4Position[]>([]);
 
   // Popular Brokers - Real broker list
@@ -675,7 +675,7 @@ const MT4Connection = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-slate-400">Your broker credentials are securely processed and not stored on this device.</p>
-                <p className="text-sm text-slate-400 font-bold">Disclaimer: For full real-time trading and order execution, a secure backend integration with your broker's API is required. This application currently simulates trade execution for demo purposes. Please refer to the documentation for setting up a production-ready backend.</p>
+                <p className="text-sm text-slate-400 font-bold">Disclaimer: For full real-time trading and order execution, a secure backend integration with your broker's API is required. This application provides a frontend interface for managing broker connections. Please refer to the documentation for setting up a production-ready backend.</p>
               </CardContent>
             </Card>
           </div>

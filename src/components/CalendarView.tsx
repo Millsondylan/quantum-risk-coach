@@ -17,39 +17,25 @@ const CalendarView = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<'calendar' | 'list'>('calendar');
 
-  // Mock data for calendar days
-  const calendarData = {
-    '2024-01-15': { pnl: 450, trades: 3, type: 'profit' },
-    '2024-01-16': { pnl: -120, trades: 2, type: 'loss' },
-    '2024-01-17': { pnl: 890, trades: 5, type: 'profit' },
-    '2024-01-18': { pnl: 234, trades: 4, type: 'profit' },
-    '2024-01-19': { pnl: -67, trades: 1, type: 'loss' },
-    '2024-01-20': { pnl: 567, trades: 6, type: 'profit' },
-    '2024-01-21': { pnl: 123, trades: 2, type: 'profit' },
-    '2024-01-22': { pnl: -89, trades: 3, type: 'loss' },
-    '2024-01-23': { pnl: 345, trades: 4, type: 'profit' },
-    '2024-01-24': { pnl: 678, trades: 7, type: 'profit' },
-    '2024-01-25': { pnl: -234, trades: 2, type: 'loss' },
-    '2024-01-26': { pnl: 456, trades: 5, type: 'profit' },
-    '2024-01-27': { pnl: 789, trades: 8, type: 'profit' },
-    '2024-01-28': { pnl: -123, trades: 1, type: 'loss' },
-    '2024-01-29': { pnl: 234, trades: 3, type: 'profit' },
-    '2024-01-30': { pnl: 567, trades: 6, type: 'profit' }
-  };
+  // This component would display real calendar data based on user's past trades.
+  // Data for calendar days will be fetched from a real trade history service.
+  // const calendarData = { ... }; // Example: { '2024-01-15': { pnl: 450, trades: 3, type: 'profit' }, ... }
+
+  const calendarData = {}; // Placeholder until real data integration
 
   const getDayContent = (day: Date) => {
     const dateString = day.toISOString().split('T')[0];
-    const data = calendarData[dateString as keyof typeof calendarData];
+    const data = (calendarData as any)[dateString]; // Type assertion for now
     
     if (!data) return null;
 
     return (
       <div className="text-center p-1">
         <div className={`text-xs font-medium ${data.type === 'profit' ? 'text-green-400' : 'text-red-400'}`}>
-          ${data.pnl}
+          ${data.pnl || 0}
         </div>
         <div className="text-xs text-slate-400">
-          {data.trades} trades
+          {data.trades || 0} trades
         </div>
       </div>
     );
@@ -57,7 +43,7 @@ const CalendarView = () => {
 
   const getDayClassName = (day: Date) => {
     const dateString = day.toISOString().split('T')[0];
-    const data = calendarData[dateString as keyof typeof calendarData];
+    const data = (calendarData as any)[dateString]; // Type assertion for now
     
     if (!data) return '';
     
@@ -66,12 +52,12 @@ const CalendarView = () => {
       : 'bg-red-500/20 border-red-500/30';
   };
 
-  const monthlyStats = {
-    totalPnL: 3240.75,
-    totalTrades: 67,
-    winRate: 68.5,
-    bestDay: { date: '2024-01-27', pnl: 789 },
-    worstDay: { date: '2024-01-25', pnl: -234 }
+  const monthlyStats = { // Placeholder for real monthly stats
+    totalPnL: 0,
+    totalTrades: 0,
+    winRate: 0,
+    bestDay: { date: '', pnl: 0 },
+    worstDay: { date: '', pnl: 0 }
   };
 
   return (
@@ -154,12 +140,12 @@ const CalendarView = () => {
                               day: 'numeric' 
                             })}
                           </p>
-                          <p className="text-sm text-slate-400">{data.trades} trades</p>
+                          <p className="text-sm text-slate-400">{data.trades || 0} trades</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={`font-semibold ${data.type === 'profit' ? 'text-green-400' : 'text-red-400'}`}>
-                          ${data.pnl}
+                          ${data.pnl || 0}
                         </p>
                         <p className="text-sm text-slate-400">
                           {data.type === 'profit' ? 'Profit' : 'Loss'}

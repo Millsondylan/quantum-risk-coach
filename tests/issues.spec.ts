@@ -99,9 +99,17 @@ test.describe('Issue Detection Tests', () => {
     ];
     
     for (const selector of authElements) {
-      const element = page.locator(selector);
-      const isVisible = await element.isVisible();
-      console.log(`${selector}: ${isVisible ? 'visible' : 'not visible'}`);
+      if (selector === 'input[type="password"]') {
+        // Click signin tab first for password input
+        await page.click('[data-testid="signin-tab"]');
+        const element = page.locator('[data-testid="signin-password-input"]');
+        const isVisible = await element.isVisible();
+        console.log(`${selector}: ${isVisible ? 'visible' : 'not visible'}`);
+      } else {
+        const element = page.locator(selector);
+        const isVisible = await element.isVisible();
+        console.log(`${selector}: ${isVisible ? 'visible' : 'not visible'}`);
+      }
     }
   });
 
@@ -118,7 +126,8 @@ test.describe('Issue Detection Tests', () => {
     }
     
     // Test password input
-    const passwordInput = page.locator('input[type="password"]');
+    await page.click('[data-testid="signin-tab"]');
+    const passwordInput = page.locator('[data-testid="signin-password-input"]');
     if (await passwordInput.isVisible()) {
       await passwordInput.fill('password123');
       const value = await passwordInput.inputValue();

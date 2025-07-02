@@ -149,7 +149,16 @@ const AICoachCard = () => {
           aiProvider: 'openai'
         };
 
-        setInsights(prev => [newInsight, ...prev.slice(0, 9)]); // Keep last 10 insights
+        // Keep only the latest insight to avoid overwhelming the user
+        setInsights([newInsight]);
+
+        // Push notification (if user allowed)
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('AI Coach Insight', {
+            body: newInsight.title,
+            icon: '/qlarity-icon.png'
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to generate real insights:', error);

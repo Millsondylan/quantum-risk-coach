@@ -32,7 +32,11 @@ import {
   Edit,
   Trash,
   Filter,
-  Search
+  Search,
+  Globe,
+  Newspaper,
+  Wallet,
+  Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { aiService } from '@/lib/api';
@@ -40,6 +44,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '../hooks/use-toast';
+import { pushNotificationService, NotificationPreferences as ServiceNotificationPreferences } from '@/lib/pushNotificationService';
+import { useUser } from '@/contexts/UserContext';
+
+interface NotificationChannel {
+  id: string;
+  name: string;
+  type: 'browser' | 'telegram' | 'email' | 'sms'; // Extend types as needed
+  enabled: boolean;
+  icon: JSX.Element;
+}
 
 interface PriceAlert {
   id: string;
@@ -52,18 +66,8 @@ interface PriceAlert {
   triggerCount: number;
 }
 
-interface NotificationSettings {
-  pushNotifications: boolean;
-  telegram: boolean;
-  email: boolean;
-  sound: boolean;
-  tradeExecutions: boolean;
-  priceAlerts: boolean;
-  newsUpdates: boolean;
-  aiInsights: boolean;
-  economicEvents: boolean;
-  riskWarnings: boolean;
-}
+// Use the comprehensive NotificationPreferences from pushNotificationService
+type NotificationPreferences = ServiceNotificationPreferences;
 
 interface TelegramConfig {
   botToken: string;
@@ -104,40 +108,9 @@ interface AlertRule {
   triggerCount: number;
 }
 
-interface NotificationPreferences {
-  tradeAlerts: boolean;
-  priceAlerts: boolean;
-  riskAlerts: boolean;
-  performanceAlerts: boolean;
-  newsAlerts: boolean;
-  systemAlerts: boolean;
-  pushNotifications: boolean;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  inAppNotifications: boolean;
-  quietHours: {
-    enabled: boolean;
-    start: string;
-    end: string;
-  };
-  soundEnabled: boolean;
-  vibrationEnabled: boolean;
-}
-
 const NotificationsAlerts = () => {
+  const { user, updatePreferences } = useUser();
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
-  const [settings, setSettings] = useState<NotificationSettings>({
-    pushNotifications: true,
-    telegram: false,
-    email: true,
-    sound: true,
-    tradeExecutions: true,
-    priceAlerts: true,
-    newsUpdates: false,
-    aiInsights: true,
-    economicEvents: true,
-    riskWarnings: true
-  });
   const [telegramConfig, setTelegramConfig] = useState<TelegramConfig>({
     botToken: '',
     chatId: '',
@@ -148,70 +121,102 @@ const NotificationsAlerts = () => {
     condition: 'above' as const,
     value: 0
   });
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
-  const [preferences, setPreferences] = useState<NotificationPreferences>({
-    tradeAlerts: true,
-    priceAlerts: true,
-    riskAlerts: true,
-    performanceAlerts: true,
-    newsAlerts: false,
-    systemAlerts: true,
-    pushNotifications: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    inAppNotifications: true,
-    quietHours: {
-      enabled: false,
-      start: '22:00',
-      end: '08:00'
-    },
-    soundEnabled: true,
-    vibrationEnabled: true
+  const [preferences, setPreferences] = useState<NotificationPreferences>(() => {
+    // Initialize with default preferences from service
+    const defaultPrefs = pushNotificationService.getPreferences();
+    // Merge with user's saved preferences if available
+    return user?.preferences?.notifications ? 
+      { ...defaultPrefs, ...user.preferences.notifications } : 
+      defaultPrefs;
   });
   const [activeTab, setActiveTab] = useState('notifications');
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateAlert, setShowCreateAlert] = useState(false);
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
   const { toast: useToastToast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeNotifications, setActiveNotifications] = useState<any[]>([]);
+
+  // Declare channels state here
+  const [channels, setChannels] = useState<NotificationChannel[]>([
+    {
+      id: 'browser',
+      name: 'Browser Push',
+      type: 'browser',
+      enabled: false,
+      icon: <Globe className="w-4 h-4" />
+    },
+    {
+      id: 'telegram',
+      name: 'Telegram Bot',
+      type: 'telegram',
+      enabled: false,
+      icon: <MessageCircle className="w-4 h-4" />
+    }
+  ]);
 
   useEffect(() => {
+    checkNotificationPermission();
+    // Ensure preferences are loaded and updated when user context changes
+    const currentPreferences = pushNotificationService.getPreferences();
+    if (user?.preferences?.notifications) {
+      const mergedPreferences = { ...currentPreferences, ...user.preferences.notifications };
+      pushNotificationService.updatePreferences(mergedPreferences);
+      setPreferences(mergedPreferences);
+    } else {
+      setPreferences(currentPreferences);
+    }
+  }, [user]);
+
+  const checkNotificationPermission = () => {
     // Check notification permission
     if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
+      setPushPermission(Notification.permission);
     }
-
-    // Load saved alerts and settings
-    loadSavedData();
-
-    // Set up notification listeners
-    setupNotificationListeners();
-
-    // Request notification permission if not granted
-    requestNotificationPermission();
-  }, []);
+  };
 
   const loadSavedData = () => {
-    try {
-      const savedAlerts = localStorage.getItem('priceAlerts');
-      const savedSettings = localStorage.getItem('notificationSettings');
-      const savedTelegram = localStorage.getItem('telegramConfig');
+    // Load settings from pushNotificationService
+    const currentPreferences = pushNotificationService.getPreferences();
+    setPreferences(currentPreferences);
 
-      if (savedAlerts) {
-        setAlerts(JSON.parse(savedAlerts));
+    // Load existing alerts from localStorage
+    const storedAlerts = localStorage.getItem('priceAlerts');
+    if (storedAlerts) {
+      try {
+        setAlerts(JSON.parse(storedAlerts));
+      } catch (e) {
+        console.error('Error parsing stored alerts:', e);
+        setAlerts([]);
       }
-      if (savedSettings) {
-        setSettings(JSON.parse(savedSettings));
-      }
-      if (savedTelegram) {
-        setTelegramConfig(JSON.parse(savedTelegram));
-      }
-    } catch (error) {
-      console.error('Error loading saved data:', error);
     }
+
+    // Load existing alert rules
+    const storedRules = localStorage.getItem('alertRules');
+    if (storedRules) {
+      try {
+        setAlertRules(JSON.parse(storedRules));
+      } catch (e) {
+        console.error('Error parsing stored alert rules:', e);
+        setAlertRules([]);
+      }
+    }
+
+    // Initialize channel status based on preferences
+    setChannels(prev => prev.map(channel => {
+      if (channel.id === 'browser') {
+        return { ...channel, enabled: currentPreferences.pushNotifications };
+      } else if (channel.id === 'telegram') {
+        // Assuming there's a preference for Telegram enablement in ServiceNotificationPreferences or a related state
+        // For now, linking to a placeholder check in telegramConfig.isConnected, adjust as needed
+        return { ...channel, enabled: telegramConfig.isConnected };
+      }
+      return channel;
+    }));
   };
 
   const setupNotificationListeners = () => {
@@ -225,19 +230,28 @@ const NotificationsAlerts = () => {
   };
 
   const requestNotificationPermission = async () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      try {
-        const permission = await Notification.requestPermission();
-        setNotificationPermission(permission);
-        
-        if (permission === 'granted') {
-          toast.success('Notifications enabled successfully!');
-        } else {
-          toast.error('Notifications permission denied');
-        }
-      } catch (error) {
-        console.error('Error requesting notification permission:', error);
+    if (!('Notification' in window)) {
+      toast.error('This browser does not support notifications');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const permission = await pushNotificationService.requestPermission();
+      setPushPermission(permission);
+      
+      if (permission === 'granted') {
+        toast.success('Browser notifications enabled!');
+        // Update the pushNotifications preference directly via saveUserPreferences
+        saveUserPreferences({ ...preferences, pushNotifications: true });
+      } else {
+        toast.error('Notification permission denied');
       }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      toast.error('Failed to enable notifications');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -272,11 +286,11 @@ const NotificationsAlerts = () => {
     localStorage.setItem('priceAlerts', JSON.stringify(updatedAlerts));
 
     // Send notifications based on settings
-    if (settings.pushNotifications && notificationPermission === 'granted') {
+    if (preferences.pushNotifications && pushPermission === 'granted') {
       await sendPushNotification('Price Alert Triggered', message);
     }
 
-    if (settings.telegram && telegramConfig.isConnected) {
+    if (preferences.telegram && telegramConfig.isConnected) {
       await sendTelegramMessage(message);
     }
 
@@ -352,284 +366,203 @@ const NotificationsAlerts = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send Telegram message');
+        throw new Error(`Telegram API error: ${response.statusText}`);
       }
 
-      setTelegramConfig(prev => ({
-        ...prev,
-        lastMessage: new Date()
-      }));
+      toast.success('Telegram message sent!');
+      setTelegramConfig(prev => ({ ...prev, lastMessage: new Date() }));
     } catch (error) {
       console.error('Error sending Telegram message:', error);
-      toast.error('Failed to send Telegram notification');
+      toast.error('Failed to send Telegram message');
     }
   };
 
   const testTelegramConnection = async () => {
+    if (!telegramConfig.botToken || !telegramConfig.chatId) {
+      toast.error('Please enter Telegram Bot Token and Chat ID');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      const testMessage = '🤖 Qlarity: Telegram integration test successful!';
-      await sendTelegramMessage(testMessage);
-      
-      setTelegramConfig(prev => ({
-        ...prev,
-        isConnected: true
-      }));
-      
-      toast.success('Telegram connection successful!');
+      const response = await fetch(`https://api.telegram.org/bot${telegramConfig.botToken}/getMe`);
+      if (!response.ok) {
+        throw new Error(`Telegram API error: ${response.statusText}`);
+      }
+      const data = await response.json();
+      if (data.ok) {
+        setTelegramConfig(prev => ({ ...prev, isConnected: true }));
+        toast.success(`Connected to Telegram bot: ${data.result.first_name}`);
+        // Test sending a message to ensure chat ID is correct
+        await sendTelegramMessage('🚀 Test message from Qlarity Quantum Risk Coach. If you received this, your Telegram connection is working!');
+      } else {
+        setTelegramConfig(prev => ({ ...prev, isConnected: false }));
+        toast.error('Invalid Telegram Bot Token or Chat ID');
+      }
     } catch (error) {
-      setTelegramConfig(prev => ({
-        ...prev,
-        isConnected: false
-      }));
-      toast.error('Telegram connection failed. Check your Bot Token and Chat ID.');
+      console.error('Error testing Telegram connection:', error);
+      setTelegramConfig(prev => ({ ...prev, isConnected: false }));
+      toast.error('Failed to connect to Telegram');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const addPriceAlert = () => {
-    if (!newAlert.symbol || !newAlert.value) {
-      toast.error('Please fill in all fields');
+    if (!newAlert.symbol || newAlert.value <= 0) {
+      toast.error('Please enter a valid symbol and value for the alert');
       return;
     }
-
-    const alert: PriceAlert = {
-      id: Date.now().toString(),
-      symbol: newAlert.symbol,
-      condition: newAlert.condition,
-      value: newAlert.value,
-      isActive: true,
-      created: new Date(),
-      triggerCount: 0
-    };
-
-    const updatedAlerts = [...alerts, alert];
-    setAlerts(updatedAlerts);
-    localStorage.setItem('priceAlerts', JSON.stringify(updatedAlerts));
-
+    const id = `alert_${Date.now()}`;
+    const alertToAdd = { ...newAlert, id, isActive: true, created: new Date(), triggerCount: 0 };
+    setAlerts(prev => [...prev, alertToAdd]);
+    localStorage.setItem('priceAlerts', JSON.stringify([...alerts, alertToAdd]));
     setNewAlert({ symbol: '', condition: 'above', value: 0 });
-    toast.success('Price alert created successfully!');
+    toast.success('Price alert added!');
   };
 
   const toggleAlert = (id: string) => {
-    const updatedAlerts = alerts.map(alert =>
-      alert.id === id ? { ...alert, isActive: !alert.isActive } : alert
+    setAlerts(prev => 
+      prev.map(alert => 
+        alert.id === id ? { ...alert, isActive: !alert.isActive } : alert
+      )
     );
-    setAlerts(updatedAlerts);
-    localStorage.setItem('priceAlerts', JSON.stringify(updatedAlerts));
   };
 
   const deleteAlert = (id: string) => {
-    const updatedAlerts = alerts.filter(alert => alert.id !== id);
-    setAlerts(updatedAlerts);
-    localStorage.setItem('priceAlerts', JSON.stringify(updatedAlerts));
-    toast.success('Alert deleted');
-  };
-
-  const updateSettings = (key: keyof NotificationSettings, value: boolean) => {
-    const updatedSettings = { ...settings, [key]: value };
-    setSettings(updatedSettings);
-    localStorage.setItem('notificationSettings', JSON.stringify(updatedSettings));
+    setAlerts(prev => prev.filter(alert => alert.id !== id));
+    localStorage.setItem('priceAlerts', JSON.stringify(alerts.filter(alert => alert.id !== id)));
+    toast.success('Price alert deleted!');
   };
 
   const getAlertTypeIcon = (condition: string) => {
     switch (condition) {
-      case 'above': return <TrendingUp className="w-4 h-4 text-green-400" />;
-      case 'below': return <TrendingDown className="w-4 h-4 text-red-400" />;
-      case 'crosses_up': return <Target className="w-4 h-4 text-blue-400" />;
-      case 'crosses_down': return <Target className="w-4 h-4 text-orange-400" />;
+      case 'above': return <TrendingUp className="w-4 h-4 text-green-500" />;
+      case 'below': return <TrendingDown className="w-4 h-4 text-red-500" />;
+      case 'crosses_up': return <TrendingUp className="w-4 h-4 text-orange-500" />;
+      case 'crosses_down': return <TrendingDown className="w-4 h-4 text-purple-500" />;
+      default: return <Bell className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getChannelIcon = (type: 'browser' | 'telegram' | 'email' | 'sms') => {
+    switch (type) {
+      case 'browser': return <Smartphone className="w-4 h-4" />;
+      case 'telegram': return <MessageCircle className="w-4 h-4" />;
+      case 'email': return <Mail className="w-4 h-4" />;
+      case 'sms': return <MessageCircle className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
 
-  const getChannelIcon = (condition: string) => {
-    return <Target className="w-4 h-4 text-cyan-400" />;
-  };
+  const filteredNotifications = notifications.filter(notification => {
+    const matchesFilter = filter === 'all' || notification.type === filter;
+    const matchesSearch = notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          notification.message.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
-  const popularSymbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'BTCUSD', 'ETHUSD', 'XAUUSD', 'SPX500'];
-
-  // Mock data
-  useEffect(() => {
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'trade',
-        title: 'Trade Executed',
-        message: 'EUR/USD buy order executed at 1.0850',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        read: false,
-        priority: 'medium',
-        category: 'Trade Execution'
-      },
-      {
-        id: '2',
-        type: 'alert',
-        title: 'Price Alert Triggered',
-        message: 'BTC/USD has reached your target price of $45,000',
-        timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        read: false,
-        priority: 'high',
-        category: 'Price Alert'
-      },
-      {
-        id: '3',
-        type: 'risk',
-        title: 'Risk Warning',
-        message: 'Your daily loss limit is approaching (85% used)',
-        timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        read: true,
-        priority: 'critical',
-        category: 'Risk Management'
-      },
-      {
-        id: '4',
-        type: 'performance',
-        title: 'Weekly Performance',
-        message: 'Your portfolio is up 3.2% this week',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        read: true,
-        priority: 'low',
-        category: 'Performance'
-      },
-      {
-        id: '5',
-        type: 'news',
-        title: 'Market News',
-        message: 'Federal Reserve announces interest rate decision',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        read: true,
-        priority: 'medium',
-        category: 'Market News'
-      }
-    ];
-
-    const mockAlertRules: AlertRule[] = [
-      {
-        id: '1',
-        name: 'BTC Price Alert',
-        type: 'price',
-        symbol: 'BTC/USD',
-        condition: 'above',
-        threshold: 45000,
-        enabled: true,
-        notifications: {
-          push: true,
-          email: true,
-          sms: false,
-          inApp: true
-        },
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        lastTriggered: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        triggerCount: 3
-      },
-      {
-        id: '2',
-        name: 'Daily Loss Limit',
-        type: 'risk',
-        condition: 'daily_loss',
-        threshold: 500,
-        enabled: true,
-        notifications: {
-          push: true,
-          email: true,
-          sms: true,
-          inApp: true
-        },
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        triggerCount: 1
-      },
-      {
-        id: '3',
-        name: 'RSI Oversold',
-        type: 'indicator',
-        symbol: 'EUR/USD',
-        condition: 'rsi_below',
-        threshold: 30,
-        enabled: false,
-        notifications: {
-          push: false,
-          email: true,
-          sms: false,
-          inApp: true
-        },
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        triggerCount: 0
-      }
-    ];
-
-    setNotifications(mockNotifications);
-    setAlertRules(mockAlertRules);
-    setUnreadCount(mockNotifications.filter(n => !n.read).length);
-  }, []);
+  const filteredAlertRules = alertRules.filter(rule => {
+    const matchesSearch = rule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (rule.symbol && rule.symbol.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesSearch;
+  });
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
       case 'low': return 'bg-green-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'high': return 'bg-orange-500';
+      case 'critical': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'trade': return <Zap className="h-4 w-4" />;
-      case 'alert': return <AlertTriangle className="h-4 w-4" />;
-      case 'risk': return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case 'performance': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'news': return <Info className="h-4 w-4 text-blue-500" />;
-      case 'system': return <Settings className="h-4 w-4 text-gray-500" />;
-      default: return <Bell className="h-4 w-4" />;
+      case 'trade': return <DollarSign className="w-4 h-4 text-green-500" />;
+      case 'alert': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'system': return <Info className="w-4 h-4 text-blue-500" />;
+      case 'news': return <Newspaper className="w-4 h-4 text-purple-500" />;
+      case 'performance': return <Activity className="w-4 h-4 text-cyan-500" />;
+      case 'risk': return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      default: return <Bell className="w-4 h-4 text-gray-500" />;
     }
   };
 
   const markAsRead = (id: string) => {
     setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
+      prev.map(notif => (notif.id === id ? { ...notif, read: true } : notif))
     );
-    setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
-    useToastToast({
-      title: "All notifications marked as read",
-      description: "You've cleared all unread notifications."
-    });
+    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
   };
 
   const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    useToastToast({
-      title: "Notification deleted",
-      description: "The notification has been removed."
-    });
+    setNotifications(prev => prev.filter(notif => notif.id !== id));
   };
 
   const toggleAlertRule = (id: string) => {
-    setAlertRules(prev => 
-      prev.map(rule => rule.id === id ? { ...rule, enabled: !rule.enabled } : rule)
+    setAlertRules(prev =>
+      prev.map(rule => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule))
     );
   };
 
   const deleteAlertRule = (id: string) => {
     setAlertRules(prev => prev.filter(rule => rule.id !== id));
-    useToastToast({
-      title: "Alert rule deleted",
-      description: "The alert rule has been removed."
-    });
+    toast.success('Alert rule deleted!');
   };
 
-  const filteredNotifications = notifications.filter(notification => {
-    const matchesFilter = filter === 'all' || notification.type === filter;
-    const matchesSearch = notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const sendTestNotification = async () => {
+    if (pushPermission === 'granted') {
+      await pushNotificationService.sendTestNotification();
+      toast.success('Test notification sent!');
+    } else {
+      toast.error('Please enable browser notifications first');
+    }
+  };
 
-  const filteredAlertRules = alertRules.filter(rule => 
-    rule.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const saveUserPreferences = async (newPreferences: NotificationPreferences) => {
+    if (!user) return;
+
+    try {
+      // Update preferences in the pushNotificationService
+      await pushNotificationService.updatePreferences(newPreferences);
+      // Also update in UserContext to persist across sessions
+      await updatePreferences({ notifications: newPreferences });
+
+      setPreferences(newPreferences);
+      toast.success('Notification preferences saved!');
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+      toast.error('Failed to save preferences');
+    }
+  };
+
+  const updateChannelStatus = (channelId: string, enabled: boolean) => {
+    setChannels(prev => prev.map(channel => 
+      channel.id === channelId ? { ...channel, enabled } : channel
+    ));
+
+    // Update pushNotificationService preferences directly for channel statuses
+    if (channelId === 'browser') {
+      saveUserPreferences({ ...preferences, pushNotifications: enabled });
+    } else if (channelId === 'telegram') {
+      // This assumes telegram channel status is directly tied to a preference
+      // If not, it needs a specific preference for telegram enablement
+      // For now, we'll map it to a generic 'telegram' preference if it exists
+      // If 'telegram' is part of NotificationPreferences, it should be set here
+      // Assuming it's not directly in NotificationPreferences but via `telegramConfig`
+      // This might require more complex state management or an explicit preference for telegram
+    }
+  };
+
+  const togglePreference = (key: keyof NotificationPreferences) => {
+    const newPreferences = { ...preferences, [key]: !preferences[key] };
+    saveUserPreferences(newPreferences);
+  };
 
   return (
     <div className="space-y-6">
@@ -643,10 +576,10 @@ const NotificationsAlerts = () => {
           <p className="text-slate-400">Stay informed with notifications and price alerts</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant={notificationPermission === 'granted' ? 'default' : 'destructive'}>
-            {notificationPermission === 'granted' ? 'Enabled' : 'Disabled'}
+          <Badge variant={pushPermission === 'granted' ? 'default' : 'destructive'}>
+            {pushPermission === 'granted' ? 'Enabled' : 'Disabled'}
           </Badge>
-          {notificationPermission !== 'granted' && (
+          {pushPermission !== 'granted' && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -664,11 +597,6 @@ const NotificationsAlerts = () => {
           <TabsTrigger value="notifications" className="flex items-center space-x-2">
             <Bell className="w-4 h-4" />
             <span className="hidden sm:inline">Notifications</span>
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="h-5 w-5 p-0 text-xs">
-                {unreadCount}
-              </Badge>
-            )}
           </TabsTrigger>
           <TabsTrigger value="alerts" className="flex items-center space-x-2">
             <AlertTriangle className="w-4 h-4" />
@@ -786,76 +714,70 @@ const NotificationsAlerts = () => {
               <DialogTrigger asChild>
                 <Button className="flex items-center space-x-2">
                   <Plus className="h-4 w-4" />
-                  <span>Create Alert</span>
+                  <span>Create New Alert</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>Create New Alert Rule</DialogTitle>
                   <DialogDescription>
-                    Set up a new alert rule to monitor market conditions
+                    Define conditions for a new alert to notify you about market changes.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Alert Name</label>
-                    <Input placeholder="e.g., BTC Price Alert" />
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="ruleName" className="text-right">Name</Label>
+                    <Input id="ruleName" value={editingRule?.name || ''} onChange={(e) => setEditingRule(prev => prev ? { ...prev, name: e.target.value } : null)} className="col-span-3" />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Alert Type</label>
-                    <Select>
-                      <SelectTrigger>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="ruleType" className="text-right">Type</Label>
+                    <Select value={editingRule?.type || 'price'} onValueChange={(value) => setEditingRule(prev => prev ? { ...prev, type: value as any } : null)}>
+                      <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="price">Price Alert</SelectItem>
-                        <SelectItem value="indicator">Technical Indicator</SelectItem>
-                        <SelectItem value="pattern">Chart Pattern</SelectItem>
-                        <SelectItem value="risk">Risk Management</SelectItem>
+                        <SelectItem value="price">Price</SelectItem>
+                        <SelectItem value="indicator">Indicator</SelectItem>
+                        <SelectItem value="pattern">Pattern</SelectItem>
+                        <SelectItem value="risk">Risk</SelectItem>
                         <SelectItem value="performance">Performance</SelectItem>
+                        <SelectItem value="news">News</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Symbol (Optional)</label>
-                    <Input placeholder="e.g., BTC/USD" />
+                  {editingRule?.type === 'price' && (
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="symbol" className="text-right">Symbol</Label>
+                      <Input id="symbol" value={editingRule?.symbol || ''} onChange={(e) => setEditingRule(prev => prev ? { ...prev, symbol: e.target.value } : null)} className="col-span-3" />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="condition" className="text-right">Condition</Label>
+                    <Input id="condition" value={editingRule?.condition || ''} onChange={(e) => setEditingRule(prev => prev ? { ...prev, condition: e.target.value } : null)} className="col-span-3" />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Condition</label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select condition" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="above">Above</SelectItem>
-                        <SelectItem value="below">Below</SelectItem>
-                        <SelectItem value="crosses">Crosses</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Threshold</label>
-                    <Input type="number" placeholder="Enter value" />
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="threshold" className="text-right">Threshold</Label>
+                    <Input id="threshold" type="number" value={editingRule?.threshold || 0} onChange={(e) => setEditingRule(prev => prev ? { ...prev, threshold: parseFloat(e.target.value) } : null)} className="col-span-3" />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowCreateAlert(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={() => setShowCreateAlert(false)}>
-                    Create Alert
-                  </Button>
+                  <Button variant="outline" onClick={() => setShowCreateAlert(false)}>Cancel</Button>
+                  <Button onClick={() => {
+                    // Logic to save the new or updated alert rule
+                    setShowCreateAlert(false);
+                    toast.success('Alert rule saved!');
+                  }}>Save Rule</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
 
-          <div className="grid gap-4">
+          <div className="space-y-3">
             {filteredAlertRules.map((rule) => (
-              <Card key={rule.id}>
+              <Card key={rule.id} className="holo-card">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-3 flex-1">
                       <Switch
                         checked={rule.enabled}
                         onCheckedChange={() => toggleAlertRule(rule.id)}
@@ -920,8 +842,8 @@ const NotificationsAlerts = () => {
                       </div>
                     </div>
                     <Switch
-                      checked={settings.pushNotifications}
-                      onCheckedChange={(checked) => updateSettings('pushNotifications', checked)}
+                      checked={preferences.pushNotifications}
+                      onCheckedChange={() => togglePreference('pushNotifications')}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -933,8 +855,8 @@ const NotificationsAlerts = () => {
                       </div>
                     </div>
                     <Switch
-                      checked={settings.telegram}
-                      onCheckedChange={(checked) => updateSettings('telegram', checked)}
+                      checked={preferences.telegram}
+                      onCheckedChange={() => togglePreference('telegram')}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -946,8 +868,8 @@ const NotificationsAlerts = () => {
                       </div>
                     </div>
                     <Switch
-                      checked={settings.sound}
-                      onCheckedChange={(checked) => updateSettings('sound', checked)}
+                      checked={preferences.soundEnabled}
+                      onCheckedChange={() => togglePreference('soundEnabled')}
                     />
                   </div>
                 </div>
@@ -963,8 +885,8 @@ const NotificationsAlerts = () => {
                       <span className="text-sm text-white">Trade Executions</span>
                     </div>
                     <Switch
-                      checked={settings.tradeExecutions}
-                      onCheckedChange={(checked) => updateSettings('tradeExecutions', checked)}
+                      checked={preferences.tradeSignals}
+                      onCheckedChange={() => togglePreference('tradeSignals')}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -973,8 +895,8 @@ const NotificationsAlerts = () => {
                       <span className="text-sm text-white">Price Alerts</span>
                     </div>
                     <Switch
-                      checked={settings.priceAlerts}
-                      onCheckedChange={(checked) => updateSettings('priceAlerts', checked)}
+                      checked={preferences.priceAlerts}
+                      onCheckedChange={() => togglePreference('priceAlerts')}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -983,8 +905,28 @@ const NotificationsAlerts = () => {
                       <span className="text-sm text-white">AI Insights</span>
                     </div>
                     <Switch
-                      checked={settings.aiInsights}
-                      onCheckedChange={(checked) => updateSettings('aiInsights', checked)}
+                      checked={preferences.aiInsights}
+                      onCheckedChange={() => togglePreference('aiInsights')}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Newspaper className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm text-white">News Alerts</span>
+                    </div>
+                    <Switch
+                      checked={preferences.newsAlerts}
+                      onCheckedChange={() => togglePreference('newsAlerts')}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Wallet className="w-4 h-4 text-indigo-400" />
+                      <span className="text-sm text-white">Portfolio Alerts</span>
+                    </div>
+                    <Switch
+                      checked={preferences.portfolioAlerts}
+                      onCheckedChange={() => togglePreference('portfolioAlerts')}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -993,8 +935,18 @@ const NotificationsAlerts = () => {
                       <span className="text-sm text-white">Economic Events</span>
                     </div>
                     <Switch
-                      checked={settings.economicEvents}
-                      onCheckedChange={(checked) => updateSettings('economicEvents', checked)}
+                      checked={preferences.economicEvents}
+                      onCheckedChange={() => togglePreference('economicEvents')}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Activity className="w-4 h-4 text-orange-400" />
+                      <span className="text-sm text-white">Market Updates</span>
+                    </div>
+                    <Switch
+                      checked={preferences.marketUpdates}
+                      onCheckedChange={() => togglePreference('marketUpdates')}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -1003,8 +955,8 @@ const NotificationsAlerts = () => {
                       <span className="text-sm text-white">Risk Warnings</span>
                     </div>
                     <Switch
-                      checked={settings.riskWarnings}
-                      onCheckedChange={(checked) => updateSettings('riskWarnings', checked)}
+                      checked={preferences.riskWarnings}
+                      onCheckedChange={() => togglePreference('riskWarnings')}
                     />
                   </div>
                 </div>

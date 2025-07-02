@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Settings, User, LogOut, TrendingUp, Activity, Database, RefreshCw, Home, BookOpen, PlusCircle, BarChart3 } from 'lucide-react';
+import { Bell, Settings, User, LogOut, TrendingUp, Activity, Database, RefreshCw, Home, BookOpen, PlusCircle, BarChart3, Brain } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { Button } from '@/components/ui/button';
 import { 
@@ -281,6 +281,15 @@ const Header: React.FC = () => {
           >
             <BarChart3 className="w-4 h-4" />
             <span>Analytics</span>
+          </Link>
+          <Link 
+            to="/ai-coach" 
+            className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
+            aria-label="Navigate to AI Coach"
+            data-testid="nav-ai-coach"
+          >
+            <Brain className="w-4 h-4" />
+            <span>AI Coach</span>
           </Link>
           <Link 
             to="/settings" 

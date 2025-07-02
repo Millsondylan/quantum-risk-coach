@@ -1,9 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
 import './lib/localUserUtils'
 import { performanceMonitor } from './lib/performanceMonitor'
+import { UserProvider } from './contexts/UserContext'
+import { Toaster } from 'sonner'
+import { pushNotificationService } from './lib/pushNotificationService'
 
 // Register service worker for caching and offline functionality
 if ('serviceWorker' in navigator) {
@@ -30,7 +34,21 @@ try {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <App />
+      <BrowserRouter>
+        <UserProvider>
+          <App />
+          <Toaster 
+            position="bottom-right" 
+            toastOptions={{
+              style: {
+                background: '#1A1B1E',
+                color: '#FFFFFF',
+                border: '1px solid #2A2B2E'
+              }
+            }}
+          />
+        </UserProvider>
+      </BrowserRouter>
     </React.StrictMode>
   );
 } catch (error) {
@@ -47,3 +65,8 @@ try {
 // Mark app as loaded
 performanceMonitor.mark('app-loaded');
 performanceMonitor.measure('app-initialization', 'app-start', 'app-loaded');
+
+// Expose push notification service globally for testing
+if (typeof window !== 'undefined') {
+  (window as any).pushNotificationService = pushNotificationService;
+}

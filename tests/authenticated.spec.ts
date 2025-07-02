@@ -8,7 +8,9 @@ test.describe('Authenticated App Tests', () => {
     
     // Check for auth form elements
     await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
+    // Click on signin tab to make password input visible
+    await page.click('[data-testid="signin-tab"]');
+    await expect(page.locator('[data-testid="signin-password-input"]')).toBeVisible();
     await expect(page.locator('[role="tab"]:has-text("Sign In")')).toBeVisible();
   });
 
@@ -16,10 +18,12 @@ test.describe('Authenticated App Tests', () => {
     await page.goto(`${BASE}/auth`);
     
     await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    
     await expect(page.locator('input[type="email"]')).toHaveValue('test@example.com');
-    await expect(page.locator('input[type="password"]')).toHaveValue('password123');
+    
+    // Click on signin tab and test password input
+    await page.click('[data-testid="signin-tab"]');
+    await page.fill('[data-testid="signin-password-input"]', 'password123');
+    await expect(page.locator('[data-testid="signin-password-input"]')).toHaveValue('password123');
   });
 
   test('auth tabs work', async ({ page }) => {
@@ -108,19 +112,22 @@ test.describe('Authenticated App Tests', () => {
   test('form validation works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
+    // Click signin tab first
+    await page.click('[data-testid="signin-tab"]');
+    
     // Try to submit empty form
-    await page.click('button:has-text("Sign In")');
+    await page.click('[data-testid="signin-button"]');
     await expect(page.locator('body')).toBeVisible();
     
     // Fill only email
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.click('button:has-text("Sign In")');
+    await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
+    await page.click('[data-testid="signin-button"]');
     await expect(page.locator('body')).toBeVisible();
     
     // Fill only password
-    await page.fill('input[type="email"]', '');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.fill('[data-testid="signin-email-input"]', '');
+    await page.fill('[data-testid="signin-password-input"]', 'password123');
+    await page.click('[data-testid="signin-button"]');
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -131,8 +138,9 @@ test.describe('Authenticated App Tests', () => {
     const emailInput = page.locator('input[type="email"]');
     await expect(emailInput).toHaveAttribute('type', 'email');
     
-    // Test password input type
-    const passwordInput = page.locator('input[type="password"]');
+    // Test password input type - click signin tab first
+    await page.click('[data-testid="signin-tab"]');
+    const passwordInput = page.locator('[data-testid="signin-password-input"]');
     await expect(passwordInput).toHaveAttribute('type', 'password');
   });
 

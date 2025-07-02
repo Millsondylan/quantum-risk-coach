@@ -65,35 +65,35 @@ const EnhancedUltraTraderDashboard = () => {
   
   // REAL-TIME DATA STATE with enhanced validation support
   const [realTimeData, setRealTimeData] = useState({
-    BTCUSD: { price: 43567.89, change: 1245.67, changePercent: 2.94, status: 'live' },
-    ETHUSD: { price: 2876.34, change: 89.23, changePercent: 3.21, status: 'live' },
-    EURUSD: { price: 1.0845, change: 0.0023, changePercent: 0.21, status: 'live' },
-    GBPUSD: { price: 1.2634, change: -0.0012, changePercent: -0.09, status: 'live' },
-    USDJPY: { price: 148.76, change: 0.34, changePercent: 0.23, status: 'live' },
-    GOLD: { price: 2034.56, change: 12.34, changePercent: 0.61, status: 'live' }
+    BTCUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
+    ETHUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
+    EURUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
+    GBPUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
+    USDJPY: { price: 0, change: 0, changePercent: 0, status: 'loading' },
+    GOLD: { price: 0, change: 0, changePercent: 0, status: 'loading' }
   });
 
   // ENHANCED PORTFOLIO DATA with complete metrics
   const [portfolioData, setPortfolioData] = useState({
-    balance: 125847.32,
-    todayPnL: 2847.65,
-    todayPnLPercent: 2.31,
-    realizedPnL: 18750.25,
-    unrealizedPnL: -1203.45,
-    totalFees: 892.75,
-    balanceHistory: [0.8, 1.2, -0.3, 1.8, 0.5, 2.1, 1.4, -0.7, 2.3, 1.9, 0.6, 1.5, 2.2, 1.1, 0.9, 1.7, 2.5, 1.3, 0.4, 1.8],
-    totalPnL: 17546.80,
-    totalPnLPercent: 16.22,
-    winRate: 73.2,
-    profitFactor: 1.47,
-    sharpeRatio: 1.23,
-    maxDrawdown: 8.4,
-    averageWin: 234.67,
-    averageLoss: -159.23,
-    tradingDays: 127,
-    totalTrades: 456,
-    winningTrades: 334,
-    losingTrades: 122
+    balance: 0,
+    todayPnL: 0,
+    todayPnLPercent: 0,
+    realizedPnL: 0,
+    unrealizedPnL: 0,
+    totalFees: 0,
+    balanceHistory: [],
+    totalPnL: 0,
+    totalPnLPercent: 0,
+    winRate: 0,
+    profitFactor: 0,
+    sharpeRatio: 0,
+    maxDrawdown: 0,
+    averageWin: 0,
+    averageLoss: 0,
+    tradingDays: 0,
+    totalTrades: 0,
+    winningTrades: 0,
+    losingTrades: 0
   });
 
   // ENHANCED POSITIONS with live P&L
@@ -231,7 +231,6 @@ const EnhancedUltraTraderDashboard = () => {
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         
-        // Instead of demo data, show connection prompt
         setMarketData({});
         setPortfolioData({
           balance: 0,
@@ -322,58 +321,6 @@ const EnhancedUltraTraderDashboard = () => {
 
     return () => clearInterval(aiInterval);
   }, [aiService, realTimeData]);
-
-  // Convert real-time data to watchlist format with LIVE DATA
-  const watchlist = [
-    {
-      symbol: 'BTC/USD',
-      price: realTimeData.BTCUSD.price,
-      change: realTimeData.BTCUSD.change,
-      changePercent: realTimeData.BTCUSD.changePercent,
-      status: realTimeData.BTCUSD.status,
-      volume: '2.4B'
-    },
-    {
-      symbol: 'ETH/USD',
-      price: realTimeData.ETHUSD.price,
-      change: realTimeData.ETHUSD.change,
-      changePercent: realTimeData.ETHUSD.changePercent,
-      status: realTimeData.ETHUSD.status,
-      volume: '1.1B'
-    },
-    {
-      symbol: 'EUR/USD',
-      price: realTimeData.EURUSD.price,
-      change: realTimeData.EURUSD.change,
-      changePercent: realTimeData.EURUSD.changePercent,
-      status: realTimeData.EURUSD.status,
-      volume: '5.2B'
-    },
-    {
-      symbol: 'GBP/USD',
-      price: realTimeData.GBPUSD.price,
-      change: realTimeData.GBPUSD.change,
-      changePercent: realTimeData.GBPUSD.changePercent,
-      status: realTimeData.GBPUSD.status,
-      volume: '3.8B'
-    },
-    {
-      symbol: 'USD/JPY',
-      price: realTimeData.USDJPY.price,
-      change: realTimeData.USDJPY.change,
-      changePercent: realTimeData.USDJPY.changePercent,
-      status: realTimeData.USDJPY.status,
-      volume: '4.1B'
-    },
-    {
-      symbol: 'XAU/USD',
-      price: realTimeData.GOLD.price,
-      change: realTimeData.GOLD.change,
-      changePercent: realTimeData.GOLD.changePercent,
-      status: realTimeData.GOLD.status,
-      volume: '892M'
-    }
-  ];
 
   const recentTrades = [
     { id: 1, symbol: 'EUR/USD', type: 'BUY', qty: 100000, price: 1.0823, time: '2h ago', status: 'filled', pnl: 220.00 },
@@ -706,44 +653,6 @@ const EnhancedUltraTraderDashboard = () => {
                   )}>
                     {position.pnlPercent >= 0 ? '+' : ''}{position.pnlPercent.toFixed(2)}%
                   </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Live Market Data */}
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-white">Live Market Data</CardTitle>
-              <Badge variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/20">
-                Real-time
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            {watchlist.map((item) => (
-              <div key={item.symbol} className="flex items-center justify-between p-3 bg-[#151619] rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">{item.symbol.substring(0, 2)}</span>
-                  </div>
-                  <div>
-                    <div className="font-medium text-white text-sm">{item.symbol}</div>
-                    <div className="text-xs text-slate-400">${item.price.toFixed(item.symbol.includes('/') ? 4 : 2)}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={cn(
-                    "text-sm font-medium",
-                    item.changePercent >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%
-                  </div>
-                  <Badge variant="outline" className="text-xs mt-1 bg-green-500/10 text-green-400 border-green-500/20">
-                    {item.status}
-                  </Badge>
                 </div>
               </div>
             ))}

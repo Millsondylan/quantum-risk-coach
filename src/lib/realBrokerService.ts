@@ -372,23 +372,17 @@ class RealBrokerService {
   private async testMT45Connection(connection: RealBrokerConnection): Promise<any> {
     // In a real-world scenario, this would involve a secure backend
     // connecting to the MT4/MT5 API or a custom bridge (e.g., using a Web API for MT4/MT5).
-    // This is a client-side simulation for demonstration purposes.
+    // This client-side implementation is for demonstration purposes and should not return simulated data.
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         if (connection.credentials.server && connection.credentials.login && connection.credentials.password) {
-          // Simulate successful connection and return mock account info
-          resolve({
-            balance: 10000.00,
-            equity: 10050.00,
-            margin: 500.00,
-            freeMargin: 9550.00,
-            profit: 50.00,
-            currency: 'USD',
-          });
+          // In a real application, this would make an actual API call to the MT4/MT5 backend.
+          // For now, we reject to indicate that real integration is needed.
+          reject(new Error('MT4/MT5 integration requires a backend connection. Client-side simulation not supported for real data.'));
         } else {
           reject(new Error('Invalid MT4/MT5 credentials or server.'));
         }
-      }, 1500); // Simulate network latency
+      }, 500); // Simulate network latency
     });
   }
 
