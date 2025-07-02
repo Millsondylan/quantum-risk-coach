@@ -1,0 +1,54 @@
+name: React Native APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 16
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: zulu
+        java-version: 11
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+    
+    - run: npm install
+    - run: npm run build
+    
+    - name: Create React Native App
+      run: |
+        npx react-native init QuantumApp --version 0.72.0
+        cd QuantumApp
+        mkdir -p android/app/src/main/assets
+        cp -r ../dist/* android/app/src/main/assets/
+    
+    - name: Build APK
+      run: |
+        cd QuantumApp/android
+        chmod +x gradlew
+        ./gradlew assembleDebug
+    
+    - uses: actions/upload-artifact@v4
+      with:
+        name: quantum-apk
+        path: QuantumApp/android/app/build/outputs/apk/debug/app-debug.apk
+    
+    - uses: softprops/action-gh-release@v1
+      if: success()
+      with:
+        tag_name: rn-v${{ github.run_number }}
+        files: QuantumApp/android/app/build/outputs/apk/debug/app-debug.apk
