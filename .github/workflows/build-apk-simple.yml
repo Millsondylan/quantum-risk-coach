@@ -1,0 +1,69 @@
+name: Simple APK Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Build web assets
+      run: npm run build
+      
+    - name: Sync Capacitor
+      run: npx cap sync android
+      
+    - name: Build APK using Docker
+      run: |
+        docker run --rm -v "${PWD}":/workspace -w /workspace/android \
+          thyrlian/android-sdk:latest \
+          bash -c "chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon"
+      
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: quantum-risk-coach-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: apk-v${{ github.run_number }}
+        name: Quantum Risk Coach APK v${{ github.run_number }}
+        body: |
+          ## 🚀 Quantum Risk Coach APK - Ready for Download!
+          
+          **🎯 Your Android APK is ready!**
+          
+          ### 📱 Installation Instructions:
+          1. Download the APK file below
+          2. Enable "Install from Unknown Sources" in your Android settings
+          3. Install the APK file
+          4. Launch Quantum Risk Coach!
+          
+          ### ✨ Features:
+          - AI-powered trading coach
+          - Risk management tools
+          - Real-time market analysis
+          - Trading journal
+          - Performance analytics
+          
+          **Download your APK below! ⬇️**
+        files: |
+          android/app/build/outputs/apk/debug/app-debug.apk
+        draft: false
+        prerelease: false 
