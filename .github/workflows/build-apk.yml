@@ -1,4 +1,4 @@
-name: Build APK
+name: Build & Release APK
 
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
       run: npm run build
       
     - name: Set up Capacitor
-      run: npx cap sync
+      run: npx cap sync android
       
     - name: Set up Java
       uses: actions/setup-java@v4
@@ -36,11 +36,14 @@ jobs:
         
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
+        
+    - name: Make gradlew executable
+      run: chmod +x android/gradlew
       
     - name: Build APK
       run: |
         cd android
-        ./gradlew assembleDebug --no-daemon
+        ./gradlew assembleDebug --no-daemon --stacktrace
       
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
@@ -50,12 +53,10 @@ jobs:
         
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ github.run_number }}
-        release_name: Quantum Risk Coach v${{ github.run_number }}
+        name: Quantum Risk Coach v${{ github.run_number }}
         body: |
           ## 🚀 Quantum Risk Coach APK
           
@@ -68,7 +69,7 @@ jobs:
           - **Performance Analytics** - Detailed performance insights
           
           ### 📱 Installation:
-          1. Download the APK file
+          1. Download the APK file below
           2. Enable "Install from Unknown Sources" on your Android device
           3. Install the APK
           4. Enjoy your personalized trading experience!
@@ -78,15 +79,9 @@ jobs:
           - Capacitor for native mobile experience
           - Supabase backend integration
           - Modern holographic UI design
+          
+          **Download Link:** [quantum-risk-coach.apk](https://github.com/Millsondylan/quantum-risk-coach/releases/download/v${{ github.run_number }}/quantum-risk-coach.apk)
+        files: |
+          android/app/build/outputs/apk/debug/app-debug.apk
         draft: false
-        prerelease: false
-        
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: android/app/build/outputs/apk/debug/app-debug.apk
-        asset_name: quantum-risk-coach.apk
-        asset_content_type: application/vnd.android.package-archive 
+        prerelease: false 
