@@ -11,10 +11,10 @@ const Onboarding = () => {
   const { completeOnboarding, user, createUser } = useUser();
   const [step, setStep] = useState(1);
   const [preferences, setPreferences] = useState({
-    tradingStyle: 'day-trading' as any,
-    riskTolerance: 'moderate' as any,
-    preferredMarkets: ['Forex (FX)', 'Stocks'] as string[],
-    experienceLevel: 'intermediate' as any,
+    tradingStyle: '' as any,
+    riskTolerance: '' as any,
+    preferredMarkets: [] as string[],
+    experienceLevel: '' as any,
     notifications: {
       tradeAlerts: true,
       marketUpdates: true,
@@ -171,11 +171,11 @@ const Onboarding = () => {
                   </Select>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1 relative z-20" data-testid="onboarding-back-button">
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1 relative z-20" data-testid="onboarding-back-button">
                     Back
                   </Button>
                   <Button 
-                    onClick={() => setStep(3)} 
+                    onClick={() => setStep(4)} 
                     disabled={!preferences.riskTolerance}
                     className="flex-1 relative z-20"
                     data-testid="onboarding-next-button"
