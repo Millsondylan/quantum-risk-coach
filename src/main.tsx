@@ -1,7 +1,25 @@
-import { createRoot } from 'react-dom/client'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import './lib/localUserUtils'
+import { performanceMonitor } from './lib/performanceMonitor'
+
+// Register service worker for caching and offline functionality
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('✅ Service Worker registered successfully:', registration.scope);
+      })
+      .catch((error) => {
+        console.warn('⚠️ Service Worker registration failed:', error);
+      });
+  });
+}
+
+// Initialize performance monitoring
+performanceMonitor.mark('app-start');
 
 try {
   const rootElement = document.getElementById("root");
@@ -9,8 +27,12 @@ try {
     throw new Error("Root element not found");
   }
   
-  const root = createRoot(rootElement);
-  root.render(<App />);
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
 } catch (error) {
   console.error('Error rendering React app:', error);
   document.body.innerHTML = `
@@ -21,3 +43,7 @@ try {
     </div>
   `;
 }
+
+// Mark app as loaded
+performanceMonitor.mark('app-loaded');
+performanceMonitor.measure('app-initialization', 'app-start', 'app-loaded');

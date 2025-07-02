@@ -2,225 +2,197 @@
 // Quantum Risk Coach - Trading Notifications
 
 const CACHE_NAME = 'quantum-risk-coach-v1';
-const STATIC_ASSETS = [
+const STATIC_CACHE = 'quantum-risk-coach-static-v1';
+const DYNAMIC_CACHE = 'quantum-risk-coach-dynamic-v1';
+
+// Files to cache immediately
+const STATIC_FILES = [
   '/',
+  '/index.html',
   '/manifest.json',
-  '/favicon.ico',
-  '/placeholder.svg'
+  '/favicon.ico'
 ];
 
-// Install event - cache static assets
+// Install event - cache static files
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
-  
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Service Worker: Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+    caches.open(STATIC_CACHE)
+      .then((cache) => {
+        console.log('Caching static files');
+        return cache.addAll(STATIC_FILES);
       })
-      .catch(error => {
-        console.error('Service Worker: Failed to cache static assets', error);
-      })
+      .then(() => self.skipWaiting())
   );
-  
-  // Force activation of new service worker
-  self.skipWaiting();
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
-  
   event.waitUntil(
-    caches.keys().then(cacheNames => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker: Deleting old cache', cacheName);
+        cacheNames.map((cacheName) => {
+          if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  
-  // Take control of all clients
-  self.clients.claim();
 });
 
-// Fetch event - serve from cache when possible
+// Fetch event - serve from cache or network
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests
-  if (event.request.method !== 'GET') return;
-  
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) return;
-  
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Skip non-GET requests
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // Handle API requests
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(handleApiRequest(request));
+    return;
+  }
+
+  // Handle static assets
+  if (isStaticAsset(url.pathname)) {
+    event.respondWith(handleStaticAsset(request));
+    return;
+  }
+
+  // Handle navigation requests
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigation(request));
+    return;
+  }
+
+  // Default: try network first, fallback to cache
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return cached version if available
-        if (response) {
-          return response;
+    fetch(request)
+      .then((response) => {
+        if (response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(request, responseClone);
+          });
         }
-        
-        // Otherwise fetch from network
-        return fetch(event.request);
+        return response;
       })
-      .catch(error => {
-        console.error('Service Worker: Fetch failed', error);
+      .catch(() => {
+        return caches.match(request);
       })
   );
 });
 
-// Push event - handle push notifications
+function handleApiRequest(request) {
+  return fetch(request)
+    .then((response) => {
+      if (response.status === 200) {
+        const responseClone = response.clone();
+        caches.open(DYNAMIC_CACHE).then((cache) => {
+          cache.put(request, responseClone);
+        });
+      }
+      return response;
+    })
+    .catch(() => {
+      return caches.match(request);
+    });
+}
+
+function handleStaticAsset(request) {
+  return caches.match(request)
+    .then((response) => {
+      if (response) {
+        return response;
+      }
+      return fetch(request).then((response) => {
+        if (response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(STATIC_CACHE).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return response;
+      });
+    });
+}
+
+function handleNavigation(request) {
+  return fetch(request)
+    .then((response) => {
+      if (response.status === 200) {
+        const responseClone = response.clone();
+        caches.open(DYNAMIC_CACHE).then((cache) => {
+          cache.put(request, responseClone);
+        });
+      }
+      return response;
+    })
+    .catch(() => {
+      return caches.match('/index.html');
+    });
+}
+
+function isStaticAsset(pathname) {
+  return pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/);
+}
+
+// Background sync for offline actions
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(doBackgroundSync());
+  }
+});
+
+function doBackgroundSync() {
+  // Handle any pending offline actions
+  console.log('Performing background sync');
+  return Promise.resolve();
+}
+
+// Push notification handling
 self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push message received');
-  
-  let notificationData = {
-    title: 'Quantum Risk Coach',
-    body: 'You have a new trading alert!',
+  const options = {
+    body: event.data ? event.data.text() : 'New notification from Quantum Risk Coach',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
-    tag: 'trading-alert',
-    requireInteraction: false,
-    data: {}
-  };
-  
-  // Parse push payload if available
-  if (event.data) {
-    try {
-      const payload = event.data.json();
-      notificationData = {
-        ...notificationData,
-        ...payload
-      };
-    } catch (error) {
-      console.error('Service Worker: Failed to parse push payload', error);
-      notificationData.body = event.data.text() || notificationData.body;
-    }
-  }
-  
-  // Customize notification based on type
-  if (notificationData.type) {
-    switch (notificationData.type) {
-      case 'price_alert':
-        notificationData.icon = '/favicon.ico';
-        notificationData.tag = 'price-alert';
-        notificationData.requireInteraction = true;
-        break;
-      case 'news_alert':
-        notificationData.icon = '/favicon.ico';
-        notificationData.tag = 'news-alert';
-        break;
-      case 'ai_insight':
-        notificationData.icon = '/favicon.ico';
-        notificationData.tag = 'ai-insight';
-        break;
-      case 'risk_warning':
-        notificationData.icon = '/favicon.ico';
-        notificationData.tag = 'risk-warning';
-        notificationData.requireInteraction = true;
-        break;
-    }
-  }
-  
-  // Add action buttons for interactive notifications
-  if (notificationData.type === 'price_alert' || notificationData.type === 'risk_warning') {
-    notificationData.actions = [
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    },
+    actions: [
       {
-        action: 'view',
-        title: 'View Details',
+        action: 'explore',
+        title: 'View',
         icon: '/favicon.ico'
       },
       {
-        action: 'dismiss',
-        title: 'Dismiss',
+        action: 'close',
+        title: 'Close',
         icon: '/favicon.ico'
       }
-    ];
-  }
-  
+    ]
+  };
+
   event.waitUntil(
-    self.registration.showNotification(notificationData.title, notificationData)
+    self.registration.showNotification('Quantum Risk Coach', options)
   );
 });
 
-// Notification click event
 self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification clicked', event);
-  
-  const notification = event.notification;
-  const action = event.action;
-  
-  notification.close();
-  
-  // Handle action buttons
-  if (action === 'dismiss') {
-    return;
-  }
-  
-  // Default action or 'view' action - open the app
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(clientList => {
-        // Check if app is already open
-        for (let client of clientList) {
-          if (client.url.includes(self.location.origin)) {
-            client.focus();
-            
-            // Send message to client if notification has data
-            if (notification.data) {
-              client.postMessage({
-                type: 'notification_click',
-                data: notification.data
-              });
-            }
-            
-            return;
-          }
-        }
-        
-        // Open new window if app is not open
-        return clients.openWindow('/');
-      })
-  );
-});
+  event.notification.close();
 
-// Background sync for offline functionality
-self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Background sync triggered', event.tag);
-  
-  if (event.tag === 'background-sync-trades') {
-    event.waitUntil(syncTrades());
-  }
-  
-  if (event.tag === 'background-sync-market-data') {
-    event.waitUntil(syncMarketData());
+  if (event.action === 'explore') {
+    event.waitUntil(
+      clients.openWindow('/')
+    );
   }
 });
-
-// Sync functions
-async function syncTrades() {
-  try {
-    console.log('Service Worker: Syncing trades...');
-    // This would sync pending trades when back online
-    // Implementation would depend on your data structure
-  } catch (error) {
-    console.error('Service Worker: Failed to sync trades', error);
-  }
-}
-
-async function syncMarketData() {
-  try {
-    console.log('Service Worker: Syncing market data...');
-    // This would fetch latest market data when back online
-    // Implementation would depend on your data structure
-  } catch (error) {
-    console.error('Service Worker: Failed to sync market data', error);
-  }
-}
 
 // Message event - handle messages from main thread
 self.addEventListener('message', (event) => {

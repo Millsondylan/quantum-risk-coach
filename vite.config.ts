@@ -25,11 +25,21 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: ['ccxt'],
-    include: ['ws']
+    include: ['ws', 'react', 'react-dom', 'lucide-react'],
+    esbuildOptions: {
+      target: 'es2020',
+    }
   },
   build: {
     outDir: 'dist',
     sourcemap: mode === 'development',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production',
+      },
+    },
     rollupOptions: {
       external: [
         'http',
@@ -107,12 +117,31 @@ export default defineConfig(({ mode }) => ({
           'node:util': 'null'
         },
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          charts: ['recharts'],
-          supabase: ['@supabase/supabase-js']
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': [
+            '@radix-ui/react-dialog', 
+            '@radix-ui/react-dropdown-menu', 
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip'
+          ],
+          'charts-vendor': ['recharts'],
+          'data-vendor': ['@supabase/supabase-js', '@tanstack/react-query'],
+          'utils-vendor': ['date-fns', 'date-fns-tz', 'clsx', 'tailwind-merge'],
+          'icons-vendor': ['lucide-react'],
+          'ai-vendor': ['openai', 'groq-sdk'],
+          'trading-vendor': ['ccxt', 'binance-api-node', 'socket.io-client']
         }
       }
-    }
+    },
+    chunkSizeWarningLimit: 1000,
+    target: 'es2020'
+  },
+  css: {
+    devSourcemap: mode === 'development',
+  },
+  esbuild: {
+    target: 'es2020',
   }
 }));

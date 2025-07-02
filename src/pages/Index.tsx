@@ -1,18 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import UltraTraderDashboard from '../components/UltraTraderDashboard';
-import PersonalChallenges from '../components/PersonalChallenges';
-import AICoachCard from '../components/AICoachCard';
-import RiskAnalyzer from '../components/RiskAnalyzer';
+import React, { useState, useEffect, memo, useMemo } from 'react';
+import { lazy, Suspense } from 'react';
 import { Target, Brain, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
-const Index = () => {
+// Lazy load heavy components
+const UltraTraderDashboard = lazy(() => import('../components/UltraTraderDashboard'));
+const PersonalChallenges = lazy(() => import('../components/PersonalChallenges'));
+const AICoachCard = lazy(() => import('../components/AICoachCard'));
+const RiskAnalyzer = lazy(() => import('../components/RiskAnalyzer'));
+
+// Loading component for lazy-loaded sections
+const SectionLoader = memo(() => (
+  <div className="animate-pulse">
+    <div className="h-32 bg-slate-800 rounded-lg mb-4"></div>
+  </div>
+));
+
+SectionLoader.displayName = 'SectionLoader';
+
+// Memoized section header component
+const SectionHeader = memo(({ 
+  icon: Icon, 
+  title, 
+  badgeText, 
+  badgeColor 
+}: { 
+  icon: any; 
+  title: string; 
+  badgeText: string; 
+  badgeColor: string; 
+}) => (
+  <div className="flex items-center justify-between">
+    <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+      <Icon className={`w-5 h-5 ${badgeColor}`} />
+      {title}
+    </h2>
+    <Badge variant="outline" className={`text-xs ${badgeColor} border-opacity-20`}>
+      {badgeText}
+    </Badge>
+  </div>
+));
+
+SectionHeader.displayName = 'SectionHeader';
+
+const Index = memo(() => {
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
+    const timer = setTimeout(() => setIsLoading(false), 500); // Reduced from 1000ms
     return () => clearTimeout(timer);
   }, []);
+  
+  // Memoized section configurations
+  const sections = useMemo(() => [
+    {
+      id: 'challenges',
+      title: 'AI-Generated Challenges',
+      icon: Target,
+      badgeText: '4 Active',
+      badgeColor: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+      component: PersonalChallenges
+    },
+    {
+      id: 'ai-coach',
+      title: 'AI Coaching Insights',
+      icon: Brain,
+      badgeText: 'Live Analysis',
+      badgeColor: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+      component: AICoachCard
+    },
+    {
+      id: 'risk-analysis',
+      title: 'Risk Analysis Engine',
+      icon: Shield,
+      badgeText: 'Real-time',
+      badgeColor: 'text-red-400 bg-red-500/10 border-red-500/20',
+      component: RiskAnalyzer
+    }
+  ], []);
   
   if (isLoading) {
     return (
@@ -28,50 +93,25 @@ const Index = () => {
   return (
     <div data-testid="page-container" className="min-h-screen bg-[#0A0B0D] text-white">
       <main data-testid="main-content" className="main-content" role="main">
-        <UltraTraderDashboard />
+        <Suspense fallback={<SectionLoader />}>
+          <UltraTraderDashboard />
+        </Suspense>
         
-        {/* Add Challenge Section for Validation */}
+        {/* Optimized Challenge Section */}
         <div className="px-4 py-6 space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Target className="w-5 h-5 text-purple-400" />
-                AI-Generated Challenges
-              </h2>
-              <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-400 border-purple-500/20">
-                4 Active
-              </Badge>
+          {sections.map((section) => (
+            <div key={section.id} className="space-y-4">
+              <SectionHeader
+                icon={section.icon}
+                title={section.title}
+                badgeText={section.badgeText}
+                badgeColor={section.badgeColor}
+              />
+              <Suspense fallback={<SectionLoader />}>
+                <section.component />
+              </Suspense>
             </div>
-            <PersonalChallenges />
-          </div>
-
-          {/* AI Coach Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Brain className="w-5 h-5 text-blue-400" />
-                AI Coaching Insights
-              </h2>
-              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20">
-                Live Analysis
-              </Badge>
-            </div>
-            <AICoachCard />
-          </div>
-
-          {/* Risk Analysis Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Shield className="w-5 h-5 text-red-400" />
-                Risk Analysis Engine
-              </h2>
-              <Badge variant="outline" className="text-xs bg-red-500/10 text-red-400 border-red-500/20">
-                Real-time
-              </Badge>
-            </div>
-            <RiskAnalyzer />
-          </div>
+          ))}
 
           {/* Bottom spacing for mobile nav */}
           <div className="h-24"></div>
@@ -79,6 +119,8 @@ const Index = () => {
       </main>
     </div>
   );
-};
+});
+
+Index.displayName = 'Index';
 
 export default Index;

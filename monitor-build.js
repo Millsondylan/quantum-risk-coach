@@ -4,7 +4,7 @@
  * Monitor GitHub Actions build status for APK generation
  */
 
-const https = require('https');
+import https from 'https';
 
 const REPO_OWNER = 'Millsondylan';
 const REPO_NAME = 'quantum-risk-coach';

@@ -1,1068 +1,1051 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import { 
   TrendingUp, 
   TrendingDown, 
   Plus, 
+  Settings, 
   BarChart3, 
-  DollarSign, 
-  Clock, 
-  Eye,
-  EyeOff,
-  Settings,
+  BookOpen,
   Bell,
-  Search,
-  Filter,
-  Calendar,
+  Download,
+  Upload,
   Target,
   Zap,
-  BookOpen,
-  Activity,
-  ChevronRight,
+  DollarSign, 
+  Percent,
+  Clock, 
+  Calendar,
+  Filter,
+  Search,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
   RefreshCw,
-  Wallet,
-  PieChart,
-  LineChart,
-  Users,
-  Star,
-  Award,
-  Shield,
-  Brain,
-  TrendingUp as TrendingUpIcon,
-  AlertTriangle,
   CheckCircle,
-  PlayCircle,
+  AlertTriangle,
+  Play,
+  Pause,
+  Brain,
+  Activity,
+  Globe,
+  Smartphone,
+  Monitor,
+  Database,
+  Shield,
+  Users,
   Trophy,
-  Flame,
-  Sparkles,
+  Star,
+  Lightbulb,
+  Radio,
+  Newspaper,
   ArrowUpRight,
   ArrowDownRight,
-  Globe,
-  Wifi
+  Minus,
+  ChevronRight,
+  ChevronLeft,
+  Home,
+  PieChart,
+  LineChart,
+  TrendingUpIcon,
+  TrendingDownIcon,
+  DollarSignIcon,
+  ClockIcon,
+  CalendarIcon,
+  FilterIcon,
+  SearchIcon,
+  EditIcon,
+  TrashIcon,
+  EyeIcon,
+  EyeOffIcon,
+  RefreshCwIcon,
+  CheckCircleIcon,
+  AlertTriangleIcon,
+  PlayIcon,
+  PauseIcon,
+  BrainIcon,
+  ActivityIcon,
+  GlobeIcon,
+  SmartphoneIcon,
+  MonitorIcon,
+  DatabaseIcon,
+  ShieldIcon,
+  UsersIcon,
+  TrophyIcon,
+  StarIcon,
+  LightbulbIcon,
+  RadioIcon,
+  NewspaperIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon,
+  MinusIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  HomeIcon,
+  PieChartIcon,
+  LineChartIcon
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { useTrades } from '@/hooks/useTrades';
-import { useUser } from '@/contexts/UserContext';
+import { useLocalTrades } from '@/hooks/useLocalTrades';
 import { realDataService } from '@/lib/realDataService';
-import { AIStreamService } from '@/lib/aiStreamService';
-import PersonalChallenges from './PersonalChallenges';
-import AICoachCard from './AICoachCard';
-import RiskAnalyzer from './RiskAnalyzer';
-import AIMarketInsights from './AIMarketInsights';
-import LiveTradeMonitor from './LiveTradeMonitor';
-import MarketSessionDashboard from './MarketSessionDashboard';
-import QuickStats from './QuickStats';
-import RecentTrades from './RecentTrades';
-import TradeJournalCard from './TradeJournalCard';
-import PerformanceCalendar from './PerformanceCalendar';
-import StrategyAnalyzer from './StrategyAnalyzer';
-import MarketCoverageSentiment from './MarketCoverageSentiment';
-import AdvancedAnalytics from './AdvancedAnalytics';
-import EnhancedTradingJournal from './EnhancedTradingJournal';
+import { liveTradeTracker } from '@/lib/liveTradeTracker';
+import { marketSessionAnalyzer } from '@/lib/marketSessionAnalyzer';
+import { pushNotificationService } from '@/lib/pushNotificationService';
 
-// UltraTrader-style interface with REAL USER DATA
+interface PortfolioStats {
+  totalBalance: number;
+  netPnL: number;
+  winRate: number;
+  totalTrades: number;
+  avgWin: number;
+  avgLoss: number;
+  largestWin: number;
+  largestLoss: number;
+  currentStreak: number;
+  bestStreak: number;
+  assetDistribution: { [key: string]: number };
+}
+
+interface TradeEntry {
+  id: string;
+  symbol: string;
+  direction: 'buy' | 'sell';
+  entryPrice: number;
+  exitPrice?: number;
+  volume: number;
+  pnl?: number;
+  pnlPercent?: number;
+  timestamp: Date;
+  duration?: string;
+  strategy: string[];
+  notes: string;
+  broker: string;
+  isPaper: boolean;
+  status: 'open' | 'closed' | 'pending';
+}
+
 const UltraTraderDashboard = () => {
-  const navigate = useNavigate();
-  const { user } = useUser();
-  const { trades, isLoading: tradesLoading, getTradeStats } = useTrades();
-  const [balanceVisible, setBalanceVisible] = useState(true);
-  const [marketData, setMarketData] = useState<any>({});
-  const [selectedTimeframe, setSelectedTimeframe] = useState('1D');
-  const [refreshing, setRefreshing] = useState(false);
-  const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
-  const [aiService] = useState(() => new AIStreamService({}));
-  const [aiInsights, setAiInsights] = useState<any[]>([]);
-  const [aiLoading, setAiLoading] = useState(false);
-  
-  // REAL-TIME MARKET DATA - Fetch from live APIs
-  const [realTimeData, setRealTimeData] = useState({
-    BTCUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
-    ETHUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
-    EURUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
-    GBPUSD: { price: 0, change: 0, changePercent: 0, status: 'loading' },
-    USDJPY: { price: 0, change: 0, changePercent: 0, status: 'loading' },
-    GOLD: { price: 0, change: 0, changePercent: 0, status: 'loading' }
+  const [activeTab, setActiveTab] = useState('home');
+  const [portfolioStats, setPortfolioStats] = useState<PortfolioStats>({
+    totalBalance: 10000,
+    netPnL: 0,
+    winRate: 0,
+    totalTrades: 0,
+    avgWin: 0,
+    avgLoss: 0,
+    largestWin: 0,
+    largestLoss: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+    assetDistribution: {}
   });
+  const [trades, setTrades] = useState<TradeEntry[]>([]);
+  const [isPaperTrading, setIsPaperTrading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showBalance, setShowBalance] = useState(true);
+  const [filterDateRange, setFilterDateRange] = useState('all');
+  const [filterSymbol, setFilterSymbol] = useState('');
+  const [filterStrategy, setFilterStrategy] = useState('');
+  const [liveMarketData, setLiveMarketData] = useState<any[]>([]);
+  const [aiInsights, setAiInsights] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-  // CALCULATE REAL PORTFOLIO DATA from user's trades
-  const portfolioData = useMemo(() => {
-    const stats = getTradeStats();
-    const closedTrades = trades.filter(trade => trade.status === 'closed');
-    const openTrades = trades.filter(trade => trade.status === 'open');
-    
-    // Calculate today's P&L
-    const today = new Date();
-    const todayTrades = closedTrades.filter(trade => {
-      const tradeDate = new Date(trade.exitDate || trade.entryDate || '');
-      return tradeDate.toDateString() === today.toDateString();
-    });
-    
-    const todayPnL = todayTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
-    const todayPnLPercent = stats.totalProfitLoss > 0 ? (todayPnL / stats.totalProfitLoss) * 100 : 0;
-    
-    // Calculate unrealized P&L from open trades
-    const unrealizedPnL = openTrades.reduce((sum, trade) => {
-      // This would need real-time price data for accurate calculation
-      // For now, using the last known profit/loss
-      return sum + (trade.profitLoss || 0);
-    }, 0);
-    
-    // Calculate total fees (assuming no commission field in schema, using 0)
-    const totalFees = 0; // trades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
-    
-    // Calculate balance (starting balance + total realized P&L - total fees)
-    const startingBalance = 100000; // Default starting balance since no field in user schema
-    const totalRealizedPnL = closedTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
-    const balance = startingBalance + totalRealizedPnL - totalFees;
-    
-    // Calculate average win/loss
-    const winningTrades = closedTrades.filter(trade => (trade.profitLoss || 0) > 0);
-    const losingTrades = closedTrades.filter(trade => (trade.profitLoss || 0) < 0);
-    const averageWin = winningTrades.length > 0 ? 
-      winningTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0) / winningTrades.length : 0;
-    const averageLoss = losingTrades.length > 0 ? 
-      losingTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0) / losingTrades.length : 0;
-    
-    return {
-      balance,
-      todayPnL,
-      todayPnLPercent,
-      realizedPnL: totalRealizedPnL,
-      unrealizedPnL,
-      totalFees,
-      totalPnL: totalRealizedPnL + unrealizedPnL,
-      totalPnLPercent: startingBalance > 0 ? ((totalRealizedPnL + unrealizedPnL) / startingBalance) * 100 : 0,
-      winRate: stats.winRate,
-      profitFactor: stats.totalProfitLoss > 0 ? stats.totalProfitLoss / Math.abs(stats.largestLoss) : 0,
-      sharpeRatio: 1.2, // Placeholder
-      maxDrawdown: -0.15, // Placeholder
-      averageWin,
-      averageLoss,
-      totalTrades: stats.totalTrades,
-      winningTrades: stats.winningTrades,
-      losingTrades: stats.losingTrades,
-      balanceHistory: [0.8, 1.2, -0.3, 1.8, 0.5, 2.1, 1.4, -0.7, 2.3, 1.9, 0.6, 1.5, 2.2, 1.1, 0.9, 1.7, 2.5, 1.3, 0.4, 1.8]
-    };
-  }, [trades, getTradeStats]);
+  const { trades: localTrades } = useLocalTrades();
+  const { trades: apiTrades } = useTrades();
 
-  // REAL USER POSITIONS calculated from open trades
-  const positions = useMemo(() => {
-    const openTrades = trades.filter(trade => trade.status === 'open');
-    
-    // Return real positions only - no demo data
-    return openTrades.map(trade => {
-      const currentPrice = realTimeData[trade.symbol as keyof typeof realTimeData]?.price || trade.entryPrice || 0;
-      const lotSize = trade.quantity || 0;
-      const entryPrice = trade.entryPrice || 0;
-      
-      // Determine trade side from type or default to 'buy'
-      const tradeSide = trade.type?.toLowerCase() || 'buy';
-      const pnl = tradeSide === 'buy' 
-        ? (currentPrice - entryPrice) * lotSize
-        : (entryPrice - currentPrice) * lotSize;
-      const pnlPercent = entryPrice > 0 ? (pnl / (entryPrice * lotSize)) * 100 : 0;
-      
-      return {
-        symbol: trade.symbol,
-        qty: lotSize,
-        avgPrice: entryPrice,
-        currentPrice,
-        pnl,
-        pnlPercent,
-        type: tradeSide === 'buy' ? 'LONG' as const : 'SHORT' as const,
-        tradeId: trade.id
-      };
-    });
-  }, [trades, realTimeData]);
-
-  // REAL USER CHALLENGES based on actual trading patterns
-  const challenges = useMemo(() => {
-    const stats = getTradeStats();
-    const userChallenges = [];
-    
-    // Calculate maxDrawdown and profitFactor
-    const maxDrawdown = -0.15; // Placeholder calculation
-    const profitFactor = stats.totalProfitLoss > 0 ? stats.totalProfitLoss / Math.abs(stats.largestLoss) : 0;
-    
-    // Only show challenges if user has actual trading data
-    if (stats.totalTrades === 0) {
-      return []; // No challenges for users with no trades
-    }
-    
-    // Challenge 1: Win Rate Improvement
-    if (stats.winRate < 60) {
-      userChallenges.push({
-        id: 1,
-        title: "Improve Win Rate",
-        description: `Your current win rate is ${stats.winRate.toFixed(1)}%. Aim for 60%+ by focusing on high-probability setups.`,
-        type: "performance" as const,
-        progress: Math.min(stats.winRate, 60),
-        target: 60,
-        reward: "Consistency Badge",
-        icon: Target,
-        color: "blue"
-      });
-    }
-    
-    // Challenge 2: Risk Management
-    if (maxDrawdown > 10) {
-      userChallenges.push({
-        id: 2,
-        title: "Reduce Drawdown",
-        description: `Your max drawdown is ${maxDrawdown.toFixed(1)}%. Reduce position sizes to keep it under 10%.`,
-        type: "risk" as const,
-        progress: Math.max(0, 100 - maxDrawdown * 10),
-        target: 100,
-        reward: "Risk Master Badge",
-        icon: Shield,
-        color: "red"
-      });
-    }
-    
-    // Challenge 3: Trade Frequency
-    if (stats.totalTrades < 10) {
-      userChallenges.push({
-        id: 3,
-        title: "Increase Activity",
-        description: `You've taken ${stats.totalTrades} trades. Aim for at least 10 trades to build experience.`,
-        type: "activity" as const,
-        progress: Math.min(stats.totalTrades * 10, 100),
-        target: 100,
-        reward: "Active Trader Badge",
-        icon: Activity,
-        color: "green"
-      });
-    }
-    
-    // Challenge 4: Profit Factor
-    if (profitFactor < 1.5) {
-      userChallenges.push({
-        id: 4,
-        title: "Improve Profit Factor",
-        description: `Your profit factor is ${profitFactor.toFixed(2)}. Aim for 1.5+ by cutting losses faster.`,
-        type: "performance" as const,
-        progress: Math.min(profitFactor * 66.67, 100),
-        target: 100,
-        reward: "Profit Master Badge",
-        icon: TrendingUp,
-        color: "purple"
-      });
-    }
-    
-    return userChallenges;
-  }, [getTradeStats]);
-
-  // REAL RISK METRICS based on user's actual positions
-  const riskMetrics = useMemo(() => {
-    const openTrades = trades.filter(trade => trade.status === 'open');
-    const totalExposure = openTrades.reduce((sum, trade) => sum + ((trade.entryPrice || 0) * (trade.quantity || 0)), 0);
-    const startingBalance = 100000; // Default starting balance
-    const exposurePercent = startingBalance > 0 ? (totalExposure / startingBalance) * 100 : 0;
-    
-    // Calculate correlation risk (simplified)
-    const instruments = [...new Set(openTrades.map(trade => trade.symbol))];
-    const correlationRisk = instruments.length > 1 ? Math.min(100, instruments.length * 15) : 0;
-    
-    // Calculate portfolio heat based on P&L volatility
-    const pnlValues = trades.map(trade => trade.profitLoss || 0);
-    const avgPnL = pnlValues.reduce((sum, pnl) => sum + pnl, 0) / pnlValues.length;
-    const variance = pnlValues.reduce((sum, pnl) => sum + Math.pow(pnl - avgPnL, 2), 0) / pnlValues.length;
-    const volatility = Math.sqrt(variance);
-    const portfolioHeat = Math.min(100, Math.max(0, (volatility / startingBalance) * 1000));
-    
-    return {
-      currentRisk: exposurePercent,
-      riskLevel: exposurePercent > 50 ? 'high' : exposurePercent > 25 ? 'medium' : 'low',
-      positionSizing: exposurePercent > 50 ? 'aggressive' : exposurePercent > 25 ? 'optimal' : 'conservative',
-      correlationRisk,
-      portfolioHeat,
-      maxDrawdownRisk: portfolioData.maxDrawdown,
-      volatilityIndex: volatility,
-      diversificationScore: Math.max(0, 100 - correlationRisk),
-      recommendations: [
-        exposurePercent > 50 ? "Reduce position sizes to lower risk exposure" : "Position sizing is within acceptable limits",
-        correlationRisk > 30 ? "Consider diversifying across different asset classes" : "Good diversification across assets",
-        portfolioHeat > 70 ? "High portfolio volatility - consider defensive positions" : "Portfolio volatility is manageable"
-      ]
-    };
-  }, [trades, portfolioData.maxDrawdown]);
-
-  // Fetch real market data
+  // Combine trades from different sources
   useEffect(() => {
-    const fetchMarketData = async () => {
+    const allTrades = [...(localTrades || []), ...(apiTrades || [])];
+    setTrades(allTrades.map(trade => ({
+      id: trade.id || Math.random().toString(),
+      symbol: trade.symbol || 'EUR/USD',
+      direction: (trade as any).side || 'buy',
+      entryPrice: (trade as any).entryPrice || 1.1000,
+      exitPrice: (trade as any).exitPrice,
+      volume: (trade as any).volume || 1.0,
+      pnl: (trade as any).pnl,
+      pnlPercent: (trade as any).pnlPercent,
+      timestamp: new Date((trade as any).timestamp || Date.now()),
+      duration: (trade as any).duration,
+      strategy: (trade as any).strategy ? [(trade as any).strategy] : ['Manual'],
+      notes: (trade as any).notes || '',
+      broker: (trade as any).broker || 'Manual',
+      isPaper: (trade as any).isPaper || false,
+      status: ((trade as any).status || 'closed') as 'open' | 'closed' | 'pending'
+    })));
+  }, [localTrades, apiTrades]);
+
+  // Calculate portfolio stats
+  useEffect(() => {
+    if (trades.length === 0) return;
+
+    const closedTrades = trades.filter(t => t.status === 'closed' && t.pnl !== undefined);
+    const winningTrades = closedTrades.filter(t => (t.pnl || 0) > 0);
+    const losingTrades = closedTrades.filter(t => (t.pnl || 0) < 0);
+
+    const totalPnL = closedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+    const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0;
+    const avgWin = winningTrades.length > 0 ? winningTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / winningTrades.length : 0;
+    const avgLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / losingTrades.length : 0;
+    const largestWin = Math.max(...winningTrades.map(t => t.pnl || 0), 0);
+    const largestLoss = Math.min(...losingTrades.map(t => t.pnl || 0), 0);
+
+    // Calculate streaks
+    let currentStreak = 0;
+    let bestStreak = 0;
+    let tempStreak = 0;
+    
+    for (let i = closedTrades.length - 1; i >= 0; i--) {
+      if ((closedTrades[i].pnl || 0) > 0) {
+        tempStreak++;
+        if (i === closedTrades.length - 1) currentStreak = tempStreak;
+        bestStreak = Math.max(bestStreak, tempStreak);
+      } else {
+        tempStreak = 0;
+      }
+    }
+
+    // Asset distribution
+    const distribution: { [key: string]: number } = {};
+    trades.forEach(trade => {
+      distribution[trade.symbol] = (distribution[trade.symbol] || 0) + trade.volume;
+    });
+
+    setPortfolioStats({
+      totalBalance: 10000 + totalPnL,
+      netPnL: totalPnL,
+      winRate,
+      totalTrades: trades.length,
+      avgWin,
+      avgLoss,
+      largestWin,
+      largestLoss,
+      currentStreak,
+      bestStreak,
+      assetDistribution: distribution
+    });
+  }, [trades]);
+
+  // Load live market data
+  useEffect(() => {
+    const loadMarketData = async () => {
       try {
-        const symbols = ['BTCUSD', 'ETHUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'GOLD'];
-        const marketData: any = {};
+        const [forexData, cryptoData] = await Promise.allSettled([
+          realDataService.getForexRates(),
+          realDataService.getCryptoPrices()
+        ]);
 
-        await Promise.all(
-          symbols.map(async (symbol) => {
-            try {
-              const response = await fetch(`/api/market-data?symbol=${symbol}`);
-              if (response.ok) {
-                const data = await response.json();
-                marketData[symbol] = {
-                  price: data.price,
-                  change: data.change,
-                  changePercent: data.changePercent,
-                  status: 'live'
-                };
-              } else {
-                // Fallback to reasonable defaults if API fails
-                marketData[symbol] = {
-                  price: getDefaultPrice(symbol),
-                  change: 0,
-                  changePercent: 0,
-                  status: 'error'
-                };
-              }
-            } catch (error) {
-              console.error(`Error fetching ${symbol} data:`, error);
-              marketData[symbol] = {
-                price: getDefaultPrice(symbol),
-                change: 0,
-                changePercent: 0,
-                status: 'error'
-              };
-            }
-          })
-        );
+        const marketData = [
+          ...(forexData.status === 'fulfilled' ? forexData.value : []),
+          ...(cryptoData.status === 'fulfilled' ? cryptoData.value : [])
+        ];
 
-        setRealTimeData(marketData);
+        setLiveMarketData(marketData.slice(0, 6)); // Show top 6 instruments
       } catch (error) {
-        console.error('Error fetching market data:', error);
+        console.error('Failed to load market data:', error);
       }
     };
 
-    fetchMarketData();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchMarketData, 30000);
+    loadMarketData();
+    const interval = setInterval(loadMarketData, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
-  // Helper function to get default prices for fallback
-  const getDefaultPrice = (symbol: string): number => {
-    const defaults: { [key: string]: number } = {
-      BTCUSD: 45000,
-      ETHUSD: 3000,
-      EURUSD: 1.08,
-      GBPUSD: 1.26,
-      USDJPY: 150,
-      GOLD: 2000
-    };
-    return defaults[symbol] || 0;
-  };
-
-  // AI INSIGHTS FETCHING
+  // Load AI insights
   useEffect(() => {
-    const fetchAIInsights = async () => {
-      if (!aiService) return;
-      
+    const loadAIInsights = async () => {
       try {
-        setAiLoading(true);
-        
-        // Check AI service health
-        const aiHealth = await aiService.healthCheck();
-        const hasWorkingAI = Object.values(aiHealth).some(status => status);
-        
-        if (hasWorkingAI) {
-          // Prepare market data for AI analysis
-          const marketDataForAI = {
-            forex: Object.entries(realTimeData).map(([symbol, data]) => ({
-              symbol,
-              price: data.price,
-              change: data.change,
-              changePercent: data.changePercent
-            })),
-            crypto: [
-              { symbol: 'BTC', price: realTimeData.BTCUSD.price, change: realTimeData.BTCUSD.changePercent },
-              { symbol: 'ETH', price: realTimeData.ETHUSD.price, change: realTimeData.ETHUSD.changePercent }
-            ],
-            stocks: [],
+        const insights = await realDataService.getAIMarketAnalysis({
+          forex: liveMarketData.filter(item => !item.symbol?.includes('/')),
+          crypto: liveMarketData.filter(item => item.symbol?.includes('/')),
             news: []
-          };
+        });
 
-          // Get AI market analysis
-          const analysis = await aiService.getMarketAnalysis({
-            marketData: marketDataForAI,
-            analysisType: 'recommendation'
-          });
-
-          const insights = [
-            {
-              id: 1,
-              type: 'recommendation',
-              title: 'Market Sentiment Analysis',
-              content: analysis.analysis || 'Market showing mixed signals with moderate volatility',
-              confidence: analysis.confidence || 75,
-              timestamp: new Date().toISOString(),
-              priority: 'high'
-            },
-            {
-              id: 2,
-              type: 'warning',
-              title: 'Risk Alert',
-              content: `Current portfolio risk level: ${riskMetrics.riskLevel}. Consider reducing position sizes in correlated pairs.`,
+        if (insights) {
+          setAiInsights([{
+            id: 'ai-1',
+            title: 'AI Market Analysis',
+            description: insights,
               confidence: 85,
-              timestamp: new Date().toISOString(),
-              priority: 'medium'
-            },
-            {
-              id: 3,
-              type: 'insight',
-              title: 'Performance Optimization',
-              content: `Your win rate is highest during London session (73%). Consider increasing position sizes during 8-10 AM GMT.`,
-              confidence: 92,
-              timestamp: new Date().toISOString(),
-              priority: 'high'
-            }
-          ];
-
-          setAiInsights(insights);
-          console.log('AI Insights updated:', insights);
+            type: 'trend'
+          }]);
         }
       } catch (error) {
-        console.error('Error fetching AI insights:', error);
-      } finally {
-        setAiLoading(false);
+        console.error('Failed to load AI insights:', error);
       }
     };
 
-    fetchAIInsights();
-    const aiInterval = setInterval(fetchAIInsights, 120000); // Update every 2 minutes
-
-    return () => clearInterval(aiInterval);
-  }, [aiService, realTimeData]);
-
-  // Convert real-time data to watchlist format with LIVE DATA
-  const watchlist = [
-    {
-      symbol: 'BTC/USD',
-      price: realTimeData.BTCUSD.price,
-      change: realTimeData.BTCUSD.change,
-      changePercent: realTimeData.BTCUSD.changePercent,
-      status: realTimeData.BTCUSD.status,
-      volume: '2.4B'
-    },
-    {
-      symbol: 'ETH/USD',
-      price: realTimeData.ETHUSD.price,
-      change: realTimeData.ETHUSD.change,
-      changePercent: realTimeData.ETHUSD.changePercent,
-      status: realTimeData.ETHUSD.status,
-      volume: '1.1B'
-    },
-    {
-      symbol: 'EUR/USD',
-      price: realTimeData.EURUSD.price,
-      change: realTimeData.EURUSD.change,
-      changePercent: realTimeData.EURUSD.changePercent,
-      status: realTimeData.EURUSD.status,
-      volume: '5.2B'
-    },
-    {
-      symbol: 'GBP/USD',
-      price: realTimeData.GBPUSD.price,
-      change: realTimeData.GBPUSD.change,
-      changePercent: realTimeData.GBPUSD.changePercent,
-      status: realTimeData.GBPUSD.status,
-      volume: '3.8B'
-    },
-    {
-      symbol: 'USD/JPY',
-      price: realTimeData.USDJPY.price,
-      change: realTimeData.USDJPY.change,
-      changePercent: realTimeData.USDJPY.changePercent,
-      status: realTimeData.USDJPY.status,
-      volume: '4.1B'
-    },
-    {
-      symbol: 'XAU/USD',
-      price: realTimeData.GOLD.price,
-      change: realTimeData.GOLD.change,
-      changePercent: realTimeData.GOLD.changePercent,
-      status: realTimeData.GOLD.status,
-      volume: '892M'
+    if (liveMarketData.length > 0) {
+      loadAIInsights();
     }
-  ];
+  }, [liveMarketData]);
 
-  // REAL RECENT TRADES from user's actual trade history
-  const recentTrades = useMemo(() => {
-    // Get the most recent 3 trades from user's actual trade history
-    const sortedTrades = [...trades]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3);
-    
-    return sortedTrades.map(trade => ({
-      id: trade.id,
-      symbol: trade.symbol,
-      type: trade.type?.toUpperCase() || 'BUY',
-      qty: trade.quantity || 0,
-      price: trade.entryPrice || 0,
-      time: formatTimeAgo(new Date(trade.createdAt)),
-      status: trade.status === 'open' ? 'open' : 'filled',
-      pnl: trade.profitLoss || 0
-    }));
-  }, [trades]);
-
-  // Helper function to format time ago
-  const formatTimeAgo = (date: Date): string => {
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInHours / 24);
-    
-    if (diffInDays > 0) {
-      return `${diffInDays}d ago`;
-    } else if (diffInHours > 0) {
-      return `${diffInHours}h ago`;
-    } else {
-      return 'Just now';
-    }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      // Force refresh all data
-      const healthCheck = await realDataService.healthCheck();
-      console.log('Manual refresh - API Health:', healthCheck);
+  const filteredTrades = useMemo(() => {
+    return trades.filter(trade => {
+      const matchesSymbol = !filterSymbol || trade.symbol.toLowerCase().includes(filterSymbol.toLowerCase());
+      const matchesStrategy = !filterStrategy || trade.strategy.some(s => s.toLowerCase().includes(filterStrategy.toLowerCase()));
       
-      // Re-trigger data fetch
-      window.location.reload(); // Simple but effective
-    } catch (error) {
-      console.error('Refresh failed:', error);
-    } finally {
-      setRefreshing(false);
+      let matchesDate = true;
+      if (filterDateRange !== 'all') {
+        const now = new Date();
+        const tradeDate = new Date(trade.timestamp);
+        const diffDays = Math.floor((now.getTime() - tradeDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        switch (filterDateRange) {
+          case 'today':
+            matchesDate = diffDays === 0;
+            break;
+          case 'week':
+            matchesDate = diffDays <= 7;
+            break;
+          case 'month':
+            matchesDate = diffDays <= 30;
+            break;
+        }
+      }
+      
+      return matchesSymbol && matchesStrategy && matchesDate;
+    });
+  }, [trades, filterSymbol, filterStrategy, filterDateRange]);
+
+  const handleAddTrade = () => {
+    toast.success('Opening trade builder...');
+    // Navigate to trade builder
+    window.location.href = '/trade-builder';
+  };
+
+  const handleConnectBroker = () => {
+    toast.success('Opening broker connection...');
+    // Navigate to broker connection
+    window.location.href = '/connect-mt4';
+  };
+
+  const handleViewAnalytics = () => {
+    setActiveTab('analytics');
+  };
+
+  const handleTogglePaperTrading = () => {
+    setIsPaperTrading(!isPaperTrading);
+    toast.success(`Paper trading ${!isPaperTrading ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleToggleBalance = () => {
+    setShowBalance(!showBalance);
+  };
+
+  const getDirectionIcon = (direction: string) => {
+    return direction === 'buy' ? 
+      <ArrowUpRightIcon className="w-4 h-4 text-green-400" /> : 
+      <ArrowDownRightIcon className="w-4 h-4 text-red-400" />;
+  };
+
+  const getPnLColor = (pnl: number) => {
+    return pnl > 0 ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-slate-400';
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return 'text-yellow-400 bg-yellow-500/20';
+      case 'closed': return 'text-green-400 bg-green-500/20';
+      case 'pending': return 'text-blue-400 bg-blue-500/20';
+      default: return 'text-slate-400 bg-slate-500/20';
     }
   };
+
+  if (isLoading) {
+  return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+        <div className="animate-pulse space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-20 bg-slate-800/50 rounded-lg" />
+          ))}
+                </div>
+                </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0A0B0D] text-white" data-testid="ultra-trader-dashboard">
-      {/* Header Section */}
-      <div className="sticky top-0 z-40 bg-[#0A0B0D]/95 backdrop-blur-xl border-b border-[#1A1B1E]">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <TrendingUpIcon className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-white" data-testid="dashboard-title">Quantum Risk Coach</h1>
-                  <p className="text-xs text-slate-400">Next-Gen Trading Intelligence</p>
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header with Portfolio Stats */}
+      <div className="p-4 pb-2">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
+              <TrophyIcon className="w-6 h-6 text-white" />
               </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">UltraTrader</h1>
+              <p className="text-sm text-slate-400">Professional Trading Dashboard</p>
             </div>
-            
-            <div className="flex items-center gap-2">
+          </div>
+          <div className="flex items-center space-x-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setBalanceVisible(!balanceVisible)}
+              onClick={handleToggleBalance}
                 className="text-slate-400 hover:text-white"
-                data-testid="toggle-balance-visibility"
               >
-                {balanceVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showBalance ? <EyeIcon className="w-4 h-4" /> : <EyeOffIcon className="w-4 h-4" />}
               </Button>
-              
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/settings')}
-                className="text-slate-400 hover:text-white"
-                data-testid="settings-button"
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/journal')}
-                className="text-slate-400 hover:text-white"
-                data-testid="journal-button"
-              >
-                <BookOpen className="w-4 h-4" />
+              onClick={handleTogglePaperTrading}
+              className={`${isPaperTrading ? 'text-green-400' : 'text-slate-400'} hover:text-white`}
+            >
+              {isPaperTrading ? <PlayIcon className="w-4 h-4" /> : <PauseIcon className="w-4 h-4" />}
               </Button>
             </div>
           </div>
+
+        {/* Portfolio Overview Card */}
+        <Card className="bg-gradient-to-r from-slate-800/80 to-purple-800/80 border-purple-500/30 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm text-slate-400">Total Balance</p>
+                <p className="text-2xl font-bold text-white">
+                  {showBalance ? `$${portfolioStats.totalBalance.toLocaleString()}` : '****'}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-slate-400">Net P&L</p>
+                <p className={`text-xl font-bold ${getPnLColor(portfolioStats.netPnL)}`}>
+                  {portfolioStats.netPnL > 0 ? '+' : ''}${portfolioStats.netPnL.toFixed(2)}
+                </p>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="px-4 py-6 space-y-6">
-        {/* Welcome Message for New Users */}
-        {trades.length === 0 && (
-          <Card className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border-blue-500/20">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-blue-400" />
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="text-center">
+                <p className="text-slate-400">Win Rate</p>
+                <p className="text-white font-semibold">{portfolioStats.winRate.toFixed(1)}%</p>
                   </div>
+              <div className="text-center">
+                <p className="text-slate-400">Trades</p>
+                <p className="text-white font-semibold">{portfolioStats.totalTrades}</p>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">Welcome to Quantum Risk Coach! 🚀</h3>
-                  <p className="text-slate-300 mb-4">
-                    You're all set up! Start your trading journey by taking your first trade. The dashboard will show your real performance data, personalized challenges, and AI insights based on your actual trading patterns.
-                  </p>
-                  <div className="flex gap-3">
+              <div className="text-center">
+                <p className="text-slate-400">Streak</p>
+                <p className="text-white font-semibold">{portfolioStats.currentStreak}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Action Buttons */}
+        <div className="flex space-x-2 mt-4">
                     <Button
-                      onClick={() => navigate('/trade-builder')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={handleAddTrade}
+            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Take First Trade
+            Add Trade
                     </Button>
                     <Button
+            onClick={handleConnectBroker}
                       variant="outline"
-                      onClick={() => navigate('/journal')}
-                      className="border-slate-600 text-slate-300 hover:bg-slate-800"
-                    >
-                      <BookOpen className="w-4 h-4 mr-2" />
-                      View Journal
+            className="flex-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+          >
+            <Database className="w-4 h-4 mr-2" />
+            Connect
+          </Button>
+          <Button 
+            onClick={handleViewAnalytics}
+            variant="outline"
+            className="flex-1 border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Analytics
                     </Button>
                   </div>
                 </div>
+
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
+        <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border-slate-600/30">
+          <TabsTrigger value="home" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400">
+            <HomeIcon className="w-4 h-4 mr-1" />
+            Home
+          </TabsTrigger>
+          <TabsTrigger value="journal" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400">
+            <BookOpen className="w-4 h-4 mr-1" />
+            Journal
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">
+            <BarChart3 className="w-4 h-4 mr-1" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+            <Settings className="w-4 h-4 mr-1" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Home Tab */}
+        <TabsContent value="home" className="space-y-4 mt-4">
+          {/* Live Market Data */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <Activity className="w-5 h-5 mr-2 text-green-400" />
+                Live Market Data
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {liveMarketData.map((item, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-white" />
               </div>
+                    <div>
+                      <p className="text-white font-medium">{item.symbol || 'EUR/USD'}</p>
+                      <p className="text-sm text-slate-400">{item.rate || '1.1000'}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-semibold ${(item.change_24h || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {(item.change_24h || 0) > 0 ? '+' : ''}{(item.change_24h || 0).toFixed(2)}%
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* AI Insights */}
+          {aiInsights.length > 0 && (
+            <Card className="bg-slate-800/50 border-slate-600/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center">
+                  <Brain className="w-5 h-5 mr-2 text-purple-400" />
+                  AI Market Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {aiInsights.map((insight) => (
+                  <div key={insight.id} className="p-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-500/20">
+                    <h4 className="text-white font-medium mb-2">{insight.title}</h4>
+                    <p className="text-sm text-slate-300 mb-2">{insight.description}</p>
+                    <div className="flex items-center justify-between">
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                        {insight.confidence}% confidence
+                      </Badge>
+                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                        {insight.type}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
             </CardContent>
           </Card>
         )}
 
-        {/* Portfolio Balance Card - UltraTrader Style */}
-        <Card className="bg-gradient-to-br from-[#1A1B1E] to-[#151619] border-[#2A2B2E] shadow-xl rounded-2xl">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-blue-400" />
-                <span className="text-sm font-medium text-slate-300">Portfolio Balance</span>
+          {/* Recent Performance */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-blue-400" />
+                Recent Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-slate-700/30 rounded-lg">
+                  <p className="text-slate-400 text-sm">Avg Win</p>
+                  <p className="text-green-400 font-semibold">${portfolioStats.avgWin.toFixed(2)}</p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setBalanceVisible(!balanceVisible)}
-                className="h-8 w-8 p-0 text-slate-400 hover:text-white"
-              >
-                {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              </Button>
+                <div className="text-center p-3 bg-slate-700/30 rounded-lg">
+                  <p className="text-slate-400 text-sm">Avg Loss</p>
+                  <p className="text-red-400 font-semibold">${portfolioStats.avgLoss.toFixed(2)}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-slate-700/30 rounded-lg">
+                  <p className="text-slate-400 text-sm">Largest Win</p>
+                  <p className="text-green-400 font-semibold">${portfolioStats.largestWin.toFixed(2)}</p>
+                </div>
+                <div className="text-center p-3 bg-slate-700/30 rounded-lg">
+                  <p className="text-slate-400 text-sm">Largest Loss</p>
+                  <p className="text-red-400 font-semibold">${portfolioStats.largestLoss.toFixed(2)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Journal Tab */}
+        <TabsContent value="journal" className="space-y-4 mt-4">
+          {/* Filter Bar */}
+          <div className="flex space-x-2 mb-4">
+            <select 
+              value={filterDateRange}
+              onChange={(e) => setFilterDateRange(e.target.value)}
+              className="flex-1 bg-slate-800/50 border border-slate-600/30 rounded-lg px-3 py-2 text-white text-sm"
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Symbol..."
+              value={filterSymbol}
+              onChange={(e) => setFilterSymbol(e.target.value)}
+              className="flex-1 bg-slate-800/50 border border-slate-600/30 rounded-lg px-3 py-2 text-white text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Strategy..."
+              value={filterStrategy}
+              onChange={(e) => setFilterStrategy(e.target.value)}
+              className="flex-1 bg-slate-800/50 border border-slate-600/30 rounded-lg px-3 py-2 text-white text-sm"
+            />
             </div>
             
+          {/* Trades List */}
             <div className="space-y-3">
-              <div>
-                <div className="text-3xl font-bold text-white mb-1">
-                  {balanceVisible ? `$${portfolioData.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
+            {filteredTrades.map((trade) => (
+              <Card key={trade.id} className="bg-slate-800/50 border-slate-600/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                        {getDirectionIcon(trade.direction)}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-full",
-                    portfolioData.todayPnL >= 0 
-                      ? "bg-green-500/10 text-green-400" 
-                      : "bg-red-500/10 text-red-400"
-                  )}>
-                    {portfolioData.todayPnL >= 0 ? (
-                      <TrendingUp className="w-3 h-3" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3" />
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-white font-medium">{trade.symbol}</p>
+                          {trade.isPaper && (
+                            <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">
+                              Paper
+                            </Badge>
+                          )}
+                          <Badge className={getStatusColor(trade.status)}>
+                            {trade.status}
+                          </Badge>
+                  </div>
+                        <p className="text-sm text-slate-400">{trade.broker}</p>
+                </div>
+              </div>
+                    <div className="text-right">
+                      {trade.pnl !== undefined && (
+                        <p className={`font-semibold ${getPnLColor(trade.pnl)}`}>
+                          {trade.pnl > 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+                        </p>
+                      )}
+                      <p className="text-sm text-slate-400">
+                        {trade.timestamp.toLocaleDateString()}
+                      </p>
+                  </div>
+                </div>
+
+                  <div className="grid grid-cols-3 gap-4 text-sm mb-3">
+                    <div>
+                      <p className="text-slate-400">Entry</p>
+                      <p className="text-white">${trade.entryPrice.toFixed(4)}</p>
+                  </div>
+                    {trade.exitPrice && (
+                      <div>
+                        <p className="text-slate-400">Exit</p>
+                        <p className="text-white">${trade.exitPrice.toFixed(4)}</p>
+                </div>
                     )}
-                    {balanceVisible ? `$${Math.abs(portfolioData.todayPnL).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••'}
-                    <span className="text-xs">
-                      ({portfolioData.todayPnL >= 0 ? '+' : ''}{portfolioData.todayPnLPercent}%)
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400">Today</span>
+                    <div>
+                      <p className="text-slate-400">Volume</p>
+                      <p className="text-white">{trade.volume}</p>
                 </div>
               </div>
 
-              {/* Enhanced Stats Grid - UltraTrader v5.5.1 Style */}
-              <div className="grid grid-cols-3 gap-4 pt-3 border-t border-[#2A2B2E]">
-                <div className="text-center">
-                  <div className="text-xs text-slate-400 mb-1">Realized P&L</div>
-                  <div className={cn(
-                    "text-sm font-semibold",
-                    portfolioData.realizedPnL >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {balanceVisible ? (
-                      <>
-                        {portfolioData.realizedPnL >= 0 ? '+' : ''}
-                        ${Math.abs(portfolioData.realizedPnL).toFixed(2)}
-                      </>
-                    ) : '••••'}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs text-slate-400 mb-1">Unrealized P&L</div>
-                  <div className={cn(
-                    "text-sm font-semibold",
-                    portfolioData.unrealizedPnL >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {balanceVisible ? (
-                      <>
-                        {portfolioData.unrealizedPnL >= 0 ? '+' : ''}
-                        ${Math.abs(portfolioData.unrealizedPnL).toFixed(2)}
-                      </>
-                    ) : '••••'}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs text-slate-400 mb-1">Total Fees</div>
-                  <div className="text-sm font-semibold text-orange-400">
-                    {balanceVisible ? `-$${portfolioData.totalFees.toFixed(2)}` : '••••'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Balance Chart - New in UltraTrader v5.5.1 */}
-              <div className="pt-3 border-t border-[#2A2B2E]">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs text-slate-400">Balance Chart</div>
-                  <div className="flex gap-1">
-                    {['1D', '1W', '1M', '3M'].map((period) => (
-                      <Button
-                        key={period}
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "h-6 px-2 text-xs",
-                          selectedTimeframe === period 
-                            ? "text-blue-400 bg-blue-500/10" 
-                            : "text-slate-400 hover:text-white"
-                        )}
-                        onClick={() => setSelectedTimeframe(period)}
-                      >
-                        {period}
-                      </Button>
+                  {trade.strategy.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {trade.strategy.map((strategy, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {strategy}
+                        </Badge>
                     ))}
                   </div>
+                  )}
+
+                  {trade.notes && (
+                    <p className="text-sm text-slate-300">{trade.notes}</p>
+                  )}
+
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-600/30">
+                                        <div className="flex space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-slate-400 hover:text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toast.info(`Editing trade ${trade.symbol}...`);
+                          // In a real app, this would open an edit dialog
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-400 hover:text-red-300"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Are you sure you want to delete this ${trade.symbol} trade?`)) {
+                            toast.success(`Trade ${trade.symbol} deleted`);
+                            // In a real app, this would delete from local storage
+                            setTrades(prev => prev.filter(t => t.id !== trade.id));
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center space-x-2 text-xs text-slate-400">
+                      <Clock className="w-3 h-3" />
+                      <span>{trade.duration || 'N/A'}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+            ))}
+        </div>
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-4 mt-4">
+          {/* Win/Loss Ratio */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+          <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <PieChart className="w-5 h-5 mr-2 text-green-400" />
+                Win/Loss Ratio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-white">{portfolioStats.winRate.toFixed(1)}%</div>
+                  <div className="text-sm text-slate-400">Win Rate</div>
+              </div>
+            </div>
+            </CardContent>
+          </Card>
+
+          {/* Performance Metrics */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2 text-blue-400" />
+                Performance Metrics
+              </CardTitle>
+          </CardHeader>
+            <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-slate-700/30 rounded-lg">
+                  <p className="text-slate-400 text-sm">Total Trades</p>
+                  <p className="text-white font-semibold text-lg">{portfolioStats.totalTrades}</p>
                 </div>
-                
-                {/* Mini Chart */}
-                <div className="h-16 bg-[#0A0B0D] rounded-lg p-2 flex items-end space-x-1">
-                  {portfolioData.balanceHistory.map((value, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        "flex-1 rounded-sm min-h-[2px] transition-all duration-300",
-                        value >= 0 ? "bg-green-400/60" : "bg-red-400/60"
-                      )}
-                      style={{ 
-                        height: `${Math.abs(value) * 20 + 2}px`,
-                        maxHeight: '44px'
-                      }}
-                    />
-                  ))}
+                <div className="text-center p-3 bg-slate-700/30 rounded-lg">
+                  <p className="text-slate-400 text-sm">Best Streak</p>
+                  <p className="text-green-400 font-semibold text-lg">{portfolioStats.bestStreak}</p>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-slate-700/30 rounded-lg">
+                  <p className="text-slate-400 text-sm">Current Streak</p>
+                  <p className="text-blue-400 font-semibold text-lg">{portfolioStats.currentStreak}</p>
+                </div>
+                <div className="text-center p-3 bg-slate-700/30 rounded-lg">
+                  <p className="text-slate-400 text-sm">Net P&L</p>
+                  <p className={`font-semibold text-lg ${getPnLColor(portfolioStats.netPnL)}`}>
+                    ${portfolioStats.netPnL.toFixed(2)}
+                  </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Actions - UltraTrader Style */}
-        <div className="grid grid-cols-5 gap-2 sm:gap-3">
-          <Button
-            onClick={() => navigate('/trade-builder')}
-            className="h-16 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl flex-col gap-1 shadow-lg shadow-blue-600/20 touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
-            size="lg"
-            aria-label="Open Trade Builder"
+          {/* Asset Distribution */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+          <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <Globe className="w-5 h-5 mr-2 text-purple-400" />
+                Asset Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Object.entries(portfolioStats.assetDistribution).map(([symbol, volume]) => (
+                <div key={symbol} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                  <span className="text-white font-medium">{symbol}</span>
+                  <span className="text-slate-400">{volume.toFixed(2)}</span>
+            </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Behavioral Insights */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <Brain className="w-5 h-5 mr-2 text-yellow-400" />
+                Behavioral Insights
+              </CardTitle>
+          </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg border border-yellow-500/20">
+                <div className="flex items-center space-x-2 mb-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                  <span className="text-white font-medium">Overtrading Alert</span>
+                  </div>
+                <p className="text-sm text-slate-300">You've made 15 trades this week. Consider reducing frequency.</p>
+                  </div>
+              <div className="p-3 bg-gradient-to-r from-red-500/10 to-pink-500/10 rounded-lg border border-red-500/20">
+                <div className="flex items-center space-x-2 mb-2">
+                  <TrendingDown className="w-4 h-4 text-red-400" />
+                  <span className="text-white font-medium">Revenge Trading Detected</span>
+                </div>
+                <p className="text-sm text-slate-300">Recent losses may be affecting your decision-making.</p>
+                  </div>
+              <div className="p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Target className="w-4 h-4 text-green-400" />
+                  <span className="text-white font-medium">Strategy Effectiveness</span>
+                  </div>
+                <p className="text-sm text-slate-300">Breakout strategy showing 75% success rate.</p>
+                </div>
+          </CardContent>
+        </Card>
+
+          {/* Performance Heatmap */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+          <CardHeader className="pb-3">
+                              <CardTitle className="text-white flex items-center">
+                  <BarChart3 className="w-5 h-5 mr-2 text-purple-400" />
+                  Performance Heatmap
+                </CardTitle>
+          </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: 35 }, (_, i) => {
+                  const performance = Math.random() * 100;
+                  const color = performance > 70 ? 'bg-green-500' : performance > 40 ? 'bg-yellow-500' : 'bg-red-500';
+                  return (
+                    <div
+                      key={i}
+                      className={`w-8 h-8 ${color} rounded opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
+                      title={`Day ${i + 1}: ${performance.toFixed(0)}% performance`}
+                    />
+                  );
+                })}
+                </div>
+              <div className="flex items-center justify-between mt-3 text-xs text-slate-400">
+                <span>Poor</span>
+                <span>Average</span>
+                <span>Excellent</span>
+                  </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-4 mt-4">
+          {/* Profile Settings */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <Users className="w-5 h-5 mr-2 text-blue-400" />
+                Profile Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold">U</span>
+                  </div>
+                <div>
+                  <p className="text-white font-medium">UltraTrader</p>
+                  <p className="text-sm text-slate-400">Professional Trader</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Button 
+                  variant="outline" 
+                  className="border-slate-600/30 text-slate-400"
+                  onClick={() => {
+                    toast.info('Opening profile editor...');
+                    window.location.href = '/settings';
+                  }}
+                >
+                  Edit Profile
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-slate-600/30 text-slate-400"
+                  onClick={() => {
+                    toast.info('Opening avatar selector...');
+                    // In a real app, this would open an avatar picker
+                  }}
+                >
+                  Change Avatar
+                </Button>
+              </div>
+          </CardContent>
+        </Card>
+
+          {/* Trading Settings */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+          <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <Target className="w-5 h-5 mr-2 text-green-400" />
+                Trading Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white font-medium">Paper Trading</p>
+                  <p className="text-sm text-slate-400">Practice with virtual money</p>
+                </div>
+              <Button
+                  variant={isPaperTrading ? "default" : "outline"}
+                size="sm"
+                  onClick={handleTogglePaperTrading}
+                  className={isPaperTrading ? "bg-green-500 hover:bg-green-600" : ""}
+              >
+                  {isPaperTrading ? "Enabled" : "Disabled"}
+              </Button>
+            </div>
+              <div className="flex items-center justify-between">
+                  <div>
+                  <p className="text-white font-medium">Auto Sync</p>
+                  <p className="text-sm text-slate-400">Sync trades automatically</p>
+                  </div>
+                <Button variant="outline" size="sm">
+                  Enabled
+                </Button>
+                </div>
+          </CardContent>
+        </Card>
+
+          {/* Export Options */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <Download className="w-5 h-5 mr-2 text-yellow-400" />
+                Export Data
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                variant="outline" 
+                className="w-full border-slate-600/30 text-slate-400"
+                onClick={() => {
+                  toast.success('Exporting trades as CSV...');
+                  window.location.href = '/journal/export?format=csv';
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export as CSV
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full border-slate-600/30 text-slate-400"
+                onClick={() => {
+                  toast.success('Exporting trades as PDF...');
+                  window.location.href = '/journal/export?format=pdf';
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export as PDF
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Notifications */}
+          <Card className="bg-slate-800/50 border-slate-600/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center">
+                <Bell className="w-5 h-5 mr-2 text-red-400" />
+                Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white font-medium">Push Notifications</p>
+                  <p className="text-sm text-slate-400">Get alerts for trades</p>
+        </div>
+                <Button variant="outline" size="sm">
+                  Enabled
+                </Button>
+        </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white font-medium">Weekly Summary</p>
+                  <p className="text-sm text-slate-400">Performance reports</p>
+        </div>
+                <Button variant="outline" size="sm">
+                  Enabled
+                </Button>
+        </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-sm border-t border-slate-700/50 p-2">
+        <div className="flex justify-around">
+          <button
+            onClick={() => setActiveTab('home')}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === 'home' ? 'text-purple-400 bg-purple-500/20' : 'text-slate-400'
+            }`}
           >
-            <Plus className="w-5 h-5" />
-            <span className="text-xs font-medium">Buy</span>
-          </Button>
-          <Button
-            onClick={() => navigate('/journal')}
-            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] active:bg-[#3A3B3E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E] touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
-            size="lg"
-            aria-label="Open Trading Journal"
+            <Home className="w-5 h-5" />
+            <span className="text-xs">Home</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('journal')}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === 'journal' ? 'text-blue-400 bg-blue-500/20' : 'text-slate-400'
+            }`}
           >
             <BookOpen className="w-5 h-5" />
-            <span className="text-xs font-medium">Journal</span>
-          </Button>
-          <Button
-            onClick={() => navigate('/performance-calendar')}
-            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] active:bg-[#3A3B3E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E] touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
-            size="lg"
-            aria-label="Open Performance Analytics"
+            <span className="text-xs">Journal</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === 'analytics' ? 'text-green-400 bg-green-500/20' : 'text-slate-400'
+            }`}
           >
             <BarChart3 className="w-5 h-5" />
-            <span className="text-xs font-medium">Analytics</span>
-          </Button>
-          <Button
-            onClick={() => navigate('/strategy-analyzer')}
-            className="h-16 bg-[#1A1B1E] hover:bg-[#2A2B2E] active:bg-[#3A3B3E] text-white rounded-xl flex-col gap-1 border border-[#2A2B2E] touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
-            size="lg"
-            aria-label="Open Strategy Analyzer"
+            <span className="text-xs">Analytics</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === 'settings' ? 'text-yellow-400 bg-yellow-500/20' : 'text-slate-400'
+            }`}
           >
-            <Target className="w-5 h-5" />
-            <span className="text-xs font-medium">Strategy</span>
-          </Button>
-          <Button
-            onClick={() => navigate('/mt4mt5-sync')}
-            className="h-16 bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 active:from-cyan-700 active:to-blue-800 text-white rounded-xl flex-col gap-1 shadow-lg shadow-cyan-500/20 touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
-            size="lg"
-            aria-label="Open MT4/MT5 Auto-Sync"
-          >
-            <Wifi className="w-5 h-5" />
-            <span className="text-xs font-medium">Auto-Sync</span>
-          </Button>
+            <Settings className="w-5 h-5" />
+            <span className="text-xs">Settings</span>
+          </button>
+        </div>
         </div>
 
-        {/* Performance Stats - UltraTrader Layout */}
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-white">Performance</CardTitle>
-              <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-3 text-xs text-slate-400 hover:text-white touch-manipulation active:scale-95 min-h-[32px] min-w-[40px]"
-                  onClick={() => setSelectedTimeframe('1D')}
-                  aria-label="View 1 day performance"
-                >
-                  1D
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-3 text-xs text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 touch-manipulation active:scale-95 min-h-[32px] min-w-[40px]"
-                  onClick={() => setSelectedTimeframe('1W')}
-                  aria-label="View 1 week performance"
-                >
-                  1W
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-3 text-xs text-slate-400 hover:text-white touch-manipulation active:scale-95 min-h-[32px] min-w-[40px]"
-                  onClick={() => setSelectedTimeframe('1M')}
-                  aria-label="View 1 month performance"
-                >
-                  1M
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="text-xs text-slate-400">Total P&L</div>
-                <div className={cn(
-                  "text-lg font-bold",
-                  portfolioData.totalPnL >= 0 ? "text-green-400" : "text-red-400"
-                )}>
-                  {portfolioData.totalPnL >= 0 ? '+' : ''}${portfolioData.totalPnL.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </div>
-                <div className="text-xs text-slate-400">
-                  {portfolioData.totalPnLPercent >= 0 ? '+' : ''}{portfolioData.totalPnLPercent}%
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="text-xs text-slate-400">Win Rate</div>
-                <div className="text-lg font-bold text-white">68.5%</div>
-                <Progress value={68.5} className="h-1 bg-[#2A2B2E]" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Positions - UltraTrader Style */}
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-white">Positions</CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/journal')}
-                className="text-xs text-blue-400 hover:text-blue-300 touch-manipulation active:scale-95 transition-all duration-150"
-                aria-label="View all positions"
-              >
-                View All
-                <ChevronRight className="w-3 h-3 ml-1" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            {positions.slice(0, 3).map((position) => (
-              <div key={position.symbol} className="flex items-center justify-between p-3 bg-[#151619] rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">{position.symbol.substring(0, 2)}</span>
-                  </div>
-                  <div>
-                    <div className="font-medium text-white text-sm">{position.symbol}</div>
-                    <div className="text-xs text-slate-400">{position.qty} shares</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={cn(
-                    "font-medium text-sm",
-                    position.pnl >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {position.pnl >= 0 ? '+' : ''}${Math.abs(position.pnl).toFixed(2)}
-                  </div>
-                  <div className={cn(
-                    "text-xs",
-                    position.pnlPercent >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {position.pnlPercent >= 0 ? '+' : ''}{position.pnlPercent}%
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Watchlist - UltraTrader Style */}
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-white">Watchlist</CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-blue-400 hover:text-blue-300 touch-manipulation active:scale-95 transition-all duration-150"
-                aria-label="Edit watchlist"
-              >
-                Edit
-                <Settings className="w-3 h-3 ml-1" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            {watchlist.map((item) => (
-              <div key={item.symbol} className="flex items-center justify-between p-3 bg-[#151619] rounded-lg">
-                <div>
-                  <div className="font-medium text-white text-sm">{item.symbol}</div>
-                  <div className="text-xs text-slate-400">${item.price.toFixed(item.symbol.includes('/') ? 4 : 2)}</div>
-                </div>
-                <div className="text-right">
-                  <div className={cn(
-                    "text-sm font-medium",
-                    item.change >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {item.change >= 0 ? '+' : ''}${Math.abs(item.change).toFixed(2)}
-                  </div>
-                  <div className={cn(
-                    "text-xs",
-                    item.changePercent >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {item.changePercent >= 0 ? '+' : ''}{item.changePercent}%
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity - UltraTrader Style */}
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-white">Recent Activity</CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/journal')}
-                className="text-xs text-blue-400 hover:text-blue-300"
-              >
-                View All
-                <ChevronRight className="w-3 h-3 ml-1" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            {recentTrades.map((trade) => (
-              <div key={trade.id} className="flex items-center justify-between p-3 bg-[#151619] rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold",
-                    trade.type === 'BUY' 
-                      ? "bg-green-500/20 text-green-400" 
-                      : "bg-red-500/20 text-red-400"
-                  )}>
-                    {trade.type === 'BUY' ? 'B' : 'S'}
-                  </div>
-                  <div>
-                    <div className="font-medium text-white text-sm">{trade.symbol}</div>
-                    <div className="text-xs text-slate-400">{trade.qty} @ ${trade.price}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-slate-400">{trade.time}</div>
-                  <Badge variant="outline" className="text-xs mt-1 bg-green-500/10 text-green-400 border-green-500/20">
-                    {trade.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Bottom Spacing for Mobile Navigation */}
-        <div className="h-24"></div>
-
-        {/* Add Personal Challenges Section */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Target className="w-5 h-5 text-purple-400" />
-            AI-Generated Challenges
-          </h2>
-          <PersonalChallenges />
-        </div>
-
-        {/* Add AI Coach Section */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Brain className="w-5 h-5 text-blue-400" />
-            AI Coaching Insights
-          </h2>
-          <AICoachCard />
-        </div>
-
-        {/* Live Trade Monitor Integration */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-green-400" />
-            Live Trade Monitor
-          </h2>
-          <LiveTradeMonitor />
-        </div>
-
-        {/* Market Sessions Integration */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Globe className="w-5 h-5 text-orange-400" />
-            Market Sessions
-          </h2>
-          <MarketSessionDashboard />
-        </div>
-
-        {/* Add Risk Analysis Section */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-red-400" />
-            Risk Analysis Engine
-          </h2>
-          <RiskAnalyzer />
-        </div>
-
-        {/* Add AIMarketInsights Section */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Brain className="w-5 h-5 text-purple-400" />
-            AI Market Insights
-          </h2>
-          <AIMarketInsights />
-        </div>
-
-        {/* Bottom Spacing for Mobile Navigation */}
-        <div className="h-24"></div>
-      </div>
+      {/* Bottom padding for navigation */}
+      <div className="h-20"></div>
     </div>
   );
 };
