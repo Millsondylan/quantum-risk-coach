@@ -2,6 +2,14 @@ import { test, expect, chromium } from '@playwright/test';
 
 const BASE = 'http://localhost:5173';
 
+// Helper function to authenticate a user
+const authenticateUser = async (page: any, name: string = 'Test User') => {
+  await page.goto(`${BASE}/auth`);
+  await page.fill('[data-testid="name-input"]', name);
+  await page.click('[data-testid="signup-button"]');
+  await page.waitForURL(`${BASE}/`); // Wait for redirect to home page
+};
+
 // Test 1-10: Basic App Loading
 test.describe('Basic App Loading', () => {
   test('app loads without errors', async ({ page }) => {
@@ -193,6 +201,7 @@ test.describe('Authentication', () => {
 
   test('sign in button exists', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
+    await page.click('[data-testid="signin-tab"]'); // Click on Sign In tab
     await expect(page.locator('button[type="submit"]:has-text("Sign In")')).toBeVisible();
   });
 
@@ -232,9 +241,14 @@ test.describe('Authentication', () => {
 
   test('form validation works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.click('button[type="submit"]:has-text("Sign In")');
-    // Should show validation error or handle empty form
-    await expect(page.locator('body')).toBeVisible();
+    await page.fill('[data-testid="name-input"]', ''); // Clear the name input
+    await expect(page.locator('[data-testid="name-input"]')).toHaveValue(''); // Assert that the input is empty
+    await page.click('[data-testid="signup-button"]');
+    
+    // Assert that the page remains on the auth URL
+    await expect(page).toHaveURL(/.*\/auth/);
+    // Assert that the signup button is not in a loading state after validation
+    await expect(page.locator('[data-testid="signup-button"]')).not.toHaveText('Loading...');
   });
 });
 
@@ -575,7 +589,9 @@ test.describe('Error Handling', () => {
   });
 
   test('404 page navigation works', async ({ page }) => {
+    await authenticateUser(page); // Ensure user is authenticated
     await page.goto(`${BASE}/invalid-route`);
+    await expect(page.locator('text=Page Not Found')).toBeVisible();
     await page.click('text=Return to Home');
     await expect(page).toHaveURL(`${BASE}/`);
   });

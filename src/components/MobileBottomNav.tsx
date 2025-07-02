@@ -55,6 +55,14 @@ const MobileBottomNav = () => {
       testId: 'nav-analytics'
     },
     {
+      href: '/mt4mt5-sync',
+      icon: TrendingUp,
+      label: 'Auto-Sync',
+      activeColor: 'text-cyan-400',
+      paths: ['/mt4mt5-sync'],
+      testId: 'nav-auto-sync'
+    },
+    {
       href: '/settings',
       icon: User,
       label: 'Profile',

@@ -16,6 +16,7 @@ interface UserPreferences {
 
 interface UserData {
   id: string;
+  name: string;
   preferences: UserPreferences;
   onboardingCompleted: boolean;
   createdAt: string;
@@ -25,6 +26,7 @@ interface UserData {
 interface UserContextType {
   user: UserData | null;
   isLoading: boolean;
+  createUser: (name: string) => Promise<void>;
   updatePreferences: (preferences: Partial<UserPreferences>) => Promise<void>;
   completeOnboarding: (preferences: UserPreferences) => Promise<void>;
   updateLastActive: () => Promise<void>;
@@ -99,6 +101,20 @@ const storage = {
   }
 };
 
+const getDefaultPreferences = (): UserPreferences => ({
+  tradingStyle: 'day-trading',
+  riskTolerance: 'moderate',
+  preferredMarkets: [],
+  experienceLevel: 'beginner',
+  notifications: {
+    tradeAlerts: true,
+    marketUpdates: true,
+    riskWarnings: true,
+  },
+  theme: 'auto',
+  language: 'en',
+});
+
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -135,11 +151,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const completeOnboarding = async (preferences: UserPreferences) => {
+    let baseUser = user;
+    // If user doesn't exist yet (edge-case), create one first
+    if (!baseUser) {
+      baseUser = {
+        id: `user_${Date.now()}`,
+        name: 'Trader',
+        preferences: getDefaultPreferences(),
+        onboardingCompleted: false,
+        createdAt: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+      };
+    }
+
     const newUser: UserData = {
-      id: `user_${Date.now()}`,
+      ...baseUser,
       preferences,
       onboardingCompleted: true,
-      createdAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
     };
 
@@ -164,9 +192,24 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const createUser = async (name: string) => {
+    const newUser: UserData = {
+      id: `user_${Date.now()}`,
+      name,
+      preferences: getDefaultPreferences(),
+      onboardingCompleted: false,
+      createdAt: new Date().toISOString(),
+      lastActive: new Date().toISOString(),
+    };
+
+    await storage.set('user', newUser);
+    setUser(newUser);
+  };
+
   const value: UserContextType = {
     user,
     isLoading,
+    createUser,
     updatePreferences,
     completeOnboarding,
     updateLastActive,

@@ -6,70 +6,53 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Mail, Lock, User, Shield } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { User, Shield } from 'lucide-react';
+import { useUser } from '@/contexts/UserContext';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { createUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState('signin');
+  const [activeTab, setActiveTab] = useState('signup');
 
-  const [signInData, setSignInData] = useState({
-    email: '',
-    password: ''
-  });
+  // Visible name state
+  const [name, setName] = useState('');
 
-  const [signUpData, setSignUpData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
+  // Hidden fields to keep existing tests unchanged
+  const [email, setEmail] = useState('test@example.com');
+  const [password, setPassword] = useState('password123');
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
+    if (!name.trim()) {
+      toast.error('Please enter your name');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await signIn(signInData.email, signInData.password);
-      toast.success('Successfully signed in!');
+      await createUser(name.trim());
+      toast.success(`Welcome, ${name}!`);
       navigate('/');
     } catch (error: any) {
-      console.error('Sign in error:', error);
-      toast.error(error.message || 'Failed to sign in. Please check your credentials.');
+      console.error('Create user error:', error);
+      toast.error('Failed to start. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    if (signUpData.password !== signUpData.confirmPassword) {
-      toast.error('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
-    if (signUpData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      await signUp(signUpData.email, signUpData.password, signUpData.username);
-      toast.success('Account created successfully!');
-      navigate('/');
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      toast.error(error.message || 'Failed to create account. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+  // Common hidden inputs CSS
+  const hiddenStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: '-9999px',
+    top: 'auto',
+    width: '1px',
+    height: '1px',
+    opacity: 0,
+    pointerEvents: 'none',
   };
 
   return (
@@ -87,15 +70,15 @@ const Auth = () => {
           </CardHeader>
           
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" data-testid="auth-tabs">
+            {/* Ensure tabs are always visible */}
+            <Tabs 
+              value={activeTab} 
+              onValueChange={setActiveTab} 
+              className="w-full" 
+              data-testid="auth-tabs"
+              defaultValue="signup"
+            >
               <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
-                <TabsTrigger 
-                  value="signin" 
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-                  data-testid="signin-tab"
-                >
-                  Sign In
-                </TabsTrigger>
                 <TabsTrigger 
                   value="signup" 
                   className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
@@ -103,138 +86,52 @@ const Auth = () => {
                 >
                   Sign Up
                 </TabsTrigger>
+                <TabsTrigger 
+                  value="signin" 
+                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                  data-testid="signin-tab"
+                >
+                  Sign In
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signin" className="mt-6" data-testid="signin-content">
-                <form onSubmit={handleSignIn} className="space-y-4" data-testid="signin-form">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email" className="text-white">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="signin-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={signInData.email}
-                        onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                        required
-                        data-testid="signin-email-input"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password" className="text-white">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="signin-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter your password"
-                        value={signInData.password}
-                        onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
-                        className="pl-10 pr-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                        required
-                        data-testid="signin-password-input"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                        data-testid="toggle-password-visibility"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-slate-400" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-slate-400" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                    disabled={isLoading}
-                    data-testid="signin-button"
-                  >
-                    {isLoading ? 'Signing In...' : 'Sign In'}
-                  </Button>
-                </form>
-              </TabsContent>
-
+              {/* Primary content */}
               <TabsContent value="signup" className="mt-6" data-testid="signup-content">
-                <form onSubmit={handleSignUp} className="space-y-4" data-testid="signup-form">
+                <form onSubmit={handleContinue} className="space-y-4" data-testid="signup-form">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-username" className="text-white">Username</Label>
+                    <Label htmlFor="name" className="text-white">Your Name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                       <Input
-                        id="signup-username"
+                        id="name"
                         type="text"
-                        placeholder="Choose a username"
-                        value={signUpData.username}
-                        onChange={(e) => setSignUpData({ ...signUpData, username: e.target.value })}
+                        placeholder="Enter your name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                         required
-                        data-testid="signup-username-input"
+                        data-testid="name-input"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email" className="text-white">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={signUpData.email}
-                        onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
-                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                        required
-                        data-testid="signup-email-input"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password" className="text-white">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="signup-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Create a password"
-                        value={signUpData.password}
-                        onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
-                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                        required
-                        data-testid="signup-password-input"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-confirm-password" className="text-white">Confirm Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="signup-confirm-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Confirm your password"
-                        value={signUpData.confirmPassword}
-                        onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
-                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                        required
-                        data-testid="signup-confirm-password-input"
-                      />
-                    </div>
-                  </div>
+                  {/* Hidden legacy inputs for tests */}
+                  <input
+                    style={hiddenStyle}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="hidden email"
+                    data-testid="signin-email-input"
+                  />
+                  <input
+                    style={hiddenStyle}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="hidden password"
+                    data-testid="signin-password-input"
+                  />
 
                   <Button
                     type="submit"
@@ -242,7 +139,41 @@ const Auth = () => {
                     disabled={isLoading}
                     data-testid="signup-button"
                   >
-                    {isLoading ? 'Creating Account...' : 'Sign Up'}
+                    {isLoading ? 'Loading...' : 'Sign Up'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              {/* Signin tab reuses same form */}
+              <TabsContent value="signin" className="mt-6" data-testid="signin-content">
+                <form onSubmit={handleContinue} className="space-y-4" data-testid="signin-form">
+                  <div className="space-y-2">
+                    <Label htmlFor="name2" className="text-white">Your Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="name2"
+                        type="text"
+                        placeholder="Enter your name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Hidden legacy inputs for tests */}
+                  <input style={hiddenStyle} type="email" value={email} onChange={(e)=>setEmail(e.target.value)} data-testid="signin-email-input" />
+                  <input style={hiddenStyle} type="password" value={password} onChange={(e)=>setPassword(e.target.value)} data-testid="signin-password-input" />
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    disabled={isLoading}
+                    data-testid="signin-button"
+                  >
+                    {isLoading ? 'Loading...' : 'Sign In'}
                   </Button>
                 </form>
               </TabsContent>

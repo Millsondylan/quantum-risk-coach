@@ -11,7 +11,8 @@ const API_ENDPOINTS = {
   ETHERSCAN: 'https://api.etherscan.io/api',
   FINNHUB: 'https://finnhub.io/api/v1',
   COINGECKO: 'https://api.coingecko.com/api/v3',
-  NEWS: 'https://newsapi.org/v2'
+  NEWS: 'https://newsapi.org/v2',
+  TRADING_ECONOMICS: 'https://api.tradingeconomics.com/historical/country/all/indicator/All' // Example endpoint, adjust as needed
 };
 
 // Legacy identifiers for verification script compatibility
@@ -339,25 +340,24 @@ class RealDataService {
     if (cached) return cached;
 
     try {
-      // Using FMP for economic calendar
-      const today = new Date().toISOString().split('T')[0];
+      // Using Trading Economics for economic calendar
       const response = await fetch(
-        `${API_ENDPOINTS.FMP}/economic_calendar?apikey=${API_KEYS.FMP}&from=${today}&to=${today}`
+        `${API_ENDPOINTS.TRADING_ECONOMICS}?c=YOUR_TRADING_ECONOMICS_API_CLIENT_KEY&u=YOUR_TRADING_ECONOMICS_API_CLIENT_SECRET` // Replace with actual API key and secret
       );
 
-      if (!response.ok) throw new Error('FMP Economic Calendar API failed');
+      if (!response.ok) throw new Error('Trading Economics API failed');
 
       const data = await response.json();
-      const events: EconomicEvent[] = data.slice(0, 10).map((event: any) => ({
-        title: event.event || 'Economic Event',
-        country: event.country || 'Unknown',
-        date: event.date || today,
-        time: event.time || '00:00',
-        currency: event.currency || 'USD',
-        impact: this.mapImpact(event.impact),
-        forecast: event.estimate || '',
-        previous: event.previous || '',
-        actual: event.actual || ''
+      const events: EconomicEvent[] = data.map((event: any) => ({
+        title: event.Title || 'Economic Event',
+        country: event.Country || 'Unknown',
+        date: event.Date || new Date().toISOString().split('T')[0],
+        time: event.Time || '00:00',
+        currency: event.Currency || 'USD',
+        impact: this.mapImpact(event.Importance) as 'high' | 'medium' | 'low',
+        forecast: event.Forecast || '',
+        previous: event.Previous || '',
+        actual: event.Actual || ''
       }));
 
       this.setCache(cacheKey, events, 60);

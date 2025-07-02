@@ -67,10 +67,10 @@ interface EconomicEvent {
   title: string;
   currency: string;
   importance: 'high' | 'medium' | 'low';
-  impact: 'positive' | 'negative' | 'neutral';
-  actual?: number;
-  forecast?: number;
-  previous?: number;
+  impact: 'high' | 'medium' | 'low';
+  actual?: number | string;
+  forecast?: number | string;
+  previous?: number | string;
   timestamp: Date;
 }
 
@@ -146,35 +146,54 @@ const AIMarketInsights = () => {
         : [];
 
       // Get real economic events from API
-      const events: EconomicEvent[] = []; // Will be populated by real economic calendar API
+      const economicEventsData = await realDataService.getEconomicCalendar();
+      const events: EconomicEvent[] = economicEventsData.slice(0, 5).map(event => ({
+        id: event.title + event.date, // Simple unique ID
+        title: event.title,
+        currency: event.currency,
+        importance: event.impact,
+        impact: event.impact, // Assuming impact can be used for sentiment
+        actual: event.actual,
+        forecast: event.forecast,
+        previous: event.previous,
+        timestamp: new Date(`${event.date}T${event.time}`),
+      }));
 
-      // Generate real AI insights based on market data
       const insights: AIInsight[] = [];
-      if (realForexData.length > 0) {
-        // Create insights based on real market movements
-        realForexData.forEach((item, index) => {
-          const changePercent = item.change_24h || 0;
-          if (Math.abs(changePercent) > 0.5) { // Only create insights for significant moves
-            insights.push({
-              id: (index + 1).toString(),
-              type: changePercent > 0 ? 'opportunity' : 'warning',
-              title: `${item.base}/${item.target} ${changePercent > 0 ? 'Bullish' : 'Bearish'} Move`,
-              description: `${item.base}/${item.target} showing ${Math.abs(changePercent).toFixed(2)}% ${changePercent > 0 ? 'gain' : 'loss'} in recent trading.`,
-              confidence: Math.min(95, Math.abs(changePercent) * 10 + 50),
-              timeframe: '1H',
-              instruments: [`${item.base}/${item.target}`],
-              action: changePercent > 0 ? 'buy' : 'sell',
-              riskLevel: Math.abs(changePercent) > 1 ? 'high' : 'medium',
-              expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 12)
-            });
-          }
+      // Generate real AI insights based on market data
+      let aiInsightsFromService: AIInsight[] = [];
+      try {
+        const aiAnalysisString = await realDataService.getAIMarketAnalysis({
+          forex: realForexData,
+          crypto: cryptoData.status === 'fulfilled' ? cryptoData.value : [],
+          news: newsData.status === 'fulfilled' ? newsData.value : []
         });
+
+        // For simplicity, create a single AIInsight from the AI summary string.
+        // In a real-world scenario, the AI might return structured JSON.
+        if (aiAnalysisString) {
+          aiInsightsFromService.push({
+            id: 'ai-insight-1',
+            type: 'trend', // Default type, can be refined based on AI output
+            title: 'AI Market Analysis',
+            description: aiAnalysisString,
+            confidence: 80, // Default confidence
+            timeframe: 'Daily',
+            instruments: ['Overall Market'],
+            action: 'hold', // Default action
+            riskLevel: 'medium', // Default risk
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24) // Expires in 24 hours
+          });
+        }
+      } catch (aiError) {
+        console.error('Error fetching AI market analysis:', aiError);
+        aiInsightsFromService = []; // Set empty if AI service fails
       }
 
       setMarketSentiments(sentiments);
       setNewsItems(news);
       setEconomicEvents(events);
-      setAiInsights(insights);
+      setAiInsights(aiInsightsFromService);
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Failed to generate real market data:', error);

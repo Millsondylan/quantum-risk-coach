@@ -37,7 +37,8 @@ import {
   Sparkles,
   ArrowUpRight,
   ArrowDownRight,
-  Globe
+  Globe,
+  Wifi
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -761,7 +762,7 @@ const UltraTraderDashboard = () => {
         </Card>
 
         {/* Quick Actions - UltraTrader Style */}
-        <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-5 gap-2 sm:gap-3">
           <Button
             onClick={() => navigate('/trade-builder')}
             className="h-16 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl flex-col gap-1 shadow-lg shadow-blue-600/20 touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
@@ -797,6 +798,15 @@ const UltraTraderDashboard = () => {
           >
             <Target className="w-5 h-5" />
             <span className="text-xs font-medium">Strategy</span>
+          </Button>
+          <Button
+            onClick={() => navigate('/mt4mt5-sync')}
+            className="h-16 bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 active:from-cyan-700 active:to-blue-800 text-white rounded-xl flex-col gap-1 shadow-lg shadow-cyan-500/20 touch-manipulation active:scale-95 transition-all duration-150 min-h-[64px] w-full"
+            size="lg"
+            aria-label="Open MT4/MT5 Auto-Sync"
+          >
+            <Wifi className="w-5 h-5" />
+            <span className="text-xs font-medium">Auto-Sync</span>
           </Button>
         </div>
 

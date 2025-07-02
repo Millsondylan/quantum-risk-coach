@@ -102,6 +102,9 @@ const MT4Connection = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [syncInterval, setSyncInterval] = useState('30');
+  const [importProgress, setImportProgress] = useState(0);
+  const [importedTradesCount, setImportedTradesCount] = useState(0);
+  const [recentTrades, setRecentTrades] = useState<MT4Position[]>([]);
   
   // Connection Form State
   const [connectionForm, setConnectionForm] = useState({
@@ -276,6 +279,58 @@ const MT4Connection = () => {
     }
   };
 
+  const handleImportTrades = async () => {
+    if (connectionStatus !== 'connected') {
+      toast.error('Not connected to MetaTrader');
+      return;
+    }
+
+    setImportProgress(0);
+    setImportedTradesCount(0);
+    setRecentTrades([]);
+    toast.info('Importing historical trades...');
+
+    try {
+      // In a real-world scenario, this would call your backend to fetch real trades.
+      // Since this is a client-only app without a backend, this will return no trades.
+      const fetchedTrades = await realBrokerService.fetchTradesFromBroker(
+        `mt4_${credentials.login}` // Use a unique ID for the connection
+      );
+
+      const mappedTrades: MT4Position[] = fetchedTrades.map(trade => ({
+        ticket: parseInt(trade.brokerTradeId || trade.id, 10) || Date.now(), // Use brokerTradeId or generate unique if not available
+        symbol: trade.symbol,
+        type: trade.side.toUpperCase() as 'BUY' | 'SELL',
+        lots: trade.amount,
+        openPrice: trade.price,
+        currentPrice: trade.price, // For imported trades, current price is often the same as open price unless live updates
+        sl: trade.stopLoss || 0,
+        tp: trade.takeProfit || 0,
+        profit: trade.profit || 0,
+        swap: 0, // Not typically provided in simple trade history import
+        commission: trade.fee || 0,
+        comment: '', // No comment from simple trade history
+        openTime: trade.openTime || trade.timestamp,
+      }));
+
+      for (let i = 0; i < mappedTrades.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay per trade
+        setRecentTrades(prev => [...prev, mappedTrades[i]]);
+        setImportedTradesCount(i + 1);
+        setImportProgress(Math.min(100, Math.round(((i + 1) / mappedTrades.length) * 100)));
+      }
+
+      if (mappedTrades.length > 0) {
+        toast.success(`Successfully imported ${mappedTrades.length} trades!`);
+      } else {
+        toast.info('No historical trades found for this account. (Requires backend for real data)');
+      }
+    } catch (error) {
+      toast.error('Trade import failed. (Requires backend for real data)');
+      console.error('Trade import error:', error);
+    }
+  };
+
   // Auto-sync effect
   useEffect(() => {
     if (autoSync && connectionStatus === 'connected') {
@@ -331,172 +386,117 @@ const MT4Connection = () => {
         </TabsList>
 
         <TabsContent value="connection" className="space-y-4">
-          {/* Connection Status */}
-          <Card className="bg-slate-900 border-slate-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Terminal className="w-5 h-5" />
-                Connection Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-slate-800 rounded-lg">
-                  <div className={cn("w-4 h-4 rounded-full mx-auto mb-2", 
-                    connectionStatus === 'connected' ? 'bg-green-500' : 
-                    connectionStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
-                  )} />
-                  <p className="text-sm text-slate-400">Status</p>
-                  <p className="text-white font-medium">{connectionStatus.toUpperCase()}</p>
-                </div>
-                <div className="text-center p-4 bg-slate-800 rounded-lg">
-                  <Clock className="w-4 h-4 mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm text-slate-400">Last Sync</p>
-                  <p className="text-white font-medium">
-                    {account?.lastSync || 'Never'}
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-slate-800 rounded-lg">
-                  <Activity className="w-4 h-4 mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm text-slate-400">Auto Sync</p>
-                  <p className="text-white font-medium">
-                    {autoSync ? 'Enabled' : 'Disabled'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Popular Brokers */}
-          <Card className="bg-slate-900 border-slate-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Globe className="w-5 h-5" />
-                Popular Brokers
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {brokers.map((broker) => (
-                <div 
-                  key={broker.id}
-                  className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/50 hover:border-blue-500/30 transition-colors cursor-pointer"
-                  onClick={() => {
-                    setConnectionForm(prev => ({
-                      ...prev,
-                      brokerName: broker.name,
-                      serverAddress: broker.serverAddress,
-                      port: broker.port.toString(),
-                      useSSL: broker.isSSL
-                    }));
-                  }}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={cn("w-3 h-3 rounded-full", getBrokerStatusColor(broker.status))} />
-                    <div>
-                      <h4 className="font-medium text-white">{broker.name}</h4>
-                      <p className="text-sm text-gray-400">{broker.serverAddress}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4 text-sm">
-                    <div className="text-center">
-                      <p className="text-gray-400">Ping</p>
-                      <p className="text-white font-medium">{broker.ping}ms</p>
-                    </div>
-                    <div className="flex space-x-1">
-                      {broker.supportedPlatforms.map(platform => (
-                        <Badge key={platform} variant="outline" className="text-blue-400">
-                          {platform}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Manual Connection Form */}
-          <Card className="bg-slate-900 border-slate-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Settings className="w-5 h-5" />
-                Manual Connection
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <Link className="mr-2 h-5 w-5" /> Broker Connection
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="server" className="text-slate-300 font-medium">Server</Label>
+                  <Label htmlFor="server">Broker Server</Label>
                   <Input
                     id="server"
+                    placeholder="e.g., MT4-Live01, Oanda-Live"
                     value={credentials.server}
-                    onChange={(e) => setCredentials(prev => ({ ...prev, server: e.target.value }))}
-                    placeholder="e.g., ICMarkets-Live01"
-                    className="bg-slate-800 border-slate-600 text-white mt-1"
+                    onChange={(e) => setCredentials({ ...credentials, server: e.target.value })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="login" className="text-slate-300 font-medium">Login</Label>
+                  <Label htmlFor="login">Account Login</Label>
                   <Input
                     id="login"
+                    placeholder="Your MT4/MT5 account number"
                     value={credentials.login}
-                    onChange={(e) => setCredentials(prev => ({ ...prev, login: e.target.value }))}
-                    placeholder="Account number"
-                    className="bg-slate-800 border-slate-600 text-white mt-1"
+                    onChange={(e) => setCredentials({ ...credentials, login: e.target.value })}
                   />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="password" className="text-slate-300 font-medium">Password</Label>
-                <div className="relative mt-1">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={credentials.password}
-                    onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="••••••••"
-                    className="bg-slate-800 border-slate-600 text-white pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Your MT4/MT5 password"
+                      value={credentials.password}
+                      onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleConnect}
-                  disabled={connectionStatus === 'connecting'}
-                  className="flex-1"
-                >
+                <Button onClick={handleConnect} disabled={connectionStatus === 'connecting'}>
                   {connectionStatus === 'connecting' ? (
                     <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Connecting...
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Connecting...
+                    </>
+                  ) : connectionStatus === 'connected' ? (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" /> Connected
                     </>
                   ) : (
                     <>
-                      <Link className="w-4 h-4 mr-2" />
-                      Connect
+                      <Link className="mr-2 h-4 w-4" /> Connect Broker
                     </>
                   )}
                 </Button>
-                <Button 
-                  variant="outline" 
+              </CardContent>
+            </Card>
+            {/* Connection Status and Account Info */}
+            <Card className="col-span-2 md:col-span-1 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <Activity className="mr-2 h-5 w-5" /> Connection Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex items-center">
+                  <span className="mr-2 font-medium">Status:</span>
+                  <Badge className={cn(
+                    'py-1 px-3 text-sm',
+                    connectionStatus === 'connected' && 'bg-green-500 hover:bg-green-600',
+                    connectionStatus === 'disconnected' && 'bg-red-500 hover:bg-red-600',
+                    connectionStatus === 'connecting' && 'bg-yellow-500 hover:bg-yellow-600'
+                  )}>
+                    {connectionStatus.charAt(0).toUpperCase() + connectionStatus.slice(1)}
+                  </Badge>
+                </div>
+                {account && (
+                  <div className="grid grid-cols-2 gap-y-2 text-sm">
+                    <div className="font-medium">Account:</div><div>{account.accountNumber}</div>
+                    <div className="font-medium">Broker:</div><div>{account.brokerName} ({account.serverName})</div>
+                    <div className="font-medium">Type:</div><div>{account.accountType}</div>
+                    <div className="font-medium">Balance:</div><div>{account.balance.toFixed(2)} {account.currency}</div>
+                    <div className="font-medium">Equity:</div><div>{account.equity.toFixed(2)} {account.currency}</div>
+                    <div className="font-medium">Leverage:</div><div>{account.leverage}</div>
+                    <div className="font-medium">Last Sync:</div><div>{account.lastSync}</div>
+                  </div>
+                )}
+                {!account && connectionStatus === 'connected' && (
+                  <p className="text-sm text-slate-400">Connected, fetching account details...</p>
+                )}
+                {!account && connectionStatus === 'disconnected' && (
+                  <p className="text-sm text-slate-400">Enter your broker details to connect.</p>
+                )}
+                <Button
                   onClick={handleDisconnect}
                   disabled={connectionStatus === 'disconnected'}
+                  variant="outline"
+                  className="mt-4"
                 >
-                  <WifiOff className="w-4 h-4 mr-2" />
-                  Disconnect
+                  <WifiOff className="mr-2 h-4 w-4" /> Disconnect
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="account" className="space-y-4">
@@ -637,40 +637,48 @@ const MT4Connection = () => {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
-          <Card className="bg-slate-900 border-slate-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Settings className="w-5 h-5" />
-                Connection Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-slate-300 font-medium">Auto Sync</Label>
-                  <p className="text-sm text-slate-400">Automatically sync account data</p>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <Settings className="mr-2 h-5 w-5" /> Auto Sync Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="auto-sync">Enable Auto Sync</Label>
+                  <Switch id="auto-sync" checked={autoSync} onCheckedChange={setAutoSync} />
                 </div>
-                <Switch
-                  checked={autoSync}
-                  onCheckedChange={setAutoSync}
-                />
-              </div>
-              <div>
-                <Label htmlFor="syncInterval" className="text-slate-300 font-medium">Sync Interval (seconds)</Label>
-                <Select value={syncInterval} onValueChange={setSyncInterval}>
-                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 seconds</SelectItem>
-                    <SelectItem value="30">30 seconds</SelectItem>
-                    <SelectItem value="60">1 minute</SelectItem>
-                    <SelectItem value="300">5 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+                <div>
+                  <Label htmlFor="sync-interval">Sync Interval (minutes)</Label>
+                  <Select value={syncInterval} onValueChange={setSyncInterval} disabled={!autoSync}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select interval" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 Minutes</SelectItem>
+                      <SelectItem value="30">30 Minutes</SelectItem>
+                      <SelectItem value="60">1 Hour</SelectItem>
+                      <SelectItem value="120">2 Hours</SelectItem>
+                      <SelectItem value="1440">24 Hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-slate-500">Data will be automatically synced from your broker at the chosen interval.</p>
+              </CardContent>
+            </Card>
+            <Card className="col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <Shield className="mr-2 h-5 w-5" /> Security & Privacy
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-slate-400">Your broker credentials are securely processed and not stored on this device.</p>
+                <p className="text-sm text-slate-400 font-bold">Disclaimer: For full real-time trading and order execution, a secure backend integration with your broker's API is required. This application currently simulates trade execution for demo purposes. Please refer to the documentation for setting up a production-ready backend.</p>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

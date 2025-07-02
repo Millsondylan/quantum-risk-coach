@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { UserProvider, useUser } from "./contexts/UserContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -19,6 +19,7 @@ import PerformanceCalendar from "./pages/PerformanceCalendar";
 import StrategyAnalyzer from "./pages/StrategyAnalyzer";
 import NotFound from "./pages/NotFound";
 import MobileBottomNav from "./components/MobileBottomNav";
+import MT4MT5AutoSyncDashboard from "./components/MT4MT5AutoSyncDashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,9 +36,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4" />
           <p className="text-slate-400">Loading Quantum Risk Coach...</p>
         </div>
       </div>
@@ -45,11 +46,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
-    return <Auth />;
-  }
-  
-  if (!user.onboardingCompleted) {
-    return <Onboarding />;
+    return <Navigate to="/auth" replace />;
   }
   
   return <>{children}</>;
@@ -75,11 +72,8 @@ const AppContent = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Routes>
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Index />
-          </ProtectedRoute>
-        } />
+        {/* Home: show auth page for non-authenticated users */}
+        <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/connect-mt4" element={
           <ProtectedRoute>
@@ -146,9 +140,14 @@ const AppContent = () => {
             <StrategyAnalyzer />
           </ProtectedRoute>
         } />
+        <Route path="/mt4mt5-sync" element={
+          <ProtectedRoute>
+            <MT4MT5AutoSyncDashboard />
+          </ProtectedRoute>
+        } />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      {user && user.onboardingCompleted && <MobileBottomNav />}
+      {!isLoading && user && <MobileBottomNav />}
     </div>
   );
 };

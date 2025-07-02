@@ -567,39 +567,18 @@ export interface TradeImportResult {
 export const brokerService = {
   // Connect to various brokers
   async connectToBroker(brokerType: string, credentials: any): Promise<BrokerConnection> {
-    try {
-      // Simulate connection to different brokers
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return {
-        id: `broker_${Date.now()}`,
-        name: brokerType.toUpperCase(),
-        type: brokerType as any,
-        status: 'connected',
-        lastSync: new Date().toISOString(),
-        credentials
-      };
-    } catch (error) {
-      throw new Error(`Failed to connect to ${brokerType}: ${error}`);
-    }
+    // TODO: Implement actual connection to different broker APIs (e.g., MT4, MT5, Binance, etc.)
+    // This will require integrating with their respective SDKs or REST APIs.
+    // For now, throwing an error to indicate that real implementation is required.
+    throw new Error(`Real broker connection for ${brokerType} is not yet implemented. Please integrate with a live API.`);
   },
 
   // Import trades from connected brokers
   async importTrades(brokerId: string): Promise<TradeImportResult> {
-    try {
-      // Simulate trade import
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      return {
-        success: true,
-        tradesImported: Math.floor(Math.random() * 50) + 10,
-        tradesUpdated: Math.floor(Math.random() * 20) + 5,
-        errors: [],
-        lastSyncTime: new Date().toISOString()
-      };
-    } catch (error) {
-      throw new Error(`Failed to import trades: ${error}`);
-    }
+    // TODO: Implement actual trade import logic from the connected broker.
+    // This should fetch real trade history from the broker's API.
+    // For now, throwing an error to indicate that real implementation is required.
+    throw new Error(`Real trade import for broker ${brokerId} is not yet implemented. Please integrate with a live API.`);
   },
 
   // Auto-sync trades periodically
@@ -610,7 +589,8 @@ export const brokerService = {
 
   // Get reconciliation report
   async getReconciliationReport(brokerId: string): Promise<any> {
-    // This would generate a real reconciliation report from broker data
+    // TODO: Implement actual reconciliation report generation from real broker data.
+    // For now, returning empty data.
     return {
       totalTrades: 0,
       matchedTrades: 0,
