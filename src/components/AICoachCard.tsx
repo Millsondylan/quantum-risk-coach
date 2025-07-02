@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Brain, Lightbulb, AlertTriangle, TrendingUp, TrendingDown, Target, Clock, Zap, BookOpen, Trophy, MessageCircle, Loader2 } from 'lucide-react';
+import { Brain, Lightbulb, AlertTriangle, TrendingUp, TrendingDown, Target, Clock, Zap, BookOpen, Trophy, MessageCircle, Loader2, CheckCircle, XCircle, RefreshCw, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { aiService } from '@/lib/api';
 import { toast } from 'sonner';
 import { useTrades } from '@/hooks/useTrades';
+import { createAIStreamService } from '@/lib/aiStreamService';
 
 interface TradingInsight {
   type: 'strength' | 'weakness' | 'opportunity' | 'threat';
@@ -15,129 +15,164 @@ interface TradingInsight {
   description: string;
   impact: 'high' | 'medium' | 'low';
   category: string;
+  confidence: number;
+  timestamp: Date;
+  provider?: string;
 }
 
-interface PerformanceTime {
-  time: string;
-  profit: number;
-  winRate: number;
-  trades: number;
+interface AIHealthStatus {
+  openai: boolean;
+  groq: boolean;
+  gemini: boolean;
 }
 
 const AICoachCard = () => {
   const navigate = useNavigate();
   const { trades, getPerformanceMetrics } = useTrades();
-  const [isConnected, setIsConnected] = useState(false);
+  const [aiHealth, setAiHealth] = useState<AIHealthStatus>({ openai: false, groq: false, gemini: false });
   const [currentInsight, setCurrentInsight] = useState<TradingInsight | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [aiInsight, setAiInsight] = useState<any>(null);
-
-  // Simulated data
-  const strengths: TradingInsight[] = [
-    {
-      type: 'strength',
-      title: 'Excellent Risk Management',
-      description: 'Your position sizing and stop-loss placement show strong discipline',
-      impact: 'high',
-      category: 'Risk Management'
-    },
-    {
-      type: 'strength',
-      title: 'Strong Trend Following',
-      description: 'You excel at identifying and riding market trends',
-      impact: 'high',
-      category: 'Strategy'
-    }
-  ];
-
-  const weaknesses: TradingInsight[] = [
-    {
-      type: 'weakness',
-      title: 'Overtrading During News',
-      description: 'You tend to enter too many positions during high-impact news events',
-      impact: 'medium',
-      category: 'Psychology'
-    },
-    {
-      type: 'weakness',
-      title: 'Poor Time Management',
-      description: 'Your worst performance occurs during London session overlap',
-      impact: 'medium',
-      category: 'Timing'
-    }
-  ];
-
-  const bestTimes: PerformanceTime[] = [
-    { time: '08:00-12:00 GMT', profit: 1250, winRate: 78, trades: 45 },
-    { time: '14:00-18:00 GMT', profit: 890, winRate: 72, trades: 32 },
-    { time: '20:00-24:00 GMT', profit: 650, winRate: 68, trades: 28 }
-  ];
-
-  const worstTimes: PerformanceTime[] = [
-    { time: '12:00-14:00 GMT', profit: -320, winRate: 45, trades: 18 },
-    { time: '00:00-04:00 GMT', profit: -180, winRate: 52, trades: 12 }
-  ];
-
-  const personalizedChallenges = [
-    {
-      title: 'News Trading Challenge',
-      description: 'Practice staying out of the market 30 minutes before and after major news releases',
-      duration: '7 days',
-      reward: 'Improved discipline score'
-    },
-    {
-      title: 'London Session Focus',
-      description: 'Focus on trading only during your best performing hours (08:00-12:00 GMT)',
-      duration: '5 days',
-      reward: 'Better win rate'
-    }
-  ];
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [aiService] = useState(() => createAIStreamService());
 
   useEffect(() => {
-    // Simulate connection status
-    setIsConnected(true);
+    checkAIHealth();
+    generateRealTimeInsight();
     
-    // Set initial insight
-    setCurrentInsight(strengths[0]);
-    
-    // Get AI insight if API key is available
-    if (import.meta.env.VITE_OPENAI_API_KEY && import.meta.env.VITE_OPENAI_API_KEY !== 'your_openai_api_key_here') {
-      getAIInsight();
-    }
+    // Update insights every 5 minutes
+    const interval = setInterval(generateRealTimeInsight, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  const getAIInsight = async () => {
+  const checkAIHealth = async () => {
+    try {
+      const healthStatus = await aiService.healthCheck();
+      setAiHealth({
+        openai: healthStatus.openai || false,
+        groq: healthStatus.groq || false,
+        gemini: healthStatus.gemini || false
+      });
+    } catch (error) {
+      console.error('AI health check failed:', error);
+      setAiHealth({ openai: false, groq: false, gemini: false });
+    }
+  };
+
+  const generateRealTimeInsight = async () => {
+    const connectedProviders = Object.values(aiHealth).filter(Boolean).length;
+    if (connectedProviders === 0) {
+      console.warn('No AI providers available for coaching');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const mockTradeData = {
-        recentTrades: [
-          { symbol: 'EURUSD', type: 'BUY', profit: 45, duration: '2h' },
-          { symbol: 'GBPUSD', type: 'SELL', profit: -20, duration: '1h' },
-          { symbol: 'USDJPY', type: 'BUY', profit: 30, duration: '3h' }
-        ],
-        winRate: 68,
-        avgProfit: 45.2,
-        totalTrades: 45
+      const performanceData = getPerformanceMetrics();
+      const tradingData = {
+        recentTrades: trades.slice(0, 10),
+        totalTrades: trades.length,
+        winRate: performanceData.winRate,
+        totalPnL: performanceData.totalPnL,
+        avgTrade: performanceData.avgTrade,
+        riskRewardRatio: performanceData.riskRewardRatio,
+        maxDrawdown: performanceData.maxDrawdown,
+        tradingFrequency: trades.length > 0 ? trades.length / 30 : 0
       };
 
-      const mockUserProfile = {
-        experience: 'intermediate',
-        riskTolerance: 'moderate',
-        preferredPairs: ['EURUSD', 'GBPUSD'],
-        tradingStyle: 'scalping'
-      };
-
-      const insight = await aiService.getTradingInsight(mockTradeData, mockUserProfile);
-      if (insight) {
-        setAiInsight(insight);
-        toast.success("AI insight generated successfully!");
+      const coachingResponse = await aiService.getAICoaching(tradingData);
+      
+      if (coachingResponse && coachingResponse.content) {
+        // Parse the AI response
+        const insight = parseCoachingResponse(coachingResponse);
+        setCurrentInsight(insight);
+        setLastUpdate(new Date());
+        toast.success(`AI coaching updated via ${coachingResponse.provider || 'AI'}`);
       }
     } catch (error) {
-      console.error('Error getting AI insight:', error);
-      toast.error("Failed to generate AI insight");
+      console.error('Error generating AI coaching insight:', error);
+      toast.error("Failed to get AI coaching insight");
+      
+      // Fallback to basic insight
+      setCurrentInsight({
+        type: 'opportunity',
+        title: 'AI Coaching Unavailable',
+        description: 'Unable to connect to AI services. Check your API keys in settings.',
+        impact: 'medium',
+        category: 'System',
+        confidence: 0,
+        timestamp: new Date()
+      });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const parseCoachingResponse = (response: any): TradingInsight => {
+    const content = response.content || '';
+    const provider = response.provider || 'AI';
+    
+    // Extract key insights from the response
+    const lines = content.split('\n').filter((line: string) => line.trim());
+    const title = lines.find((line: string) => 
+      line.includes('strength') || line.includes('weakness') || 
+      line.includes('improve') || line.includes('focus')
+    )?.substring(0, 60) || 'Trading Analysis Complete';
+    
+    // Determine insight type based on content
+    let type: 'strength' | 'weakness' | 'opportunity' | 'threat' = 'opportunity';
+    const contentLower = content.toLowerCase();
+    
+    if (contentLower.includes('strength') || contentLower.includes('good') || contentLower.includes('excellent')) {
+      type = 'strength';
+    } else if (contentLower.includes('weakness') || contentLower.includes('poor') || contentLower.includes('improve')) {
+      type = 'weakness';
+    } else if (contentLower.includes('risk') || contentLower.includes('danger') || contentLower.includes('warning')) {
+      type = 'threat';
+    }
+    
+    // Determine impact level
+    let impact: 'high' | 'medium' | 'low' = 'medium';
+    if (contentLower.includes('critical') || contentLower.includes('urgent') || contentLower.includes('major')) {
+      impact = 'high';
+    } else if (contentLower.includes('minor') || contentLower.includes('slight')) {
+      impact = 'low';
+    }
+    
+    return {
+      type,
+      title: title.replace(/^\d+\.\s*/, ''), // Remove numbering
+      description: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
+      impact,
+      category: 'AI Coaching',
+      confidence: 85,
+      timestamp: new Date(),
+      provider
+    };
+  };
+
+  const testProvider = async (provider: 'openai' | 'groq' | 'gemini') => {
+    try {
+      const result = await aiService.testProvider(provider);
+      if (result.success) {
+        toast.success(`${provider.toUpperCase()}: ${result.message} (${result.latency}ms)`);
+      } else {
+        toast.error(`${provider.toUpperCase()}: ${result.message}`);
+      }
+      
+      // Refresh health status
+      await checkAIHealth();
+    } catch (error) {
+      toast.error(`${provider.toUpperCase()}: Connection failed`);
+    }
+  };
+
+  const getProviderStatus = () => {
+    const connectedCount = Object.values(aiHealth).filter(Boolean).length;
+    return {
+      count: connectedCount,
+      total: 3,
+      isConnected: connectedCount > 0
+    };
   };
 
   const getImpactColor = (impact: string) => {
@@ -159,6 +194,8 @@ const AICoachCard = () => {
     }
   };
 
+  const status = getProviderStatus();
+
   return (
     <div className="space-y-6">
       {/* AI Coach Header */}
@@ -167,18 +204,63 @@ const AICoachCard = () => {
           <div className="p-2 bg-purple-500/20 rounded-lg">
             <Brain className="w-6 h-6 text-purple-400" />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-semibold text-white">AI Coach</h2>
-            <p className="text-sm text-slate-400">Real-time insights & guidance</p>
+            <p className="text-sm text-slate-400">Multi-provider AI coaching system</p>
           </div>
-          <Badge variant={isConnected ? "default" : "destructive"} className="ml-auto">
-            {isConnected ? "Active" : "Inactive"}
-          </Badge>
+          <div className="flex items-center space-x-2">
+            <Badge variant={status.isConnected ? "default" : "destructive"}>
+              {status.isConnected ? `${status.count}/${status.total} Connected` : "Disconnected"}
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateRealTimeInsight}
+              disabled={isLoading}
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {isLoading ? 'Analyzing...' : 'Refresh'}
+            </Button>
+          </div>
         </div>
 
-        {isConnected ? (
+        {/* AI Provider Status */}
+        <div className="mb-6 p-4 bg-slate-700/30 rounded-lg border border-slate-600/30">
+          <h3 className="text-sm font-medium text-white mb-3">AI Provider Status</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50">
+              <div className="flex items-center space-x-2">
+                {aiHealth.openai ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
+                <span className="text-sm text-slate-300">OpenAI GPT</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => testProvider('openai')}>
+                Test
+              </Button>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50">
+              <div className="flex items-center space-x-2">
+                {aiHealth.groq ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
+                <span className="text-sm text-slate-300">Groq Llama</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => testProvider('groq')}>
+                Test
+              </Button>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50">
+              <div className="flex items-center space-x-2">
+                {aiHealth.gemini ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
+                <span className="text-sm text-slate-300">Gemini Pro</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => testProvider('gemini')}>
+                Test
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {status.isConnected ? (
           <div className="space-y-4">
-            {/* Current Insight */}
+            {/* Current AI Insight */}
             {currentInsight && (
               <div className="p-4 rounded-lg border border-slate-600/30 bg-slate-700/30">
                 <div className="flex items-center space-x-3 mb-3">
@@ -187,35 +269,51 @@ const AICoachCard = () => {
                   <Badge variant="outline" className={getImpactColor(currentInsight.impact)}>
                     {currentInsight.impact} impact
                   </Badge>
+                  {currentInsight.confidence > 0 && (
+                    <Badge variant="outline" className="text-blue-400">
+                      {currentInsight.confidence}% confidence
+                    </Badge>
+                  )}
+                  {currentInsight.provider && (
+                    <Badge variant="outline" className="text-purple-400">
+                      {currentInsight.provider}
+                    </Badge>
+                  )}
                 </div>
-                <p className="text-sm text-slate-300 leading-relaxed">
+                <p className="text-sm text-slate-300 leading-relaxed mb-3">
                   {currentInsight.description}
                 </p>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-xs text-slate-400">{currentInsight.category}</span>
-                  <Button variant="ghost" size="sm">
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Get Advice
-                  </Button>
-                </div>
+                {lastUpdate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">
+                      Updated: {lastUpdate.toLocaleTimeString()}
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={generateRealTimeInsight}>
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Get More Details
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Quick Stats */}
+            {/* Quick Performance Stats */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
                 <div className="flex items-center space-x-2 mb-2">
                   <TrendingUp className="w-4 h-4 text-green-400" />
                   <span className="text-sm text-slate-400">Win Rate</span>
                 </div>
-                <p className="text-lg font-semibold text-white">68%</p>
+                <p className="text-lg font-semibold text-white">{getPerformanceMetrics().winRate.toFixed(1)}%</p>
               </div>
               <div className="p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
                 <div className="flex items-center space-x-2 mb-2">
                   <Target className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-slate-400">Avg Profit</span>
+                  <span className="text-sm text-slate-400">Total P&L</span>
                 </div>
-                <p className="text-lg font-semibold text-green-400">$45.20</p>
+                <p className={`text-lg font-semibold ${getPerformanceMetrics().totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  ${getPerformanceMetrics().totalPnL.toFixed(2)}
+                </p>
               </div>
             </div>
           </div>
@@ -223,168 +321,32 @@ const AICoachCard = () => {
           <div className="space-y-4">
             <div className="p-4 rounded-lg border border-slate-600/30 bg-slate-700/30">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="p-2 bg-blue-500/20 rounded-lg">
-                  <Lightbulb className="w-4 h-4 text-blue-400" />
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-red-400" />
                 </div>
-                <h3 className="font-medium text-white">No Active Insights</h3>
+                <h3 className="font-medium text-white">AI Services Unavailable</h3>
               </div>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                Connect your MT4/5 account to receive personalized trading insights and recommendations.
+              <p className="text-sm text-slate-300 leading-relaxed mb-4">
+                No AI providers are currently connected. Please check your API keys in the environment configuration.
               </p>
-            </div>
-
-            <div 
-              onClick={() => navigate('/connect-mt4')}
-              className="p-4 rounded-lg border border-slate-600/30 bg-slate-700/30 cursor-pointer hover:bg-slate-700/50 transition-colors"
-            >
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="p-2 bg-orange-500/20 rounded-lg">
-                  <AlertTriangle className="w-4 h-4 text-orange-400" />
-                </div>
-                <h3 className="font-medium text-white">Setup Required</h3>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate('/settings')}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configure API Keys
+                </Button>
+                <Button variant="ghost" size="sm" onClick={checkAIHealth}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry Connection
+                </Button>
               </div>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                Enable data synchronization to start receiving AI-powered trading analysis.
-              </p>
             </div>
           </div>
         )}
       </div>
-
-      {/* Strengths & Weaknesses */}
-      {isConnected && (
-        <div className="holo-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-            <Zap className="w-5 h-5 text-yellow-400" />
-            <span>Your Trading Profile</span>
-          </h3>
-          
-          <div className="space-y-4">
-            {/* Strengths */}
-            <div>
-              <h4 className="text-sm font-medium text-green-400 mb-3 flex items-center space-x-2">
-                <TrendingUp className="w-4 h-4" />
-                <span>Strengths</span>
-              </h4>
-              <div className="space-y-2">
-                {strengths.map((strength, index) => (
-                  <div key={index} className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-white">{strength.title}</span>
-                      <Badge variant="outline" className="text-green-400">
-                        {strength.impact} impact
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-slate-300">{strength.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Weaknesses */}
-            <div>
-              <h4 className="text-sm font-medium text-red-400 mb-3 flex items-center space-x-2">
-                <TrendingDown className="w-4 h-4" />
-                <span>Areas for Improvement</span>
-              </h4>
-              <div className="space-y-2">
-                {weaknesses.map((weakness, index) => (
-                  <div key={index} className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-white">{weakness.title}</span>
-                      <Badge variant="outline" className="text-red-400">
-                        {weakness.impact} impact
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-slate-300">{weakness.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Best & Worst Times */}
-      {isConnected && (
-        <div className="holo-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-            <Clock className="w-5 h-5 text-blue-400" />
-            <span>Performance by Time</span>
-          </h3>
-          
-          <div className="space-y-4">
-            {/* Best Times */}
-            <div>
-              <h4 className="text-sm font-medium text-green-400 mb-3">Best Performing Times</h4>
-              <div className="space-y-2">
-                {bestTimes.map((time, index) => (
-                  <div key={index} className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-white">{time.time}</span>
-                      <span className="text-sm text-green-400">+${time.profit}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Win Rate: {time.winRate}%</span>
-                      <span>{time.trades} trades</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Worst Times */}
-            <div>
-              <h4 className="text-sm font-medium text-red-400 mb-3">Worst Performing Times</h4>
-              <div className="space-y-2">
-                {worstTimes.map((time, index) => (
-                  <div key={index} className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-white">{time.time}</span>
-                      <span className="text-sm text-red-400">${time.profit}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Win Rate: {time.winRate}%</span>
-                      <span>{time.trades} trades</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Personalized Challenges */}
-      {isConnected && (
-        <div className="holo-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-            <Trophy className="w-5 h-5 text-yellow-400" />
-            <span>Personalized Challenges</span>
-          </h3>
-          
-          <div className="space-y-3">
-            {personalizedChallenges.map((challenge, index) => (
-              <div key={index} className="p-4 rounded-lg bg-slate-700/30 border border-slate-600/30">
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="text-sm font-medium text-white">{challenge.title}</h4>
-                  <Badge variant="outline" className="text-xs">
-                    {challenge.duration}
-                  </Badge>
-                </div>
-                <p className="text-xs text-slate-300 mb-3">{challenge.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Reward: {challenge.reward}</span>
-                  <Button variant="ghost" size="sm">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Start Challenge
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

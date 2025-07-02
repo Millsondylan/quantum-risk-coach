@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Settings, User, LogOut, TrendingUp, Activity, Database, Menu } from 'lucide-react';
+import { Bell, Settings, User, LogOut, TrendingUp, Activity, Database } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { 
@@ -12,7 +12,6 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
-import { realDataService } from '@/lib/realDataService';
 import { toast } from 'sonner';
 
 // Static market data for display purposes
@@ -33,33 +32,8 @@ const Header = () => {
   const navigate = useNavigate();
   const marketData = useStaticMarketData();
   const [notifications, setNotifications] = useState(3);
-  const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
-  const [availableSources, setAvailableSources] = useState<string[]>([]);
-
-  useEffect(() => {
-    // Check overall API status
-    const checkApiStatus = async () => {
-      try {
-        const healthCheck = await realDataService.healthCheck();
-        const workingApis = Object.entries(healthCheck)
-          .filter(([_, status]) => status)
-          .map(([api, _]) => api);
-        
-        setAvailableSources(workingApis);
-        
-        if (workingApis.length > 0) {
-          const hasConnectedData = Object.values(marketData).some(data => data.status === 'connected');
-          setApiStatus(hasConnectedData ? 'connected' : 'error');
-        } else {
-          setApiStatus('error');
-        }
-      } catch (error) {
-        setApiStatus('error');
-      }
-    };
-
-    checkApiStatus();
-  }, [marketData]);
+  const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('connected'); // Static data is always "connected"
+  const [availableSources, setAvailableSources] = useState<string[]>(['Static Data']);
 
   const getPageTitle = () => {
     const path = location.pathname;
@@ -92,34 +66,22 @@ const Header = () => {
       <span className={`text-xs font-medium ${data.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
         {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)}%
       </span>
-      {data.status === 'connected' && (
-        <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
+      {data.status === 'static' && (
+        <div className="w-1 h-1 bg-slate-400 rounded-full" title="Static Data"></div>
       )}
     </div>
   );
 
+  const getStatusText = () => {
+    return 'STATIC DATA';
+  };
+
   const getStatusColor = () => {
-    switch (apiStatus) {
-      case 'connected': return 'text-emerald-400';
-      case 'error': return 'text-red-400';
-      default: return 'text-yellow-400';
-    }
+    return 'text-slate-400';
   };
 
   const getStatusBg = () => {
-    switch (apiStatus) {
-      case 'connected': return 'bg-emerald-500/10 border-emerald-500/20';
-      case 'error': return 'bg-red-500/10 border-red-500/20';
-      default: return 'bg-yellow-500/10 border-yellow-500/20';
-    }
-  };
-
-  const getStatusText = () => {
-    switch (apiStatus) {
-      case 'connected': return 'LIVE DATA';
-      case 'error': return 'API ERROR';
-      default: return 'CONNECTING';
-    }
+    return 'bg-slate-500/10 border-slate-500/20';
   };
 
   // Hide header for UltraTrader-style mobile interface

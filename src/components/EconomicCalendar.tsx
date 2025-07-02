@@ -17,7 +17,6 @@ import {
   Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { realDataService, RealEconomicEvent } from '@/lib/realDataService';
 import { format } from 'date-fns';
 
 interface FilterOptions {
@@ -26,9 +25,22 @@ interface FilterOptions {
   category: string;
 }
 
+interface EconomicEvent {
+  id: string;
+  title: string;
+  country: string;
+  currency: string;
+  time: string;
+  date: string;
+  impact: 'high' | 'medium' | 'low';
+  forecast?: string;
+  previous?: string;
+  actual?: string;
+}
+
 const EconomicCalendar = () => {
-  const [events, setEvents] = useState<RealEconomicEvent[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<RealEconomicEvent[]>([]);
+  const [events, setEvents] = useState<EconomicEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<EconomicEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isLoading, setIsLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
@@ -41,38 +53,76 @@ const EconomicCalendar = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    fetchRealEconomicCalendar();
+    loadEconomicData();
   }, []);
 
   useEffect(() => {
     applyFilters();
   }, [events, filters, selectedDate]);
 
-  const fetchRealEconomicCalendar = async () => {
+  const loadEconomicData = async () => {
     setIsLoading(true);
     try {
-      // Check if API keys are configured
-      const apiValidation = realDataService.validateApiKeys();
-      setAvailableSources(apiValidation.available);
-      
-      if (!apiValidation.valid) {
-        setApiStatus('error');
-        toast.error(`Missing API keys: ${apiValidation.missing.join(', ')}`);
-        return;
-      }
+      // Static economic events data
+      const staticEvents: EconomicEvent[] = [
+        {
+          id: '1',
+          title: 'Non-Farm Payrolls',
+          country: 'United States',
+          currency: 'USD',
+          time: '08:30',
+          date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
+          impact: 'high',
+          forecast: '200K',
+          previous: '187K',
+          actual: ''
+        },
+        {
+          id: '2', 
+          title: 'ECB Interest Rate Decision',
+          country: 'European Union',
+          currency: 'EUR',
+          time: '12:45',
+          date: new Date(Date.now() + 172800000).toISOString().split('T')[0], // Day after tomorrow
+          impact: 'high',
+          forecast: '4.50%',
+          previous: '4.50%',
+          actual: ''
+        },
+        {
+          id: '3',
+          title: 'Consumer Price Index',
+          country: 'United States', 
+          currency: 'USD',
+          time: '08:30',
+          date: new Date(Date.now() + 259200000).toISOString().split('T')[0], // 3 days from now
+          impact: 'medium',
+          forecast: '3.2%',
+          previous: '3.1%',
+          actual: ''
+        },
+        {
+          id: '4',
+          title: 'Bank of Japan Policy Meeting',
+          country: 'Japan',
+          currency: 'JPY', 
+          time: '03:00',
+          date: new Date(Date.now() + 345600000).toISOString().split('T')[0], // 4 days from now
+          impact: 'high',
+          forecast: '-0.10%',
+          previous: '-0.10%',
+          actual: ''
+        }
+      ];
 
-      // Fetch real economic calendar data
-      const realEvents = await realDataService.getRealEconomicCalendar();
-      
-      setEvents(realEvents);
-      setApiStatus('connected');
-      toast.success(`Real economic calendar loaded from ${availableSources.length} sources`);
-    } catch (error) {
-      console.error('Error fetching real economic calendar:', error);
-      setApiStatus('error');
-      toast.error('Failed to load economic calendar. Check your API configuration.');
-    } finally {
+      setEvents(staticEvents);
       setIsLoading(false);
+      
+      toast.success('Economic calendar loaded (static data)');
+    } catch (error) {
+      console.error('Error loading economic data:', error);
+      setIsLoading(false);
+      toast.error('Failed to load economic calendar');
     }
   };
 
@@ -180,7 +230,7 @@ const EconomicCalendar = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchRealEconomicCalendar}
+            onClick={loadEconomicData}
             disabled={isLoading}
             className="border-slate-600 text-slate-300 hover:bg-slate-700"
           >
@@ -300,7 +350,7 @@ const EconomicCalendar = () => {
                               {event.country}
                             </Badge>
                           </div>
-                          <h4 className="font-medium text-white mb-1">{event.event}</h4>
+                          <h4 className="font-medium text-white mb-1">{event.title}</h4>
                           <div className="flex items-center space-x-4 text-sm text-slate-400 mb-2">
                             <span className="flex items-center">
                               <Clock className="h-4 w-4 mr-1" />
@@ -359,7 +409,7 @@ const EconomicCalendar = () => {
                               {event.category}
                             </Badge>
                           </div>
-                          <h4 className="font-medium text-white mb-1">{event.event}</h4>
+                          <h4 className="font-medium text-white mb-1">{event.title}</h4>
                           <div className="flex items-center space-x-4 text-sm text-slate-400 mb-2">
                             <span className="flex items-center">
                               <CalendarIcon className="h-4 w-4 mr-1" />

@@ -25,9 +25,13 @@ import {
   Percent,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Minus,
+  CheckCircle,
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { realDataService } from '@/lib/realDataService';
 
 interface MarketSentiment {
   symbol: string;

@@ -112,9 +112,33 @@ interface AIStreamOptions {
 
 // Live AI API Keys with environment variable fallbacks
 const AI_API_KEYS = {
-  OPENAI: import.meta.env.VITE_OPENAI_API_KEY || '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',
-  GROQ: import.meta.env.VITE_GROQ_API_KEY || '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',
-  GEMINI: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyD3jSvbP_AntLSgc5vRJXMpVvPAJ0LBBb4'
+  OPENAI: import.meta.env.VITE_OPENAI_API_KEY || '',
+  GROQ: import.meta.env.VITE_GROQ_API_KEY || '',
+  GEMINI: import.meta.env.VITE_GEMINI_API_KEY || ''
+};
+
+// Validate API keys on service initialization
+const validateAPIKeys = () => {
+  const status = {
+    openai: false,
+    groq: false,
+    gemini: false
+  };
+
+  if (AI_API_KEYS.OPENAI && AI_API_KEYS.OPENAI.startsWith('sk-')) {
+    status.openai = true;
+  }
+
+  if (AI_API_KEYS.GROQ && AI_API_KEYS.GROQ.startsWith('gsk_')) {
+    status.groq = true;
+  }
+
+  if (AI_API_KEYS.GEMINI && AI_API_KEYS.GEMINI.startsWith('AIza')) {
+    status.gemini = true;
+  }
+
+  console.log('AI API Keys Status:', status);
+  return status;
 };
 
 export class AIStreamService extends EventTarget {
@@ -125,6 +149,7 @@ export class AIStreamService extends EventTarget {
   private config: AIStreamConfig;
   private agents: Map<string, AIAgent> = new Map();
   private analysisCache: Map<string, AIAnalysisResponse> = new Map();
+  private keyStatus: { openai: boolean; groq: boolean; gemini: boolean };
 
   constructor(config: Partial<AIStreamConfig> = {}) {
     super();
@@ -140,27 +165,49 @@ export class AIStreamService extends EventTarget {
       ...config
     };
 
+    this.keyStatus = validateAPIKeys();
     this.initializeProviders();
     this.initializeAgents();
     this.restoreSessions();
   }
 
   private initializeProviders() {
-    const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    const groqKey = import.meta.env.VITE_GROQ_API_KEY;
-
-    if (openaiKey) {
-      this.openai = new OpenAI({ 
-        apiKey: openaiKey,
-        dangerouslyAllowBrowser: true 
-      });
+    // Initialize OpenAI if key is available
+    if (this.keyStatus.openai && AI_API_KEYS.OPENAI) {
+      try {
+        this.openai = new OpenAI({ 
+          apiKey: AI_API_KEYS.OPENAI,
+          dangerouslyAllowBrowser: true 
+        });
+        console.log('✅ OpenAI client initialized successfully');
+      } catch (error) {
+        console.error('❌ Failed to initialize OpenAI client:', error);
+        this.keyStatus.openai = false;
+      }
+    } else {
+      console.warn('⚠️ OpenAI API key not configured or invalid');
     }
 
-    if (groqKey) {
-      this.groq = new Groq({ 
-        apiKey: groqKey,
-        dangerouslyAllowBrowser: true 
-      });
+    // Initialize Groq if key is available
+    if (this.keyStatus.groq && AI_API_KEYS.GROQ) {
+      try {
+        this.groq = new Groq({ 
+          apiKey: AI_API_KEYS.GROQ,
+          dangerouslyAllowBrowser: true 
+        });
+        console.log('✅ Groq client initialized successfully');
+      } catch (error) {
+        console.error('❌ Failed to initialize Groq client:', error);
+        this.keyStatus.groq = false;
+      }
+    } else {
+      console.warn('⚠️ Groq API key not configured or invalid');
+    }
+
+    if (this.keyStatus.gemini) {
+      console.log('✅ Gemini API key configured');
+    } else {
+      console.warn('⚠️ Gemini API key not configured or invalid');
     }
   }
 
@@ -1153,39 +1200,307 @@ Provide analysis that is:
     this.analysisCache.clear();
   }
 
-  // Get AI health status
+  // Enhanced health check with better error handling
   async healthCheck(): Promise<{ [key: string]: boolean }> {
     const results: { [key: string]: boolean } = {};
 
     // Test OpenAI
-    try {
-      const response = await fetch('https://api.openai.com/v1/models', {
-        headers: { 'Authorization': `Bearer ${AI_API_KEYS.OPENAI}` }
-      });
-      results.openai = response.ok;
-    } catch {
+    if (this.keyStatus.openai && AI_API_KEYS.OPENAI) {
+      try {
+        const response = await fetch('https://api.openai.com/v1/models', {
+          headers: { 
+            'Authorization': `Bearer ${AI_API_KEYS.OPENAI}`,
+            'Content-Type': 'application/json'
+          },
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        results.openai = response.ok;
+        if (response.ok) {
+          console.log('✅ OpenAI API health check passed');
+        } else {
+          console.error('❌ OpenAI API health check failed:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('❌ OpenAI API health check error:', error);
+        results.openai = false;
+      }
+    } else {
       results.openai = false;
     }
 
     // Test Groq
-    try {
-      const response = await fetch('https://api.groq.com/openai/v1/models', {
-        headers: { 'Authorization': `Bearer ${AI_API_KEYS.GROQ}` }
-      });
-      results.groq = response.ok;
-    } catch {
+    if (this.keyStatus.groq && AI_API_KEYS.GROQ) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/models', {
+          headers: { 
+            'Authorization': `Bearer ${AI_API_KEYS.GROQ}`,
+            'Content-Type': 'application/json'
+          },
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        results.groq = response.ok;
+        if (response.ok) {
+          console.log('✅ Groq API health check passed');
+        } else {
+          console.error('❌ Groq API health check failed:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('❌ Groq API health check error:', error);
+        results.groq = false;
+      }
+    } else {
       results.groq = false;
     }
 
     // Test Gemini
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${AI_API_KEYS.GEMINI}`);
-      results.gemini = response.ok;
-    } catch {
+    if (this.keyStatus.gemini && AI_API_KEYS.GEMINI) {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${AI_API_KEYS.GEMINI}`, {
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        results.gemini = response.ok;
+        if (response.ok) {
+          console.log('✅ Gemini API health check passed');
+        } else {
+          console.error('❌ Gemini API health check failed:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('❌ Gemini API health check error:', error);
+        results.gemini = false;
+      }
+    } else {
       results.gemini = false;
     }
 
+    // Log overall status
+    const connectedCount = Object.values(results).filter(Boolean).length;
+    console.log(`🔌 AI Services Status: ${connectedCount}/3 connected`, results);
+
     return results;
+  }
+
+  // Get connection status for UI
+  getConnectionStatus() {
+    return {
+      configured: this.keyStatus,
+      connected: {
+        openai: !!this.openai,
+        groq: !!this.groq,
+        gemini: this.keyStatus.gemini
+      }
+    };
+  }
+
+  // Test individual provider with detailed feedback
+  async testProvider(provider: 'openai' | 'groq' | 'gemini'): Promise<{ success: boolean; message: string; latency?: number }> {
+    const startTime = Date.now();
+    
+    try {
+      switch (provider) {
+        case 'openai':
+          if (!AI_API_KEYS.OPENAI) {
+            return { success: false, message: 'OpenAI API key not configured' };
+          }
+          
+          const openaiResponse = await fetch('https://api.openai.com/v1/models', {
+            headers: { 'Authorization': `Bearer ${AI_API_KEYS.OPENAI}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          const latency = Date.now() - startTime;
+          
+          if (openaiResponse.ok) {
+            return { 
+              success: true, 
+              message: 'OpenAI connection successful', 
+              latency 
+            };
+          } else {
+            return { 
+              success: false, 
+              message: `OpenAI API error: ${openaiResponse.status} ${openaiResponse.statusText}` 
+            };
+          }
+          
+        case 'groq':
+          if (!AI_API_KEYS.GROQ) {
+            return { success: false, message: 'Groq API key not configured' };
+          }
+          
+          const groqResponse = await fetch('https://api.groq.com/openai/v1/models', {
+            headers: { 'Authorization': `Bearer ${AI_API_KEYS.GROQ}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          const groqLatency = Date.now() - startTime;
+          
+          if (groqResponse.ok) {
+            return { 
+              success: true, 
+              message: 'Groq connection successful', 
+              latency: groqLatency 
+            };
+          } else {
+            return { 
+              success: false, 
+              message: `Groq API error: ${groqResponse.status} ${groqResponse.statusText}` 
+            };
+          }
+          
+        case 'gemini':
+          if (!AI_API_KEYS.GEMINI) {
+            return { success: false, message: 'Gemini API key not configured' };
+          }
+          
+          const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${AI_API_KEYS.GEMINI}`, {
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          const geminiLatency = Date.now() - startTime;
+          
+          if (geminiResponse.ok) {
+            return { 
+              success: true, 
+              message: 'Gemini connection successful', 
+              latency: geminiLatency 
+            };
+          } else {
+            return { 
+              success: false, 
+              message: `Gemini API error: ${geminiResponse.status} ${geminiResponse.statusText}` 
+            };
+          }
+          
+        default:
+          return { success: false, message: 'Unknown provider' };
+      }
+    } catch (error: any) {
+      return { 
+        success: false, 
+        message: `Connection failed: ${error.message || error}` 
+      };
+    }
+  }
+
+  // Enhanced coaching method with multi-provider fallback
+  async getAICoaching(tradingData: any, options: { preferredProvider?: 'openai' | 'groq' | 'gemini' } = {}): Promise<any> {
+    const prompt = `As an expert trading coach, analyze this performance data:
+
+Trading Performance:
+- Total Trades: ${tradingData.totalTrades || 0}
+- Win Rate: ${(tradingData.winRate || 0).toFixed(1)}%
+- Total P&L: $${(tradingData.totalPnL || 0).toFixed(2)}
+- Average Trade: $${(tradingData.avgTrade || 0).toFixed(2)}
+- Risk/Reward Ratio: ${(tradingData.riskRewardRatio || 1).toFixed(2)}
+- Max Drawdown: ${(tradingData.maxDrawdown || 0).toFixed(2)}%
+
+Provide actionable coaching advice in a structured format:
+1. Key strength or weakness identified
+2. Specific recommendations (3 points)
+3. Risk assessment (low/medium/high)
+4. Next steps (2 actions)
+
+Keep response concise and practical for mobile display.`;
+
+    const providers = options.preferredProvider 
+      ? [options.preferredProvider, ...Object.keys(this.keyStatus).filter(p => p !== options.preferredProvider)]
+      : ['openai', 'groq', 'gemini'];
+
+    for (const provider of providers) {
+      if (!this.keyStatus[provider as keyof typeof this.keyStatus]) continue;
+
+      try {
+        const result = await this.callProvider(provider as 'openai' | 'groq' | 'gemini', prompt);
+        if (result) {
+          console.log(`✅ AI coaching generated by ${provider}`);
+          return { ...result, provider };
+        }
+      } catch (error) {
+        console.warn(`⚠️ ${provider} failed, trying next provider:`, error);
+        continue;
+      }
+    }
+
+    throw new Error('All AI providers failed to generate coaching insight');
+  }
+
+  private async callProvider(provider: 'openai' | 'groq' | 'gemini', prompt: string): Promise<any> {
+    switch (provider) {
+      case 'openai':
+        if (!this.openai) throw new Error('OpenAI not initialized');
+        
+        const openaiResponse = await this.openai.chat.completions.create({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a professional trading coach. Provide structured, actionable advice.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.7
+        });
+        
+        return {
+          content: openaiResponse.choices[0].message.content,
+          model: 'gpt-4',
+          usage: openaiResponse.usage
+        };
+
+      case 'groq':
+        if (!this.groq) throw new Error('Groq not initialized');
+        
+        const groqResponse = await this.groq.chat.completions.create({
+          model: 'llama3-70b-8192',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a professional trading coach. Provide structured, actionable advice.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 400,
+          temperature: 0.6
+        });
+        
+        return {
+          content: groqResponse.choices[0].message.content,
+          model: 'llama3-70b-8192',
+          usage: groqResponse.usage
+        };
+
+      case 'gemini':
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${AI_API_KEYS.GEMINI}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: prompt }]
+            }]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Gemini API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return {
+          content: data.candidates?.[0]?.content?.parts?.[0]?.text,
+          model: 'gemini-pro',
+          usage: data.usageMetadata
+        };
+
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
+    }
   }
 }
 

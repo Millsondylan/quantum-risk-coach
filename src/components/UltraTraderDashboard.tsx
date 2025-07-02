@@ -132,7 +132,7 @@ const UltraTraderDashboard = () => {
       {/* Main Content */}
       <div className="px-4 py-6 space-y-6">
         {/* Portfolio Balance Card - UltraTrader Style */}
-        <Card className="bg-gradient-to-br from-[#1A1B1E] to-[#151619] border-[#2A2B2E] shadow-xl">
+        <Card className="bg-gradient-to-br from-[#1A1B1E] to-[#151619] border-[#2A2B2E] shadow-xl rounded-2xl">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
