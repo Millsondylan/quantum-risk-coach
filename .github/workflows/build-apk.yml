@@ -32,10 +32,14 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '11'
+        java-version: '17'
         
-    - name: Set up Android SDK
+    - name: Setup Android SDK
       uses: android-actions/setup-android@v3
+      
+    - name: Install Android SDK components
+      run: |
+        sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "platform-tools"
         
     - name: Make gradlew executable
       run: chmod +x android/gradlew
@@ -43,7 +47,7 @@ jobs:
     - name: Build APK
       run: |
         cd android
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        ./gradlew assembleDebug --no-daemon --stacktrace --info
       
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
@@ -58,7 +62,7 @@ jobs:
         tag_name: v${{ github.run_number }}
         name: Quantum Risk Coach v${{ github.run_number }}
         body: |
-          ## 🚀 Quantum Risk Coach APK
+          ## 🚀 Quantum Risk Coach APK - Ready for Download!
           
           ### ✨ Features:
           - **Personalized Onboarding** - Custom questions for tailored experience
@@ -80,7 +84,7 @@ jobs:
           - Supabase backend integration
           - Modern holographic UI design
           
-          **Download Link:** [quantum-risk-coach.apk](https://github.com/Millsondylan/quantum-risk-coach/releases/download/v${{ github.run_number }}/quantum-risk-coach.apk)
+          **Download the APK below! ⬇️**
         files: |
           android/app/build/outputs/apk/debug/app-debug.apk
         draft: false
