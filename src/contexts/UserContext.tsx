@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { saveUserData, getUserData } from '@/lib/localUserUtils';
 
 interface UserPreferences {
   tradingStyle: 'scalping' | 'day-trading' | 'swing-trading' | 'position-trading';
@@ -29,6 +28,7 @@ interface UserContextType {
   updatePreferences: (preferences: Partial<UserPreferences>) => Promise<void>;
   completeOnboarding: (preferences: UserPreferences) => Promise<void>;
   updateLastActive: () => Promise<void>;
+  clearUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -41,6 +41,64 @@ export const useUser = () => {
   return context;
 };
 
+// Storage utilities that work in both browser and Capacitor
+const storage = {
+  async set(key: string, value: any) {
+    if (typeof window !== 'undefined') {
+      try {
+        // Try Capacitor first
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.set({ key, value: JSON.stringify(value) });
+      } catch {
+        // Fallback to localStorage
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+    }
+  },
+  
+  async get(key: string) {
+    if (typeof window !== 'undefined') {
+      try {
+        // Try Capacitor first
+        const { Preferences } = await import('@capacitor/preferences');
+        const { value } = await Preferences.get({ key });
+        return value ? JSON.parse(value) : null;
+      } catch {
+        // Fallback to localStorage
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : null;
+      }
+    }
+    return null;
+  },
+  
+  async remove(key: string) {
+    if (typeof window !== 'undefined') {
+      try {
+        // Try Capacitor first
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.remove({ key });
+      } catch {
+        // Fallback to localStorage
+        localStorage.removeItem(key);
+      }
+    }
+  },
+  
+  async clear() {
+    if (typeof window !== 'undefined') {
+      try {
+        // Try Capacitor first
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.clear();
+      } catch {
+        // Fallback to localStorage
+        localStorage.clear();
+      }
+    }
+  }
+};
+
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +107,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const userData = await getUserData('user');
+        const userData = await storage.get('user');
         if (userData) {
           setUser(userData);
         }
@@ -72,7 +130,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       lastActive: new Date().toISOString(),
     };
 
-    await saveUserData('user', updatedUser);
+    await storage.set('user', updatedUser);
     setUser(updatedUser);
   };
 
@@ -85,7 +143,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       lastActive: new Date().toISOString(),
     };
 
-    await saveUserData('user', newUser);
+    await storage.set('user', newUser);
     setUser(newUser);
   };
 
@@ -97,8 +155,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       lastActive: new Date().toISOString(),
     };
 
-    await saveUserData('user', updatedUser);
+    await storage.set('user', updatedUser);
     setUser(updatedUser);
+  };
+
+  const clearUser = async () => {
+    await storage.remove('user');
+    setUser(null);
   };
 
   const value: UserContextType = {
@@ -107,6 +170,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updatePreferences,
     completeOnboarding,
     updateLastActive,
+    clearUser,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

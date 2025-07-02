@@ -253,8 +253,11 @@ const StrategyAnalysis = () => {
                           <div key={month} className="text-center">
                             <div className="p-3 bg-slate-800/30 rounded-lg">
                               <p className="text-xs text-slate-400 mb-1">Month {month}</p>
-                              <p className={`text-sm font-medium ${Math.random() > 0.5 ? 'text-green-400' : 'text-red-400'}`}>
-                                ${(Math.random() * 1000 + 200).toFixed(0)}
+                              <p className="text-sm font-medium text-slate-400">
+                                {selectedStrategyData ? 
+                                  `$${Math.round(selectedStrategyData.totalPnL / 6)}` : 
+                                  'No data'
+                                }
                               </p>
                             </div>
                           </div>

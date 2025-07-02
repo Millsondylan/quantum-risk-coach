@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
-const Onboarding: React.FC = () => {
+const Onboarding = () => {
   const { completeOnboarding } = useUser();
   const [step, setStep] = useState(1);
   const [preferences, setPreferences] = useState({

@@ -72,6 +72,8 @@ const MobileBottomNav = () => {
     <nav 
       className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-t border-[#1A1B1E] safe-area-inset-bottom touch-manipulation"
       data-testid="mobile-bottom-nav"
+      role="navigation"
+      aria-label="Mobile navigation"
     >
       <div className="px-2 py-2">
         <div className="flex items-center justify-around">
@@ -94,6 +96,7 @@ const MobileBottomNav = () => {
                 tabIndex={0}
                 aria-label={`Navigate to ${item.label}`}
                 data-testid={item.testId}
+                aria-current={isActive ? 'page' : undefined}
               >
                 <div className={cn(
                   "p-2 rounded-xl transition-all duration-200 flex items-center justify-center",

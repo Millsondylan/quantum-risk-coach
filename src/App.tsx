@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { UserProvider, useUser } from "./contexts/UserContext";
 import { ErrorBoundary } from "react-error-boundary";
@@ -57,7 +57,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // App Content Component
 const AppContent = () => {
   const { user, isLoading } = useUser();
-  const location = useLocation();
   
   // Show loading during initialization
   if (isLoading) {
@@ -71,68 +70,84 @@ const AppContent = () => {
     );
   }
   
-  // Define valid routes
-  const validRoutes = [
-    '/',
-    '/auth',
-    '/connect-mt4',
-    '/connect-mt5', 
-    '/connect-ctrader',
-    '/connect-tradingview',
-    '/settings',
-    '/journal',
-    '/journal/add',
-    '/journal/analytics',
-    '/journal/tags',
-    '/journal/export',
-    '/trade-builder',
-    '/performance-calendar',
-    '/strategy-analyzer'
-  ];
-  
-  // Check if current route is valid
-  const isValidRoute = validRoutes.some(route => {
-    if (route === '/') return location.pathname === '/';
-    return location.pathname === route || location.pathname.startsWith(route + '/');
-  });
-  
-  // If route is invalid, show 404
-  if (!isValidRoute) {
-    return <NotFound />;
-  }
-  
-  // If user is not authenticated and trying to access protected routes, show auth
-  if (!user && location.pathname !== '/auth') {
-    return <Auth />;
-  }
-  
-  // If user is authenticated but hasn't completed onboarding, show onboarding
-  if (user && !user.onboardingCompleted) {
-    return <Onboarding />;
-  }
-  
-  // Show main app
+  // Show main app with proper routing
   return (
     <div className="flex flex-col min-h-screen">
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        } />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/connect-mt4" element={<MT4Connection />} />
-        <Route path="/connect-mt5" element={<MT4Connection platform="MT5" />} />
-        <Route path="/connect-ctrader" element={<MT4Connection platform="cTrader" />} />
-        <Route path="/connect-tradingview" element={<MT4Connection platform="TradingView" />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/journal" element={<Journal />} />
-        <Route path="/journal/add" element={<Journal defaultTab="add" />} />
-        <Route path="/journal/analytics" element={<Journal defaultTab="analytics" />} />
-        <Route path="/journal/tags" element={<Journal defaultTab="tags" />} />
-        <Route path="/journal/export" element={<Journal defaultTab="export" />} />
-        <Route path="/trade-builder" element={<TradeBuilder />} />
-        <Route path="/performance-calendar" element={<PerformanceCalendar />} />
-        <Route path="/strategy-analyzer" element={<StrategyAnalyzer />} />
+        <Route path="/connect-mt4" element={
+          <ProtectedRoute>
+            <MT4Connection />
+          </ProtectedRoute>
+        } />
+        <Route path="/connect-mt5" element={
+          <ProtectedRoute>
+            <MT4Connection platform="MT5" />
+          </ProtectedRoute>
+        } />
+        <Route path="/connect-ctrader" element={
+          <ProtectedRoute>
+            <MT4Connection platform="cTrader" />
+          </ProtectedRoute>
+        } />
+        <Route path="/connect-tradingview" element={
+          <ProtectedRoute>
+            <MT4Connection platform="TradingView" />
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } />
+        <Route path="/journal" element={
+          <ProtectedRoute>
+            <Journal />
+          </ProtectedRoute>
+        } />
+        <Route path="/journal/add" element={
+          <ProtectedRoute>
+            <Journal defaultTab="add" />
+          </ProtectedRoute>
+        } />
+        <Route path="/journal/analytics" element={
+          <ProtectedRoute>
+            <Journal defaultTab="analytics" />
+          </ProtectedRoute>
+        } />
+        <Route path="/journal/tags" element={
+          <ProtectedRoute>
+            <Journal defaultTab="tags" />
+          </ProtectedRoute>
+        } />
+        <Route path="/journal/export" element={
+          <ProtectedRoute>
+            <Journal defaultTab="export" />
+          </ProtectedRoute>
+        } />
+        <Route path="/trade-builder" element={
+          <ProtectedRoute>
+            <TradeBuilder />
+          </ProtectedRoute>
+        } />
+        <Route path="/performance-calendar" element={
+          <ProtectedRoute>
+            <PerformanceCalendar />
+          </ProtectedRoute>
+        } />
+        <Route path="/strategy-analyzer" element={
+          <ProtectedRoute>
+            <StrategyAnalyzer />
+          </ProtectedRoute>
+        } />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <MobileBottomNav />
+      {user && user.onboardingCompleted && <MobileBottomNav />}
     </div>
   );
 };

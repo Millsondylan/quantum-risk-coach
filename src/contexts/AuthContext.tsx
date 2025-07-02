@@ -34,13 +34,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Check for existing user session
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem('quantum_risk_coach_user');
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error('Error parsing stored user:', error);
-        localStorage.removeItem('user');
+        localStorage.removeItem('quantum_risk_coach_user');
       }
     }
     setIsLoading(false);
@@ -49,20 +49,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Get registered users from localStorage
+      const storedUsers = localStorage.getItem('quantum_risk_coach_all_users');
+      const allUsers = storedUsers ? JSON.parse(storedUsers) : [];
       
-      // For demo purposes, accept any email/password combination
-      const mockUser: User = {
-        id: '1',
-        username: email.split('@')[0],
-        email: email
+      // Find user by email
+      const user = allUsers.find((u: any) => u.email === email);
+      if (!user) {
+        throw new Error('User not found. Please sign up first.');
+      }
+      
+      // Check password
+      const storedPassword = localStorage.getItem(`quantum_risk_coach_password_${user.id}`);
+      if (storedPassword !== password) {
+        throw new Error('Invalid password');
+      }
+      
+      // Sign in successful
+      const authUser: User = {
+        id: user.id,
+        username: user.username,
+        email: user.email
       };
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(authUser);
+      localStorage.setItem('quantum_risk_coach_user', JSON.stringify(authUser));
     } catch (error) {
-      throw new Error('Invalid credentials');
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -71,19 +84,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUp = async (email: string, password: string, username: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check if user already exists
+      const storedUsers = localStorage.getItem('quantum_risk_coach_all_users');
+      const allUsers = storedUsers ? JSON.parse(storedUsers) : [];
       
-      const mockUser: User = {
-        id: '1',
-        username: username,
-        email: email
+      const existingUser = allUsers.find((u: any) => u.email === email);
+      if (existingUser) {
+        throw new Error('User with this email already exists');
+      }
+      
+      // Create new user
+      const newUser = {
+        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        email,
+        username,
+        created_at: new Date().toISOString(),
+        subscription_status: 'unlimited',
+        posts_remaining: 999999
       };
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      // Save user to registry
+      allUsers.push(newUser);
+      localStorage.setItem('quantum_risk_coach_all_users', JSON.stringify(allUsers));
+      
+      // Save password separately (in production, this would be hashed)
+      localStorage.setItem(`quantum_risk_coach_password_${newUser.id}`, password);
+      
+      // Sign in the new user
+      const authUser: User = {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email
+      };
+      
+      setUser(authUser);
+      localStorage.setItem('quantum_risk_coach_user', JSON.stringify(authUser));
     } catch (error) {
-      throw new Error('Failed to create account');
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     try {
       setUser(null);
-      localStorage.removeItem('user');
+      localStorage.removeItem('quantum_risk_coach_user');
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {

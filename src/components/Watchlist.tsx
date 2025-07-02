@@ -18,8 +18,12 @@ import {
   Activity,
   X,
   Search,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { realDataService } from '@/lib/realDataService';
 
 interface WatchlistItem {
   id: string;
@@ -46,6 +50,7 @@ interface WatchlistGroup {
 }
 
 export default function Watchlist() {
+  const { toast } = useToast();
   const [watchlists, setWatchlists] = useState<WatchlistGroup[]>([]);
   const [activeWatchlist, setActiveWatchlist] = useState<string>('crypto');
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,117 +66,133 @@ export default function Watchlist() {
     commodities: ['GOLD', 'SILVER', 'OIL', 'COPPER', 'WHEAT', 'CORN', 'SUGAR']
   };
 
+  // Initialize with real data from APIs
   useEffect(() => {
-    // Initialize with sample data
-    const sampleWatchlists: WatchlistGroup[] = [
-      {
-        id: 'crypto',
-        name: 'Cryptocurrency',
-        color: 'bg-orange-500',
-        items: [
-          {
-            id: '1',
-            symbol: 'BTC',
-            name: 'Bitcoin',
-            price: 43580.50,
-            change: 1250.80,
-            changePercent: 2.95,
-            high24h: 44100.00,
-            low24h: 42800.00,
-            volume: 28500000000,
-            marketCap: 855000000000,
-            category: 'crypto',
-            isFavorite: true,
-            hasAlert: true,
-            alertPrice: 45000
-          },
-          {
-            id: '2',
-            symbol: 'ETH',
-            name: 'Ethereum',
-            price: 2680.25,
-            change: -45.30,
-            changePercent: -1.66,
-            high24h: 2750.00,
-            low24h: 2650.00,
-            volume: 15800000000,
-            marketCap: 322000000000,
-            category: 'crypto',
-            isFavorite: false,
-            hasAlert: false
-          }
-        ]
-      },
-      {
-        id: 'forex',
-        name: 'Forex Pairs',
-        color: 'bg-blue-500',
-        items: [
-          {
-            id: '3',
-            symbol: 'EURUSD',
-            name: 'Euro / US Dollar',
-            price: 1.0892,
-            change: 0.0023,
-            changePercent: 0.21,
-            high24h: 1.0910,
-            low24h: 1.0875,
-            volume: 125000000,
-            category: 'forex',
-            isFavorite: true,
-            hasAlert: true,
-            alertPrice: 1.0950
-          },
-          {
-            id: '4',
-            symbol: 'GBPUSD',
-            name: 'British Pound / US Dollar',
-            price: 1.2745,
-            change: -0.0015,
-            changePercent: -0.12,
-            high24h: 1.2780,
-            low24h: 1.2720,
-            volume: 89000000,
-            category: 'forex',
-            isFavorite: false,
-            hasAlert: false
-          }
-        ]
-      },
-      {
-        id: 'stocks',
-        name: 'US Stocks',
-        color: 'bg-green-500',
-        items: [
-          {
-            id: '5',
-            symbol: 'AAPL',
-            name: 'Apple Inc.',
-            price: 189.95,
-            change: 2.85,
-            changePercent: 1.52,
-            high24h: 191.20,
-            low24h: 186.50,
-            volume: 58000000,
-            marketCap: 2950000000000,
-            category: 'stocks',
-            isFavorite: true,
-            hasAlert: false
-          }
-        ]
-      }
-    ];
+    const loadRealWatchlistData = async () => {
+      setIsLoading(true);
+      try {
+        // Get real market data
+        const [cryptoData, forexData] = await Promise.allSettled([
+          realDataService.getCryptoPrices(),
+          realDataService.getForexRates()
+        ]);
 
-    setWatchlists(sampleWatchlists);
+        const realWatchlists: WatchlistGroup[] = [];
+
+        // Crypto watchlist with real data
+        if (cryptoData.status === 'fulfilled' && cryptoData.value.length > 0) {
+          const cryptoItems: WatchlistItem[] = cryptoData.value.slice(0, 5).map((crypto: any) => ({
+            id: crypto.id || crypto.symbol,
+            symbol: crypto.symbol?.toUpperCase() || 'UNKNOWN',
+            name: crypto.name || crypto.symbol?.toUpperCase() || 'Unknown',
+            price: crypto.current_price || 0,
+            change: crypto.price_change_24h || 0,
+            changePercent: crypto.price_change_percentage_24h || 0,
+            high24h: crypto.high_24h || crypto.current_price || 0,
+            low24h: crypto.low_24h || crypto.current_price || 0,
+            volume: crypto.total_volume || 0,
+            marketCap: crypto.market_cap || 0,
+            category: 'crypto' as const,
+            isFavorite: false,
+            hasAlert: false
+          }));
+
+          realWatchlists.push({
+            id: 'crypto',
+            name: 'Cryptocurrencies',
+            color: 'bg-orange-500',
+            items: cryptoItems
+          });
+        }
+
+        // Forex watchlist with real data
+        if (forexData.status === 'fulfilled' && forexData.value.length > 0) {
+          const forexItems: WatchlistItem[] = forexData.value.slice(0, 5).map((forex: any) => ({
+            id: `${forex.base}-${forex.target}`,
+            symbol: `${forex.base}/${forex.target}`,
+            name: `${forex.base}/${forex.target}`,
+            price: forex.rate || 0,
+            change: forex.change_24h || 0,
+            changePercent: forex.change_24h ? (forex.change_24h / forex.rate) * 100 : 0,
+            high24h: forex.rate || 0,
+            low24h: forex.rate || 0,
+            volume: 0, // Not available in forex rate data
+            category: 'forex' as const,
+            isFavorite: false,
+            hasAlert: false
+          }));
+
+          realWatchlists.push({
+            id: 'forex',
+            name: 'Forex Pairs',
+            color: 'bg-blue-500',
+            items: forexItems
+          });
+        }
+
+        // If no real data available, show empty watchlists
+        if (realWatchlists.length === 0) {
+          realWatchlists.push(
+            {
+              id: 'crypto',
+              name: 'Cryptocurrencies',
+              color: 'bg-orange-500',
+              items: []
+            },
+            {
+              id: 'forex',
+              name: 'Forex Pairs',
+              color: 'bg-blue-500',
+              items: []
+            },
+            {
+              id: 'stocks',
+              name: 'US Stocks',
+              color: 'bg-green-500',
+              items: []
+            }
+          );
+        }
+
+        setWatchlists(realWatchlists);
+      } catch (error) {
+        console.error('Failed to load real watchlist data:', error);
+        // Set empty watchlists if real data fails
+        setWatchlists([
+          {
+            id: 'crypto',
+            name: 'Cryptocurrencies',
+            color: 'bg-orange-500',
+            items: []
+          },
+          {
+            id: 'forex',
+            name: 'Forex Pairs',
+            color: 'bg-blue-500',
+            items: []
+          },
+          {
+            id: 'stocks',
+            name: 'US Stocks',
+            color: 'bg-green-500',
+            items: []
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRealWatchlistData();
   }, []);
 
   const getCurrentWatchlist = () => {
     return watchlists.find(w => w.id === activeWatchlist) || watchlists[0];
   };
 
-  const addToWatchlist = (symbol: string, category: 'crypto' | 'forex' | 'stocks' | 'commodities') => {
+  const addToWatchlist = async (symbol: string, category: 'crypto' | 'forex' | 'stocks' | 'commodities') => {
     if (!symbol.trim()) {
-      toast.error('Please enter a symbol');
+      toast({ title: "Error", description: "Please enter a symbol", variant: "destructive" });
       return;
     }
 
@@ -189,36 +210,57 @@ export default function Watchlist() {
 
     // Check if symbol already exists
     if (targetWatchlist.items.some(item => item.symbol === symbol.toUpperCase())) {
-      toast.error('Symbol already in watchlist');
+      toast({ title: "Error", description: "Symbol already in watchlist", variant: "destructive" });
       return;
     }
 
-    const newItem: WatchlistItem = {
-      id: Date.now().toString(),
-      symbol: symbol.toUpperCase(),
-      name: symbol.toUpperCase(),
-      price: Math.random() * 1000 + 100,
-      change: (Math.random() - 0.5) * 20,
-      changePercent: (Math.random() - 0.5) * 5,
-      high24h: Math.random() * 1100 + 100,
-      low24h: Math.random() * 900 + 50,
-      volume: Math.random() * 100000000,
-      category,
-      isFavorite: false,
-      hasAlert: false
-    };
+    // Try to get real data for the symbol
+    try {
+      let realData: any = null;
+      
+      if (category === 'crypto') {
+        const cryptoData = await realDataService.getCryptoPrices();
+        realData = cryptoData.find((crypto: any) => 
+          crypto.symbol?.toLowerCase() === symbol.toLowerCase()
+        );
+      } else if (category === 'forex') {
+        const forexData = await realDataService.getForexRates();
+        realData = forexData.find((forex: any) => 
+          `${forex.base}/${forex.target}`.toLowerCase() === symbol.toLowerCase()
+        );
+      }
 
-    setWatchlists(prev => 
-      prev.map(w => 
-        w.id === category 
-          ? { ...w, items: [...w.items, newItem] }
-          : w
-      )
-    );
+      const newItem: WatchlistItem = {
+        id: Date.now().toString(),
+        symbol: symbol.toUpperCase(),
+        name: realData?.name || symbol.toUpperCase(),
+        price: realData?.current_price || realData?.rate || 0,
+        change: realData?.price_change_24h || realData?.change_24h || 0,
+        changePercent: realData?.price_change_percentage_24h || 
+          (realData?.change_24h && realData?.rate ? (realData.change_24h / realData.rate) * 100 : 0),
+        high24h: realData?.current_price || realData?.rate || 0, // Use current price as fallback
+        low24h: realData?.current_price || realData?.rate || 0, // Use current price as fallback
+        volume: realData?.volume_24h || 0,
+        category,
+        isFavorite: false,
+        hasAlert: false
+      };
 
-    setNewSymbol('');
-    setIsAddingSymbol(false);
-    toast.success(`${symbol.toUpperCase()} added to watchlist`);
+      setWatchlists(prev => 
+        prev.map(w => 
+          w.id === category 
+            ? { ...w, items: [...w.items, newItem] }
+            : w
+        )
+      );
+
+      setNewSymbol('');
+      setIsAddingSymbol(false);
+      toast({ title: "Success", description: `${symbol.toUpperCase()} added to watchlist` });
+    } catch (error) {
+      console.error('Failed to get real data for symbol:', error);
+      toast({ title: "Error", description: "Failed to add symbol. Please try again.", variant: "destructive" });
+    }
   };
 
   const removeFromWatchlist = (symbolId: string) => {
@@ -228,7 +270,7 @@ export default function Watchlist() {
         items: w.items.filter(item => item.id !== symbolId)
       }))
     );
-    toast.success('Symbol removed from watchlist');
+    toast({ title: "Success", description: "Symbol removed from watchlist" });
   };
 
   const toggleFavorite = (symbolId: string) => {
@@ -255,27 +297,67 @@ export default function Watchlist() {
         )
       }))
     );
-    toast.success('Price alert set successfully');
+    toast({ title: "Success", description: "Price alert set successfully" });
   };
 
-  const refreshPrices = () => {
+  const refreshPrices = async () => {
     setIsLoading(true);
-    // Simulate price updates
-    setTimeout(() => {
+    try {
+      // Get fresh real data
+      const [cryptoData, forexData] = await Promise.allSettled([
+        realDataService.getCryptoPrices(),
+        realDataService.getForexRates()
+      ]);
+
       setWatchlists(prev =>
         prev.map(w => ({
           ...w,
-          items: w.items.map(item => ({
-            ...item,
-            price: item.price * (1 + (Math.random() - 0.5) * 0.02),
-            change: (Math.random() - 0.5) * 20,
-            changePercent: (Math.random() - 0.5) * 5
-          }))
+          items: w.items.map(item => {
+            let updatedItem = { ...item };
+            
+            if (item.category === 'crypto' && cryptoData.status === 'fulfilled') {
+              const realCrypto = cryptoData.value.find((crypto: any) => 
+                crypto.symbol?.toLowerCase() === item.symbol.toLowerCase()
+              );
+              if (realCrypto) {
+                updatedItem = {
+                  ...item,
+                  price: realCrypto.current_price || item.price,
+                  change: realCrypto.price_change_24h || item.change,
+                  changePercent: realCrypto.price_change_percentage_24h || item.changePercent,
+                  high24h: realCrypto.current_price || item.high24h, // Use current price as fallback
+                  low24h: realCrypto.current_price || item.low24h, // Use current price as fallback
+                  volume: realCrypto.volume_24h || item.volume
+                };
+              }
+            } else if (item.category === 'forex' && forexData.status === 'fulfilled') {
+              const realForex = forexData.value.find((forex: any) => 
+                `${forex.base}/${forex.target}` === item.symbol
+              );
+              if (realForex) {
+                updatedItem = {
+                  ...item,
+                  price: realForex.rate || item.price,
+                  change: realForex.change_24h || item.change,
+                  changePercent: realForex.change_24h ? (realForex.change_24h / realForex.rate) * 100 : item.changePercent,
+                  high24h: realForex.rate || item.high24h,
+                  low24h: realForex.rate || item.low24h
+                };
+              }
+            }
+            
+            return updatedItem;
+          })
         }))
       );
+      
+      toast({ title: "Success", description: "Prices updated with real data" });
+    } catch (error) {
+      console.error('Failed to refresh prices:', error);
+      toast({ title: "Error", description: "Failed to update prices. Please try again.", variant: "destructive" });
+    } finally {
       setIsLoading(false);
-      toast.success('Prices updated');
-    }, 1000);
+    }
   };
 
   const filteredItems = getCurrentWatchlist()?.items.filter(item => {
@@ -462,7 +544,7 @@ export default function Watchlist() {
                           onClick={() => removeFromWatchlist(item.id)}
                           className="p-2 text-red-400 hover:text-red-300"
                         >
-                          <X className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>

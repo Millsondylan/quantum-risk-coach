@@ -143,72 +143,34 @@ export default function Backtesting() {
   };
 
   const generateMockBacktestResult = (): BacktestResult => {
-    const strategy = strategies.find(s => s.id === selectedStrategy)!;
-    const totalTrades = Math.floor(Math.random() * 200) + 50;
-    const winningTrades = Math.floor(totalTrades * (0.5 + Math.random() * 0.3));
-    const losingTrades = totalTrades - winningTrades;
-    const winRate = (winningTrades / totalTrades) * 100;
+    // Real backtesting requires historical data API integration
+    // This would connect to a historical data provider like Alpha Vantage, Polygon, etc.
+    console.log('Backtesting: Would connect to historical data API for real backtesting');
     
-    const avgWin = 50 + Math.random() * 100;
-    const avgLoss = -(30 + Math.random() * 60);
-    const profitFactor = (winningTrades * avgWin) / (losingTrades * Math.abs(avgLoss));
-    
-    const totalReturn = (Math.random() - 0.3) * 50; // -15% to +35%
-    const finalCapital = initialCapital * (1 + totalReturn / 100);
-    const maxDrawdown = -(Math.random() * 20 + 5); // -5% to -25%
-    const sharpeRatio = Math.random() * 2 + 0.5; // 0.5 to 2.5
-
-    // Generate equity curve
-    const equityCurve = [];
-    let currentEquity = initialCapital;
-    const days = Math.floor((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
-    
-    for (let i = 0; i <= days; i += 7) { // Weekly points
-      const randomChange = (Math.random() - 0.48) * 0.02; // Slight upward bias
-      currentEquity *= (1 + randomChange);
-      equityCurve.push({
-        date: new Date(new Date(startDate).getTime() + i * 24 * 60 * 60 * 1000),
-        equity: currentEquity
-      });
-    }
-
-    // Generate sample trades
-    const trades: BacktestTrade[] = [];
-    for (let i = 0; i < Math.min(totalTrades, 20); i++) {
-      trades.push({
-        id: `trade_${i}`,
-        date: new Date(new Date(startDate).getTime() + Math.random() * (new Date(endDate).getTime() - new Date(startDate).getTime())),
-        type: Math.random() > 0.5 ? 'buy' : 'sell',
-        price: 1.08 + Math.random() * 0.1,
-        quantity: 0.1,
-        pnl: i < winningTrades ? avgWin * (0.5 + Math.random()) : avgLoss * (0.5 + Math.random()),
-        reason: 'Strategy signal'
-      });
-    }
-
+    // Return empty result - no fake data
     return {
       id: `backtest_${Date.now()}`,
-      strategyName: strategy.name,
+      strategyName: 'Real Backtesting Required',
       symbol,
       timeframe,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       initialCapital,
-      finalCapital,
-      totalReturn,
-      totalTrades,
-      winningTrades,
-      losingTrades,
-      winRate,
-      profitFactor,
-      maxDrawdown,
-      sharpeRatio,
-      avgWin,
-      avgLoss,
-      largestWin: avgWin * (1.5 + Math.random()),
-      largestLoss: avgLoss * (1.5 + Math.random()),
-      trades,
-      equityCurve
+      finalCapital: initialCapital,
+      totalReturn: 0,
+      totalTrades: 0,
+      winningTrades: 0,
+      losingTrades: 0,
+      winRate: 0,
+      profitFactor: 0,
+      maxDrawdown: 0,
+      sharpeRatio: 0,
+      avgWin: 0,
+      avgLoss: 0,
+      largestWin: 0,
+      largestLoss: 0,
+      trades: [],
+      equityCurve: []
     };
   };
 

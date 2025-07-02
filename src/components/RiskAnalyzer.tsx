@@ -316,19 +316,59 @@ const RiskAnalyzer = () => {
   const refreshRiskAnalysis = async () => {
     setRefreshing(true);
     try {
-      // Simulate real-time risk calculation update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update positions with new market data
-      const updatedPositions = positions.map(pos => ({
-        ...pos,
-        // Add some realistic price movement
-        currentPrice: pos.currentPrice * (1 + (Math.random() - 0.5) * 0.001),
-        volatility: pos.volatility * (1 + (Math.random() - 0.5) * 0.1)
-      }));
+      // Update positions with fresh real data
+      const updatedPositions = await Promise.all(
+        positions.map(async (pos) => {
+          // Fetch fresh current price
+          const freshCurrentPrice = await fetchCurrentPrice(pos.symbol);
+          const freshVolatility = await calculateVolatility(pos.symbol);
+          const freshCorrelation = await calculateCorrelation(pos.symbol);
+          
+          // Recalculate P&L with fresh price
+          const pnl = pos.type === 'LONG' 
+            ? (freshCurrentPrice - pos.avgPrice) * pos.qty
+            : (pos.avgPrice - freshCurrentPrice) * pos.qty;
+          const pnlPercent = pos.avgPrice > 0 ? (pnl / (pos.avgPrice * pos.qty)) * 100 : 0;
+          
+          // Recalculate risk score
+          const riskScore = calculateRiskScore(freshVolatility, freshCorrelation, pnlPercent);
+          
+          return {
+            ...pos,
+            currentPrice: freshCurrentPrice,
+            pnl,
+            pnlPercent,
+            riskScore,
+            correlation: freshCorrelation,
+            volatility: freshVolatility
+          };
+        })
+      );
       
       setPositions(updatedPositions);
       
+      // Update risk metrics based on fresh data
+      const totalValue = updatedPositions.reduce((sum, pos) => sum + Math.abs(pos.pnl), 0);
+      const weightedRisk = updatedPositions.reduce((sum, pos) => 
+        sum + (pos.riskScore * (Math.abs(pos.pnl) / totalValue)), 0
+      );
+      
+      const avgCorrelation = updatedPositions.reduce((sum, pos) => sum + Math.abs(pos.correlation), 0) / updatedPositions.length;
+      
+      let riskLevel: 'low' | 'medium' | 'high' = 'low';
+      if (weightedRisk > 60) riskLevel = 'high';
+      else if (weightedRisk > 30) riskLevel = 'medium';
+      
+      setRiskMetrics(prev => ({
+        ...prev,
+        currentRisk: weightedRisk,
+        riskLevel,
+        correlationRisk: avgCorrelation * 100,
+        volatilityIndex: updatedPositions.reduce((sum, pos) => sum + pos.volatility, 0) / updatedPositions.length
+      }));
+      
+    } catch (error) {
+      console.error('Error refreshing risk analysis:', error);
     } finally {
       setRefreshing(false);
     }

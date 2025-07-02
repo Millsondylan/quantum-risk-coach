@@ -304,7 +304,7 @@ const EnhancedUltraTraderDashboard = () => {
               id: Date.now(),
               content: chunk,
               timestamp: new Date().toISOString(),
-              confidence: Math.random() * 0.3 + 0.7, // 70-100% confidence
+              confidence: 0.85, // Fixed high confidence for AI insights
               type: 'market_analysis'
             }]);
           }

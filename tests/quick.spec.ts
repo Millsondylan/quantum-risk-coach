@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clearUserState, completeOnboarding } from './test-helpers';
 
 const BASE = 'http://localhost:5173';
 
@@ -46,31 +47,7 @@ test.describe('Critical App Tests', () => {
   });
 
   test('auth form works', async ({ page }) => {
-    await page.goto(`${BASE}/`);
-    
-    // Complete onboarding quickly to get to the auth form
-    // Select trading style
-    await page.click('[data-testid="trading-style-select"]');
-    await page.click('[data-testid="trading-style-day-trading"]');
-    await page.click('[data-testid="onboarding-next-button"]');
-    // Select risk tolerance
-    await page.click('[data-testid="risk-tolerance-select"]');
-    await page.click('[data-testid="risk-level-moderate"]');
-    await page.click('[data-testid="onboarding-next-button"]');
-    // Select preferred markets
-    await page.click('[data-testid="market-checkbox-forex-(fx)"]');
-    await page.click('[data-testid="onboarding-next-button"]');
-    // Select experience level
-    await page.click('[data-testid="experience-level-select"]');
-    await page.click('[data-testid="experience-level-intermediate"]');
-    await page.click('[data-testid="onboarding-next-button"]');
-    // Notifications step (just click next)
-    await page.click('[data-testid="onboarding-next-button"]');
-    // Theme & Language step (just click complete)
-    await page.click('[data-testid="onboarding-complete-button"]');
-    
-    // After onboarding completion, we should be on the main dashboard
-    // Navigate to auth page to test the form
+    // Navigate to auth page directly
     await page.goto(`${BASE}/auth`);
     
     // Now we should be on the auth page

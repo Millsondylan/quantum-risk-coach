@@ -535,7 +535,7 @@ export default function EducationalResources() {
                               Lesson {index + 1}: Trading Fundamentals Part {index + 1}
                             </h4>
                             <p className={`text-sm ${isLocked ? 'text-slate-600' : 'text-slate-400'}`}>
-                              {Math.floor(Math.random() * 15) + 5} minutes
+                              {Math.floor((index + 1) * 2) + 8} minutes
                             </p>
                           </div>
                           {!isLocked && (
