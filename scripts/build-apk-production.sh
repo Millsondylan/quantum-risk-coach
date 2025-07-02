@@ -36,6 +36,23 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
+# Check Java installation
+print_status "Checking Java installation..."
+if ! command -v java &> /dev/null; then
+    print_error "Java is not installed or not in PATH"
+    print_error "Please install Java 17 or later. See ANDROID_APK_SETUP.md for instructions"
+    exit 1
+fi
+
+# Check Java version
+JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2 | cut -d'.' -f1)
+if [ "$JAVA_VERSION" -lt "8" ]; then
+    print_error "Java 8 or later required. Current version: $JAVA_VERSION"
+    print_error "Please update Java. See ANDROID_APK_SETUP.md for instructions"
+    exit 1
+fi
+print_success "Java is installed and compatible"
+
 # Check if .env file exists
 if [ ! -f ".env" ]; then
     print_warning ".env file not found, creating from template"
