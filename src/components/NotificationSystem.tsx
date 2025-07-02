@@ -200,15 +200,25 @@ const NotificationSystem = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('notification_preferences')
-        .eq('id', user.id)
-        .single();
-
-      if (data?.notification_preferences) {
-        setPreferences(data.notification_preferences);
+      // Try to load from local storage first as fallback
+      const localPrefs = localStorage.getItem(`notification_prefs_${user.id}`);
+      if (localPrefs) {
+        setPreferences(JSON.parse(localPrefs));
+        return;
       }
+
+      // Use default preferences if no stored preferences
+      const defaultPrefs: NotificationPreferences = {
+        priceAlerts: true,
+        newsAlerts: true,
+        aiInsights: true,
+        tradeSignals: true,
+        economicEvents: true,
+        marketSentiment: false,
+        portfolioAlerts: true,
+        riskWarnings: true,
+      };
+      setPreferences(defaultPrefs);
     } catch (error) {
       console.error('Error loading notification preferences:', error);
     }
@@ -218,12 +228,8 @@ const NotificationSystem = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ notification_preferences: newPreferences })
-        .eq('id', user.id);
-
-      if (error) throw error;
+      // Save to local storage as primary storage
+      localStorage.setItem(`notification_prefs_${user.id}`, JSON.stringify(newPreferences));
       
       setPreferences(newPreferences);
       toast.success('Notification preferences saved!');
