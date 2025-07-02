@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { UserProvider, useUser } from "./contexts/UserContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import { ErrorBoundary } from "react-error-boundary";
 import Onboarding from "./components/Onboarding";
 import Index from "./pages/Index";
@@ -178,17 +179,19 @@ const App = () => {
       disableTransitionOnChange={false}
     >
       <QueryClientProvider client={queryClient}>
-        <UserProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <ErrorBoundary FallbackComponent={ErrorFallback}>
-              <BrowserRouter>
-                <AppContent />
-              </BrowserRouter>
-            </ErrorBoundary>
-          </TooltipProvider>
-        </UserProvider>
+        <AuthProvider>
+          <UserProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <ErrorBoundary FallbackComponent={ErrorFallback}>
+                <BrowserRouter>
+                  <AppContent />
+                </BrowserRouter>
+              </ErrorBoundary>
+            </TooltipProvider>
+          </UserProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );
