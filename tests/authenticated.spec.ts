@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:5173';
+const BASE = 'http://localhost:5175';
 
 test.describe('Authenticated App Tests', () => {
   test('auth page loads and has form elements', async ({ page }) => {

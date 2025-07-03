@@ -30,12 +30,14 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { pushNotificationService } from '@/lib/pushNotificationService';
 import ApiStatusCard from '@/components/ApiStatusCard';
 import { applyTheme } from '@/lib/theme';
+import { localDatabase } from '@/lib/localStorage';
+import { useNavigate } from 'react-router-dom';
 
 const Settings: React.FC = () => {
   const { user, updatePreferences } = useUser();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
@@ -68,13 +70,17 @@ const Settings: React.FC = () => {
 
   const handleEnableNotifications = async () => {
     try {
-      const permission = await pushNotificationService.requestPermission();
-      setNotificationPermission(permission);
-      
-      if (permission === 'granted') {
-        toast.success('Push notifications enabled successfully!');
+      if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+        
+        if (permission === 'granted') {
+          toast.success('Push notifications enabled successfully!');
+        } else {
+          toast.error('Push notification permission denied');
+        }
       } else {
-        toast.error('Push notification permission denied');
+        toast.error('Notifications not supported in this browser');
       }
     } catch (error) {
       console.error('Error enabling notifications:', error);
@@ -84,38 +90,49 @@ const Settings: React.FC = () => {
 
   const handleTestNotification = async () => {
     try {
-      await pushNotificationService.sendTestNotification();
-      toast.success('Test notification sent!');
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Test Notification', {
+          body: 'This is a test notification from Quantum Risk Coach',
+          icon: '/favicon.ico'
+        });
+        toast.success('Test notification sent!');
+      } else {
+        toast.error('Please enable notifications first');
+      }
     } catch (error) {
       console.error('Error sending test notification:', error);
       toast.error('Failed to send test notification');
     }
   };
 
-  const handleExportData = () => {
-    // Export user data as JSON
-    const data = {
-      user: user,
-      trades: localStorage.getItem('trades'),
-      preferences: user?.preferences,
-      exportDate: new Date().toISOString()
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `qlarity-data-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Data exported successfully!');
+  const handleExportData = async () => {
+    try {
+      const data = await localDatabase.exportData();
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quantum-risk-coach-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Data exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export data');
+    }
   };
 
-  const handleClearData = () => {
+  const handleClearData = async () => {
     if (confirm('Are you sure you want to clear all your data? This action cannot be undone.')) {
-      localStorage.clear();
-      toast.success('All data cleared');
-      setTimeout(() => window.location.reload(), 1000);
+      try {
+        await localDatabase.clearAllData();
+        toast.success('All data cleared');
+        setTimeout(() => window.location.reload(), 1000);
+      } catch (error) {
+        console.error('Clear data error:', error);
+        toast.error('Failed to clear data');
+      }
     }
   };
 
@@ -130,7 +147,7 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <div data-testid="settings-page" className="container mx-auto p-4 space-y-6">
+    <div data-testid="settings-page" className="container mx-auto p-4 pb-20 space-y-6">
       <div className="flex items-center gap-2">
         <SettingsIcon className="h-6 w-6" />
         <h1 className="text-3xl font-bold">Settings</h1>
@@ -507,6 +524,21 @@ const Settings: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium mb-2">Quick Actions</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Manage your local data storage and backups.
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/data-management')} 
+                    className="flex items-center gap-2"
+                    data-testid="data-management-button"
+                  >
+                    <Database className="h-4 w-4" />
+                    Open Data Management
+                  </Button>
+                </div>
+                <Separator />
                 <div>
                   <h3 className="font-medium mb-2">Export Data</h3>
                   <p className="text-sm text-muted-foreground mb-4">

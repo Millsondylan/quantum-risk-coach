@@ -8,7 +8,7 @@ import { performanceMonitor } from './lib/performanceMonitor'
 import { UserProvider } from './contexts/UserContext'
 import { PortfolioProvider } from './contexts/PortfolioContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { PushNotificationService } from './lib/pushNotificationService'
+import { pushNotificationService } from './lib/pushNotificationService'
 
 // Register service worker for caching and offline functionality
 if ('serviceWorker' in navigator) {
@@ -64,5 +64,5 @@ performanceMonitor.measure('app-initialization', 'app-start', 'app-loaded');
 
 // Expose push notification service globally for testing
 if (typeof window !== 'undefined') {
-  (window as any).pushNotificationService = PushNotificationService;
+  (window as any).pushNotificationService = pushNotificationService;
 }

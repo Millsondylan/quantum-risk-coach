@@ -54,36 +54,6 @@ const BrokerIntegration = () => {
 
   const supportedBrokers = [
     { 
-      id: 'binance', 
-      name: 'Binance', 
-      description: 'World\'s largest crypto exchange',
-      icon: '🔸',
-      supported: true,
-      requiresPassphrase: false,
-      type: 'crypto',
-      features: ['Spot Trading', 'Futures', 'API Access']
-    },
-    { 
-      id: 'bybit', 
-      name: 'Bybit', 
-      description: 'Popular derivatives exchange',
-      icon: '🟡',
-      supported: true,
-      requiresPassphrase: false,
-      type: 'crypto',
-      features: ['Derivatives', 'Spot', 'Copy Trading']
-    },
-    { 
-      id: 'kucoin', 
-      name: 'KuCoin', 
-      description: 'Global crypto exchange',
-      icon: '🟢',
-      supported: true,
-      requiresPassphrase: true,
-      type: 'crypto',
-      features: ['Spot Trading', 'Futures', 'Margin']
-    },
-    { 
       id: 'mt4', 
       name: 'MetaTrader 4', 
       description: 'Professional forex trading',
@@ -102,37 +72,7 @@ const BrokerIntegration = () => {
       requiresPassphrase: false,
       type: 'forex',
       features: ['Multi-Asset', 'Hedging', 'Advanced Charts']
-    },
-    { 
-      id: 'ctrader', 
-      name: 'cTrader', 
-      description: 'Professional ECN trading',
-      icon: '⚡',
-      supported: true,
-      requiresPassphrase: false,
-      type: 'forex',
-      features: ['ECN Trading', 'Level II Pricing', 'cBots']
-    },
-    { 
-      id: 'tradingview', 
-      name: 'TradingView', 
-      description: 'Social trading platform',
-      icon: '📉',
-      supported: false,
-      requiresPassphrase: false,
-      type: 'social',
-      features: ['Paper Trading', 'Social Trading', 'Charts']
-    },
-    { 
-      id: 'okx', 
-      name: 'OKX', 
-      description: 'Leading crypto exchange',
-      icon: '🔷',
-      supported: false,
-      requiresPassphrase: true,
-      type: 'crypto',
-      features: ['Spot', 'Futures', 'Options']
-    },
+    }
   ];
 
   useEffect(() => {

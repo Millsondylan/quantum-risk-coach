@@ -1,4 +1,4 @@
-import { database } from '@/lib/localDatabase';
+import { localDatabase as database } from '@/lib/localStorage';
 
 export interface RealBrokerConnection {
   id: string;
@@ -121,10 +121,11 @@ class RealBrokerService {
           await database.createAccount({
             id: connection.id,
             portfolioId: 'default', // TODO: link to selected portfolio via context
+            name: `${connection.type.toUpperCase()} Account`,
             type: 'broker',
             broker: connection.type,
-            credentials: this.encryptCredentials(connection.credentials),
             balance: result.accountInfo?.balance || 0,
+            currency: result.accountInfo?.currency || 'USD',
             createdAt: new Date().toISOString(),
           });
         } catch (err) {
@@ -133,7 +134,7 @@ class RealBrokerService {
 
         // Start auto-sync if enabled
         if (connection.settings.autoSync) {
-          await this.startAutoSync(connection.id);
+          this.startAutoSync(connection.id);
         }
 
         return {
@@ -197,36 +198,9 @@ class RealBrokerService {
       let accountInfo;
 
       switch (connection.type) {
-        case 'binance':
-          accountInfo = await this.testBinanceConnection(connection);
-          break;
-        case 'bybit':
-          accountInfo = await this.testBybitConnection(connection);
-          break;
-        case 'kucoin':
-          accountInfo = await this.testKucoinConnection(connection);
-          break;
-        case 'okx':
-          accountInfo = await this.testOKXConnection(connection);
-          break;
-        case 'mexc':
-          accountInfo = await this.testMEXCConnection(connection);
-          break;
-        case 'coinbase':
-          accountInfo = await this.testCoinbaseConnection(connection);
-          break;
-        case 'kraken':
-          accountInfo = await this.testKrakenConnection(connection);
-          break;
         case 'mt4':
         case 'mt5':
           accountInfo = await this.testMT45Connection(connection);
-          break;
-        case 'ctrader':
-          accountInfo = await this.testCTraderConnection(connection);
-          break;
-        case 'tradingview':
-          accountInfo = await this.testTradingViewConnection(connection);
           break;
         default:
           throw new Error(`Unsupported broker type: ${connection.type}`);
@@ -387,20 +361,32 @@ class RealBrokerService {
   }
 
   private async testMT45Connection(connection: RealBrokerConnection): Promise<any> {
-    // In a real-world scenario, this would involve a secure backend
-    // connecting to the MT4/MT5 API or a custom bridge (e.g., using a Web API for MT4/MT5).
-    // This client-side implementation is for demonstration purposes and should not return simulated data.
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (connection.credentials.server && connection.credentials.login && connection.credentials.password) {
-          // In a real application, this would make an actual API call to the MT4/MT5 backend.
-          // For now, we reject to indicate that real integration is needed.
-          reject(new Error('MT4/MT5 integration requires a backend connection. Client-side simulation not supported for real data.'));
-        } else {
-          reject(new Error('Invalid MT4/MT5 credentials or server.'));
-        }
-      }, 500); // Simulate network latency
-    });
+    try {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${backendUrl}/api/${connection.type}/connect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          server: connection.credentials.server,
+          login: connection.credentials.login,
+          password: connection.credentials.password,
+          sandbox: connection.credentials.sandbox || false
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        return result.accountInfo;
+      } else {
+        throw new Error(result.message || 'Connection failed');
+      }
+    } catch (error) {
+      throw new Error(`Failed to connect to ${connection.type}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private async testCTraderConnection(connection: RealBrokerConnection): Promise<any> {
@@ -684,12 +670,12 @@ class RealBrokerService {
 
   // Check if broker type is supported for live connection
   isBrokerSupported(brokerType: string): boolean {
-    return ['binance', 'bybit', 'kucoin'].includes(brokerType);
+    return ['mt4', 'mt5'].includes(brokerType);
   }
 
   // Get supported broker types
   getSupportedBrokers(): string[] {
-    return ['binance', 'bybit', 'kucoin', 'okx', 'mexc', 'coinbase', 'kraken', 'mt4', 'mt5', 'ctrader', 'tradingview'];
+    return ['mt4', 'mt5'];
   }
 }
 

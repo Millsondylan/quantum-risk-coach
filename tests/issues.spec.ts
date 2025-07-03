@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:5173';
+const BASE = 'http://localhost:5175';
 
 test.describe('Issue Detection Tests', () => {
   test('detect console errors', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { database, Trade as DBTrade } from '@/lib/localDatabase';
+import { localDatabase as database, Trade as DBTrade } from '@/lib/localStorage';
 import { toast } from 'sonner';
 import { v4 as uuid } from 'uuid';
 

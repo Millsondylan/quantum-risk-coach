@@ -5,9 +5,9 @@ import React, {
   useEffect, 
   ReactNode 
 } from 'react';
-import { database } from '@/lib/localDatabase';
+import { localDatabase as database } from '@/lib/localStorage';
 import { realBrokerService } from '@/lib/realBrokerService';
-import { Portfolio, Account } from '@/lib/localDatabase';
+import { Portfolio, Account } from '@/lib/localStorage';
 
 interface PortfolioContextType {
   portfolios: Portfolio[];
@@ -45,6 +45,7 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
     } catch (error) {
       console.error('Failed to initialize portfolios', error);
+      // Don't throw - just log the error and continue with empty portfolios
     }
   };
 
@@ -58,7 +59,7 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const createPortfolio = async (portfolioData: Omit<Portfolio, 'id' | 'createdAt'>) => {
     try {
-      const newPortfolioId = `portfolio_${Date.now()}`;
+      const newPortfolioId = `portfolio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       await database.createPortfolio({
         id: newPortfolioId,
@@ -73,6 +74,16 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       await switchPortfolio(newPortfolioId);
     } catch (error) {
       console.error('Failed to create portfolio', error);
+      // If portfolio already exists, try to get existing portfolios and continue
+      try {
+        const existingPortfolios = await database.getPortfolios();
+        setPortfolios(existingPortfolios);
+        if (existingPortfolios.length > 0) {
+          await switchPortfolio(existingPortfolios[0].id);
+        }
+      } catch (fallbackError) {
+        console.error('Failed to recover from portfolio creation error:', fallbackError);
+      }
     }
   };
 
@@ -153,4 +164,16 @@ export const usePortfolioContext = () => {
     throw new Error('usePortfolioContext must be used within a PortfolioProvider');
   }
   return context;
+};
+
+// Legacy export for backward compatibility
+export const usePortfolios = () => {
+  const context = useContext(PortfolioContext);
+  if (context === undefined) {
+    throw new Error('usePortfolios must be used within a PortfolioProvider');
+  }
+  return {
+    selectedAccountId: context.currentPortfolio?.accounts?.[0]?.id || null,
+    accounts: context.currentPortfolio?.accounts || []
+  };
 }; 

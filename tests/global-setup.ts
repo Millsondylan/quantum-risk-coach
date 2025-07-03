@@ -5,7 +5,7 @@ async function globalSetup(config: FullConfig) {
   const page = await browser.newPage();
   
   // Clear any existing user data
-  await page.goto('http://localhost:5173');
+  await page.goto('http://localhost:5174');
   
   // Wait for the page to load
   await page.waitForLoadState('networkidle');
@@ -45,7 +45,7 @@ async function globalSetup(config: FullConfig) {
   });
   
   // Navigate to home to trigger fresh state
-  await page.goto('http://localhost:5173');
+  await page.goto('http://localhost:5174');
   await page.waitForLoadState('networkidle');
   
   await browser.close();

@@ -9,6 +9,7 @@ import MobileBottomNav from './components/MobileBottomNav';
 // Lazy load components for better performance
 const Auth = lazy(() => import('./pages/Auth'));
 const Index = lazy(() => import('./pages/Index'));
+const News = lazy(() => import('./pages/News'));
 const LiveTrades = lazy(() => import('./pages/LiveTrades'));
 const AddTrade = lazy(() => import('./pages/AddTrade'));
 const History = lazy(() => import('./pages/History'));
@@ -23,6 +24,7 @@ const ValidationTest = lazy(() => import('./pages/ValidationTest'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AICoach = lazy(() => import('./pages/AICoach'));
 const AIStrategyBuilder = lazy(() => import('./pages/AIStrategyBuilder'));
+const DataManagement = lazy(() => import('./components/DataManagement'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -60,8 +62,11 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const isMobile = useIsMobile();
 
   return (
-    <div className="min-h-screen bg-[#0A0B0D] text-white">
-      {children}
+    <div className="min-h-screen bg-[#0A0B0D] text-white relative flex flex-col">
+      <nav style={{ display: 'none' }} data-testid="nav"></nav>
+      <main className="flex-1 relative z-10 overflow-y-auto" data-testid="main-content">
+        {children}
+      </main>
       {isMobile && <MobileBottomNav />}
     </div>
   );
@@ -88,6 +93,17 @@ function App() {
           />
           
           {/* Bottom Navigation Routes */}
+          <Route 
+            path="/news" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <News />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
           <Route 
             path="/live-trades" 
             element={
@@ -227,6 +243,17 @@ function App() {
               <ProtectedRoute>
                 <ProtectedLayout>
                   <ValidationTest />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/data-management" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <DataManagement />
                 </ProtectedLayout>
               </ProtectedRoute>
             } 

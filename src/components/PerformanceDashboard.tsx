@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { useTheme } from 'next-themes';
 import { Badge } from '@/components/ui/badge';
 import { usePortfolioContext } from '@/contexts/PortfolioContext';
-import { database, Trade } from '@/lib/localDatabase';
+import { localDatabase as database, Trade } from '@/lib/localStorage';
 import { tradeAnalyticsService } from '@/lib/tradeAnalyticsService';
 
 export const PerformanceDashboard: React.FC = () => {

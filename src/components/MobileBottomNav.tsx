@@ -6,19 +6,13 @@ import {
   PlusCircle, 
   BarChart3, 
   Settings,
-  TrendingUp,
+  Newspaper,
   Target,
-  Calendar,
-  User,
-  LineChart,
-  Search,
-  Wallet,
-  Bell,
-  Brain
+  Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// UltraTrader-style mobile navigation matching their exact interface
+// UltraTrader-style mobile navigation with all buttons in single row
 const MobileBottomNav = () => {
   const location = useLocation();
 
@@ -32,12 +26,20 @@ const MobileBottomNav = () => {
       testId: 'nav-home'
     },
     {
-      href: '/live-trades',
-      icon: TrendingUp,
-      label: 'Live Trades',
+      href: '/news',
+      icon: Newspaper,
+      label: 'News',
       activeColor: 'text-blue-400',
-      paths: ['/live-trades'],
-      testId: 'nav-live-trades'
+      paths: ['/news'],
+      testId: 'nav-news'
+    },
+    {
+      href: '/journal',
+      icon: BookOpen,
+      label: 'Journal',
+      activeColor: 'text-blue-400',
+      paths: ['/journal'],
+      testId: 'nav-journal'
     },
     {
       href: '/add-trade',
@@ -45,24 +47,24 @@ const MobileBottomNav = () => {
       label: 'Add Trade',
       activeColor: 'text-blue-400',
       isHighlight: true,
-      paths: ['/add-trade'],
+      paths: ['/add-trade', '/trade-builder'],
       testId: 'nav-add-trade'
     },
     {
-      href: '/history',
-      icon: BarChart3,
-      label: 'History',
+      href: '/performance-calendar',
+      icon: Calendar,
+      label: 'Analytics',
       activeColor: 'text-blue-400',
-      paths: ['/history'],
-      testId: 'nav-history'
+      paths: ['/performance-calendar', '/strategy-analyzer', '/history'],
+      testId: 'nav-analytics'
     },
     {
-      href: '/alarms',
-      icon: Bell,
-      label: 'Alarms',
+      href: '/settings',
+      icon: Settings,
+      label: 'Settings',
       activeColor: 'text-blue-400',
-      paths: ['/alarms'],
-      testId: 'nav-alarms'
+      paths: ['/settings'],
+      testId: 'nav-settings'
     }
   ];
 
@@ -77,8 +79,8 @@ const MobileBottomNav = () => {
       role="navigation"
       aria-label="Mobile navigation"
     >
-      <div className="px-2 py-2">
-        <div className="flex items-center justify-around">
+      <div className="px-1 py-2">
+        <div className="flex items-center justify-around max-w-md mx-auto">
           {navItems.map((item) => {
             const isActive = isActivePath(item.paths);
             const Icon = item.icon;
@@ -88,7 +90,7 @@ const MobileBottomNav = () => {
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-3 px-4 rounded-xl transition-all duration-200 min-w-[60px] min-h-[60px] touch-manipulation select-none active:scale-95 cursor-pointer",
+                  "flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all duration-200 min-w-[60px] min-h-[60px] touch-manipulation select-none active:scale-95 cursor-pointer",
                   isActive 
                     ? "text-blue-400" 
                     : "text-slate-500 hover:text-slate-300 active:text-slate-400",
@@ -114,7 +116,7 @@ const MobileBottomNav = () => {
                   )} />
                 </div>
                 <span className={cn(
-                  "text-xs font-medium transition-all duration-200 text-center",
+                  "text-xs font-medium transition-all duration-200 text-center leading-tight",
                   isActive ? "text-blue-400" : "text-slate-500"
                 )}>
                   {item.label}

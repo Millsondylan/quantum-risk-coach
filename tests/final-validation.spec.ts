@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { completeAuth, completeOnboarding } from './test-helpers';
 
-const BASE = 'http://localhost:5173';
+const BASE = 'http://localhost:5175';
 
 test.describe('Final Comprehensive Validation', () => {
   test('onboarding page loads correctly', async ({ page }) => {

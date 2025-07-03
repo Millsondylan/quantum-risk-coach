@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { usePortfolioContext } from '@/contexts/PortfolioContext';
 import { Upload, Image as ImageIcon, FileText, Loader2 } from 'lucide-react';
-import { database } from '@/lib/localDatabase';
+import { localDatabase as database } from '@/lib/localStorage';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ManualJournalModalProps {

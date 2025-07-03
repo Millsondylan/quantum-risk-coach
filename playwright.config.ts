@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: 'html',
   globalSetup: './tests/global-setup.ts',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5178',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -24,8 +24,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev -- --port 5173',
-    url: 'http://localhost:5173',
+    command: 'npm run dev -- --port 5178',
+    url: 'http://localhost:5178',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

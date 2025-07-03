@@ -1,6 +1,35 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { applyTheme } from '@/lib/theme';
-import { NotificationPreferences } from '@/lib/pushNotificationService';
+import { localDatabase } from '@/lib/localStorage';
+
+// Define notification preferences type locally
+interface NotificationPreferences {
+  priceAlerts: boolean;
+  newsAlerts: boolean;
+  aiInsights: boolean;
+  tradeSignals: boolean;
+  economicEvents: boolean;
+  portfolioAlerts: boolean;
+  riskWarnings: boolean;
+  pushNotifications: boolean;
+  telegram: boolean;
+  soundEnabled: boolean;
+  marketUpdates: boolean;
+  tradeAlerts: boolean;
+  marketSentiment: boolean;
+  quietHours: {
+    enabled: boolean;
+    start: string;
+    end: string;
+  };
+  weekends: boolean;
+  minimumImpact: string;
+  frequency: string;
+  personalizedSymbols: string[];
+  tradingStyle: string;
+  riskTolerance: string;
+  experience: string;
+}
 
 export interface UserPreferences {
   tradingStyle: 'scalping' | 'day-trading' | 'swing-trading' | 'position-trading';
@@ -167,6 +196,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       lastActive: new Date().toISOString(),
     };
 
+    // Update in local database
+    await localDatabase.createUser(user.name, {
+      id: updatedUser.id,
+      preferences: updatedUser.preferences,
+      onboardingCompleted: updatedUser.onboardingCompleted,
+      createdAt: updatedUser.createdAt,
+      lastActive: updatedUser.lastActive,
+    });
+
+    // Update in local storage
     await storage.set('user', updatedUser);
     setUser(updatedUser);
     if (newPreferences.theme) {
@@ -195,6 +234,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       lastActive: new Date().toISOString(),
     };
 
+    // Update in local database
+    await localDatabase.createUser(newUser.name, {
+      id: newUser.id,
+      preferences: newUser.preferences,
+      onboardingCompleted: newUser.onboardingCompleted,
+      createdAt: newUser.createdAt,
+      lastActive: newUser.lastActive,
+    });
+
+    // Update in local storage
     await storage.set('user', newUser);
     setUser(newUser);
     applyTheme(preferences.theme || 'auto');
@@ -218,6 +267,26 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const createUser = async (name: string) => {
+    // Check if user already exists in local database
+    const existingUser = await localDatabase.getUser(name);
+    
+    if (existingUser) {
+      // User exists, load their data
+      const userData: UserData = {
+        id: existingUser.id || `user_${Date.now()}`,
+        name: existingUser.username,
+        preferences: existingUser.preferences || getDefaultPreferences(),
+        onboardingCompleted: existingUser.onboardingCompleted || false,
+        createdAt: existingUser.createdAt,
+        lastActive: new Date().toISOString(),
+      };
+      
+      await storage.set('user', userData);
+      setUser(userData);
+      return;
+    }
+
+    // Create new user in local database
     const newUser: UserData = {
       id: `user_${Date.now()}`,
       name,
@@ -227,6 +296,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       lastActive: new Date().toISOString(),
     };
 
+    // Save to local database
+    await localDatabase.createUser(name, {
+      id: newUser.id,
+      preferences: newUser.preferences,
+      onboardingCompleted: newUser.onboardingCompleted,
+      createdAt: newUser.createdAt,
+      lastActive: newUser.lastActive,
+    });
+
+    // Also save to local storage for immediate access
     await storage.set('user', newUser);
     setUser(newUser);
   };

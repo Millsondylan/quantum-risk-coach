@@ -1,6 +1,6 @@
 import { test, expect, chromium } from '@playwright/test';
 
-const BASE = 'http://localhost:5173';
+const BASE = 'http://localhost:5175';
 
 test('basic smoke test - app loads without errors', async () => {
   const browser = await chromium.launch({ headless: true });

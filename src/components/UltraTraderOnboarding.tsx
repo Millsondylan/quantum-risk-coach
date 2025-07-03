@@ -127,72 +127,8 @@ const UltraTraderOnboarding: React.FC = () => {
 
   // Supported brokers with logos and features
   const supportedBrokers = [
-    {
-      id: 'mt4',
-      name: 'MetaTrader 4',
-      description: 'Professional forex trading platform',
-      icon: '📈',
-      type: 'forex',
-      features: ['Forex', 'CFDs', 'EA Support', 'Advanced Charts'],
-      supported: true,
-      requiresPassphrase: false,
-      connectionType: 'server'
-    },
-    {
-      id: 'mt5',
-      name: 'MetaTrader 5',
-      description: 'Advanced multi-asset trading platform',
-      icon: '📊',
-      type: 'forex',
-      features: ['Multi-Asset', 'Hedging', 'Advanced Charts', 'Depth of Market'],
-      supported: true,
-      requiresPassphrase: false,
-      connectionType: 'server'
-    },
-    {
-      id: 'binance',
-      name: 'Binance',
-      description: 'World\'s largest crypto exchange',
-      icon: '🔸',
-      type: 'crypto',
-      features: ['Spot Trading', 'Futures', 'API Access', 'Copy Trading'],
-      supported: true,
-      requiresPassphrase: false,
-      connectionType: 'api'
-    },
-    {
-      id: 'bybit',
-      name: 'Bybit',
-      description: 'Popular derivatives exchange',
-      icon: '🟡',
-      type: 'crypto',
-      features: ['Derivatives', 'Spot', 'Copy Trading', 'Unified Trading'],
-      supported: true,
-      requiresPassphrase: false,
-      connectionType: 'api'
-    },
-    {
-      id: 'kucoin',
-      name: 'KuCoin',
-      description: 'Global crypto exchange',
-      icon: '🟢',
-      type: 'crypto',
-      features: ['Spot Trading', 'Futures', 'Margin', 'Staking'],
-      supported: true,
-      requiresPassphrase: true,
-      connectionType: 'api'
-    },
-    {
-      id: 'ctrader',
-      name: 'cTrader',
-      description: 'Professional ECN trading',
-      icon: '⚡',
-      type: 'forex',
-      features: ['ECN Trading', 'Level II Pricing', 'cBots', 'Copy Trading'],
-      supported: true,
-      requiresPassphrase: false,
-      connectionType: 'server'
-    }
+    { id: 'mt4', name: 'MetaTrader 4', requiresPassphrase: false },
+    { id: 'mt5', name: 'MetaTrader 5', requiresPassphrase: false }
   ];
 
   const steps = [
@@ -573,18 +509,7 @@ const UltraTraderOnboarding: React.FC = () => {
             >
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl">{broker.icon}</div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-white">{broker.name}</h4>
-                    <p className="text-sm text-slate-300">{broker.description}</p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {broker.features.slice(0, 2).map((feature) => (
-                        <Badge key={feature} variant="secondary" className="text-xs">
-                          {feature}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
+                  <div className="text-2xl">{broker.name}</div>
                   {selectedBroker === broker.id && (
                     <CheckCircle className="w-5 h-5 text-blue-400" />
                   )}
@@ -613,27 +538,35 @@ const UltraTraderOnboarding: React.FC = () => {
                 />
               </div>
 
-              {supportedBrokers.find(b => b.id === selectedBroker)?.connectionType === 'api' ? (
-                // API-based connection (Binance, Bybit, etc.)
-                <div className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-white font-medium">Server</Label>
+                  <Input
+                    value={connectionForm.server}
+                    onChange={(e) => setConnectionForm({ ...connectionForm, server: e.target.value })}
+                    className="mt-2 bg-slate-700 border-slate-600 text-white"
+                    placeholder="e.g., ICMarkets-Live01"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-white font-medium">API Key</Label>
+                    <Label className="text-white font-medium">Login</Label>
                     <Input
-                      value={connectionForm.apiKey}
-                      onChange={(e) => setConnectionForm({ ...connectionForm, apiKey: e.target.value })}
+                      value={connectionForm.login}
+                      onChange={(e) => setConnectionForm({ ...connectionForm, login: e.target.value })}
                       className="mt-2 bg-slate-700 border-slate-600 text-white"
-                      placeholder="Enter your API key"
+                      placeholder="Account number"
                     />
                   </div>
                   <div>
-                    <Label className="text-white font-medium">Secret Key</Label>
+                    <Label className="text-white font-medium">Password</Label>
                     <div className="relative">
                       <Input
                         type={showPassword ? "text" : "password"}
-                        value={connectionForm.secretKey}
-                        onChange={(e) => setConnectionForm({ ...connectionForm, secretKey: e.target.value })}
+                        value={connectionForm.password}
+                        onChange={(e) => setConnectionForm({ ...connectionForm, password: e.target.value })}
                         className="mt-2 bg-slate-700 border-slate-600 text-white pr-10"
-                        placeholder="Enter your secret key"
+                        placeholder="••••••••"
                       />
                       <Button
                         type="button"
@@ -646,64 +579,8 @@ const UltraTraderOnboarding: React.FC = () => {
                       </Button>
                     </div>
                   </div>
-                  {supportedBrokers.find(b => b.id === selectedBroker)?.requiresPassphrase && (
-                    <div>
-                      <Label className="text-white font-medium">Passphrase</Label>
-                      <Input
-                        value={connectionForm.passphrase}
-                        onChange={(e) => setConnectionForm({ ...connectionForm, passphrase: e.target.value })}
-                        className="mt-2 bg-slate-700 border-slate-600 text-white"
-                        placeholder="Enter your passphrase"
-                      />
-                    </div>
-                  )}
                 </div>
-              ) : (
-                // Server-based connection (MT4, MT5, cTrader)
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-white font-medium">Server</Label>
-                    <Input
-                      value={connectionForm.server}
-                      onChange={(e) => setConnectionForm({ ...connectionForm, server: e.target.value })}
-                      className="mt-2 bg-slate-700 border-slate-600 text-white"
-                      placeholder="e.g., ICMarkets-Live01"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-white font-medium">Login</Label>
-                      <Input
-                        value={connectionForm.login}
-                        onChange={(e) => setConnectionForm({ ...connectionForm, login: e.target.value })}
-                        className="mt-2 bg-slate-700 border-slate-600 text-white"
-                        placeholder="Account number"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-white font-medium">Password</Label>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          value={connectionForm.password}
-                          onChange={(e) => setConnectionForm({ ...connectionForm, password: e.target.value })}
-                          className="mt-2 bg-slate-700 border-slate-600 text-white pr-10"
-                          placeholder="••••••••"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

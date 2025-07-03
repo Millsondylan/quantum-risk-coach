@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { clearUserState, completeOnboarding } from './test-helpers';
 
-const BASE = 'http://localhost:5173';
+const BASE = 'http://localhost:5175';
 
 test.describe('Critical App Tests', () => {
   test('app loads without errors', async ({ page }) => {
@@ -43,20 +43,25 @@ test.describe('Critical App Tests', () => {
     await page.goto(`${BASE}/`);
     // Just check that the page loads successfully
     await expect(page.locator('body')).toBeVisible();
-    expect(page.url()).toMatch(/^http:\/\/localhost:5173/);
+    expect(page.url()).toMatch(/^http:\/\/localhost:5175/);
   });
 
   test('auth form works', async ({ page }) => {
     // Navigate to auth page directly
     await page.goto(`${BASE}/auth`);
     
-    // Now we should be on the auth page - check for username input instead of email
+    // Wait for auth page to load
+    await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
+    
+    // Check for username input instead of email
     await expect(page.locator('[data-testid="signup-username-input"]')).toBeVisible();
+    
     // Click signin tab to make signin username input visible
     await page.click('[data-testid="signin-tab"]');
     await expect(page.locator('[data-testid="signin-username-input"]')).toBeVisible();
     
     // Test form input
+    await page.click('[data-testid="signup-tab"]');
     await page.fill('[data-testid="signup-username-input"]', 'testuser');
     await page.click('[data-testid="signin-tab"]');
     await page.fill('[data-testid="signin-username-input"]', 'existinguser');
@@ -68,6 +73,6 @@ test.describe('Critical App Tests', () => {
     await page.goto(`${BASE}/invalid-route`);
     // Check that the page loads (even if it shows onboarding)
     await expect(page.locator('body')).toBeVisible();
-    expect(page.url()).toMatch(/^http:\/\/localhost:5173/);
+    expect(page.url()).toMatch(/^http:\/\/localhost:5175/);
   });
 }); 

@@ -121,4 +121,7 @@ export class PushNotificationService {
   public getNotificationConfig(): PushNotificationConfig {
     return { ...this.config };
   }
-} 
+}
+
+// Export singleton instance
+export const pushNotificationService = PushNotificationService.getInstance(); 

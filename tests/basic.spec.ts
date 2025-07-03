@@ -1,6 +1,6 @@
 import { test, expect, chromium } from '@playwright/test';
 
-const BASE = 'http://localhost:5173';
+const BASE = 'http://localhost:5175';
 
 test('basic app functionality test', async () => {
   const browser = await chromium.launch({ 

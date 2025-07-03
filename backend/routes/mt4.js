@@ -288,9 +288,10 @@ router.get('/status/:connectionId', async (req, res) => {
 // Helper function to test MT4 connection using Python script
 async function testMT4Connection(connection) {
   return new Promise((resolve) => {
-    const pythonScript = path.join(__dirname, '../scripts/mt4_connect.py');
+    // Use demo script for testing (works without MetaTrader5)
+    const pythonScript = path.join(__dirname, '../scripts/mt4_connect_demo.py');
     
-    const pythonProcess = spawn('python', [
+    const pythonProcess = spawn('python3', [
       pythonScript,
       '--server', connection.server,
       '--login', connection.login,

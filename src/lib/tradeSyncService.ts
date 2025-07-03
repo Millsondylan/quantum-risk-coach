@@ -1,5 +1,5 @@
 import { RealBrokerService } from './realBrokerService';
-import { database } from './localDatabase';
+import { localDatabase as database } from './localStorage';
 import { Account } from './localDatabase';
 
 export interface SyncNotification {

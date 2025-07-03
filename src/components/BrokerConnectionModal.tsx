@@ -117,16 +117,8 @@ export const BrokerConnectionModal: React.FC<BrokerConnectionModalProps> = ({
 
   const getBrokerDisplayName = (brokerCode: string): string => {
     const displayNames: Record<string, string> = {
-      'binance': 'Binance',
-      'bybit': 'Bybit',
-      'kucoin': 'KuCoin',
-      'okx': 'OKX',
-      'mexc': 'MEXC',
       'mt4': 'MetaTrader 4',
       'mt5': 'MetaTrader 5',
-      'ctrader': 'cTrader',
-      'interactive': 'Interactive Brokers',
-      'alpaca': 'Alpaca'
     };
     return displayNames[brokerCode] || brokerCode;
   };
