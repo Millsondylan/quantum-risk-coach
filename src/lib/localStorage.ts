@@ -617,4 +617,158 @@ export const storage = {
       }
     }
   }
-}; 
+};
+
+// Create a singleton instance of IndexedDBStorage
+const indexedDBStorage = new IndexedDBStorage();
+
+// Export the localDatabase interface that matches what other files expect
+export const localDatabase = {
+  // Portfolio operations
+  async createPortfolio(portfolio: Portfolio): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.createPortfolio(portfolio);
+  },
+
+  async getPortfolios(): Promise<Portfolio[]> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getPortfolios();
+  },
+
+  async updatePortfolio(portfolio: Portfolio): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.updatePortfolio(portfolio);
+  },
+
+  async deletePortfolio(id: string): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.deletePortfolio(id);
+  },
+
+  // Account operations
+  async createAccount(account: Account): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.createAccount(account);
+  },
+
+  async getAccounts(portfolioId?: string): Promise<Account[]> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getAccounts(portfolioId);
+  },
+
+  async updateAccount(account: Account): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.updateAccount(account);
+  },
+
+  // Trade operations
+  async addTrade(trade: Trade): Promise<string> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.addTrade(trade);
+  },
+
+  async getTrades(accountId?: string): Promise<Trade[]> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getTrades(accountId);
+  },
+
+  async getAllTrades(): Promise<Trade[]> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getAllTrades();
+  },
+
+  async updateTrade(trade: Trade): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.updateTrade(trade);
+  },
+
+  async deleteTrade(tradeId: string): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.deleteTrade(tradeId);
+  },
+
+  async bulkInsertTrades(trades: Trade[]): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.bulkInsertTrades(trades);
+  },
+
+  // Journal operations
+  async createJournalEntry(entry: JournalEntry): Promise<string> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.createJournalEntry(entry);
+  },
+
+  async getJournalEntries(): Promise<JournalEntry[]> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getJournalEntries();
+  },
+
+  async updateJournalEntry(entry: Partial<JournalEntry>): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.updateJournalEntry(entry);
+  },
+
+  async deleteJournalEntry(id: string): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.deleteJournalEntry(id);
+  },
+
+  // Settings operations
+  async setSetting(key: string, value: any): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.setSetting(key, value);
+  },
+
+  async getSetting(key: string): Promise<any> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getSetting(key);
+  },
+
+  // User operations
+  async createUser(username: string, userData: Partial<UserData>): Promise<UserData> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.createUser(username, userData);
+  },
+
+  async getUser(username: string): Promise<UserData | null> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getUser(username);
+  },
+
+  async getAllUsers(): Promise<UserData[]> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getAllUsers();
+  },
+
+  // Data export/import
+  async exportData(): Promise<any> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.exportData();
+  },
+
+  async importData(data: any): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.importData(data);
+  },
+
+  async clearAllData(): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.clearAllData();
+  },
+
+  // Additional methods
+  async getTradesByPortfolioId(portfolioId: string): Promise<Trade[]> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getTradesByPortfolioId(portfolioId);
+  },
+
+  async updateAccountBalance(accountId: string, balance: number): Promise<void> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.updateAccountBalance(accountId, balance);
+  },
+
+  async getAccountBalance(accountId: string): Promise<number> {
+    await indexedDBStorage.init();
+    return indexedDBStorage.getAccountBalance(accountId);
+  },
+};

@@ -63,7 +63,7 @@ const History: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const trades = await localDatabase.getAllTrades();
+        const trades = await localDatabase.getTrades();
         setAllTrades(trades);
       } catch (err) {
         console.error('Error fetching trades:', err);
@@ -354,8 +354,8 @@ const History: React.FC = () => {
             <div>
               <Label htmlFor="tags-filter">Tags</Label>
               <TagInput 
-                tags={tagsFilter} 
-                onTagsChange={setTagsFilter} 
+                value={tagsFilter} 
+                onChange={setTagsFilter} 
                 placeholder="Add tags to filter by" 
               />
             </div>

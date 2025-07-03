@@ -801,6 +801,11 @@ export const localDatabase = {
     return db.getTrades(accountId);
   },
 
+  async getAllTrades(): Promise<Trade[]> {
+    const db = await getStorage();
+    return db.getTrades();
+  },
+
   async updateTrade(trade: Trade): Promise<void> {
     const db = await getStorage();
     return db.updateTrade(trade);
