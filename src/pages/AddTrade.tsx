@@ -46,7 +46,7 @@ interface TradeFormData {
   useCustomSymbol: boolean;
   tags: string[];
   confidenceRating: number;
-  mood: 'good' | 'neutral' | 'bad';
+  mood: 'positive' | 'negative' | 'neutral' | 'excited' | 'stressed' | 'calm' | 'greedy' | 'fearful';
 }
 
 const AddTrade: React.FC = () => {
@@ -82,10 +82,13 @@ const AddTrade: React.FC = () => {
   };
 
   const handleNumberInputChange = (field: keyof TradeFormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    // Allow any numeric input including decimals and negative numbers
+    if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleConfidenceChange = (value: number[]) => {
@@ -200,8 +203,36 @@ const AddTrade: React.FC = () => {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Handle CSV file upload
-      toast.info('CSV import functionality would be implemented here');
+      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        // Handle CSV file upload
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          try {
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const trades = lines.slice(1).filter(line => line.trim()).map(line => {
+              const values = line.split(',').map(v => v.trim());
+              const trade: any = {};
+              headers.forEach((header, index) => {
+                trade[header.toLowerCase().replace(/\s+/g, '')] = values[index];
+              });
+              return trade;
+            });
+            
+            toast.success(`Successfully parsed ${trades.length} trades from CSV`);
+            console.log('Parsed trades:', trades);
+            // Here you would save the trades to the database
+          } catch (error) {
+            toast.error('Failed to parse CSV file. Please check the format.');
+          }
+        };
+        reader.readAsText(file);
+      } else if (file.type.startsWith('image/')) {
+        // Handle image upload for OCR
+        toast.info('Image uploaded for OCR processing');
+        // Here you would implement OCR processing
+      }
     }
   };
 
@@ -429,13 +460,13 @@ const AddTrade: React.FC = () => {
             <Label className="text-white">Trade Mood</Label>
             <div className="flex gap-2 mt-2">
               <Button
-                variant={formData.mood === 'good' ? "default" : "outline"}
+                variant={formData.mood === 'positive' ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleMoodChange('good')}
+                onClick={() => handleMoodChange('positive')}
                 className="flex-1"
               >
                 <Smile className="w-4 h-4 mr-1" />
-                Good
+                Positive
               </Button>
               <Button
                 variant={formData.mood === 'neutral' ? "default" : "outline"}
@@ -447,13 +478,13 @@ const AddTrade: React.FC = () => {
                 Neutral
               </Button>
               <Button
-                variant={formData.mood === 'bad' ? "default" : "outline"}
+                variant={formData.mood === 'negative' ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleMoodChange('bad')}
+                onClick={() => handleMoodChange('negative')}
                 className="flex-1"
               >
                 <Frown className="w-4 h-4 mr-1" />
-                Bad
+                Negative
               </Button>
             </div>
           </div>

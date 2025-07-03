@@ -3,85 +3,110 @@
 @tailwind components;
 @tailwind utilities;
 
-/* UltraTrader-inspired Modern Mobile Trading App Styles */
+/* Quantum Risk Coach - Visual Essence & Color System */
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Quantum Color Palette */
+    --background: 220 23% 6%; /* #0B0F1A - Deep matte navy base */
+    --foreground: 210 40% 98%; /* #F4F4F4 - Clean white for headings */
 
-    --card: 222.2 84% 4.9%;
+    --card: 220 23% 8%; /* #1A2233 - Dimmed steel blue overlays */
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 220 23% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
+    --primary: 187 100% 58%; /* #2DF4FF - Electric cyan for active states */
+    --primary-foreground: 220 23% 6%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 220 23% 12%; /* #1C1C2C - Graphite black with faint glow */
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 23% 12%;
+    --muted-foreground: 215 20.2% 65.1%; /* #B2B2B2 - Mist gray for subtext */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 187 100% 58%; /* #2DF4FF */
+    --accent-foreground: 220 23% 6%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84% 60%; /* #FF6F61 - Coral red */
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.0%;
+    --border: 220 23% 15%; /* #CCCCCC40 - Transparent silver */
+    --input: 220 23% 12%;
+    --ring: 187 100% 58%; /* #2DF4FF */
 
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    /* Trading-specific colors */
+    --profit: 142 76% 36%; /* #B6F080 - Soft lime green */
+    --loss: 0 84% 60%; /* #FF6F61 - Coral red */
+    --neutral: 215 20.2% 65.1%;
+    --warning: 38 92% 50%;
 
-    --radius: 0.5rem;
+    --chart-1: 187 100% 58%; /* #2DF4FF */
+    --chart-2: 142 76% 36%; /* #B6F080 */
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%; /* #A34EFF - Violet for gradient */
+    --chart-5: 0 84% 60%; /* #FF6F61 */
 
-    /* UltraTrader color variables */
-    --ultra-bg: #0A0B0D;
-    --ultra-card: #1A1B1E;
-    --ultra-card-dark: #151619;
-    --ultra-border: #2A2B2E;
-    --ultra-text: #FFFFFF;
-    --ultra-text-muted: #94A3B8;
-    --ultra-accent: #3B82F6;
+    --radius: 0.75rem;
 
-    /* Custom holographic colors */
-    --holo-primary: 197 100% 50%;
-    --holo-secondary: 283 89% 74%;
-    --holo-accent: 142 76% 36%;
-    --holo-warning: 38 92% 50%;
-    --space-dark: 222 47% 8%;
-    --space-darker: 222 84% 4.9%;
+    /* Quantum gradient backgrounds */
+    --gradient-primary: linear-gradient(135deg, #2DF4FF 0%, #A34EFF 100%);
+    --gradient-success: linear-gradient(135deg, #B6F080 0%, #10B981 100%);
+    --gradient-warning: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    --gradient-danger: linear-gradient(135deg, #FF6F61 0%, #DC2626 100%);
+    --gradient-card: linear-gradient(135deg, #0B0F1A 0%, #1A2233 100%);
+    
+    /* Glassmorphism effects */
+    --glass-bg: rgba(26, 34, 51, 0.8);
+    --glass-border: rgba(45, 244, 255, 0.2);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    
+    /* Quantum-specific variables */
+    --quantum-glow: 0 0 12px rgba(45, 244, 255, 0.5);
+    --quantum-glow-active: 0 0 20px rgba(45, 244, 255, 0.8);
+    --quantum-pulse: 0 0 30px rgba(45, 244, 255, 0.3);
   }
 
   body {
-    @apply bg-[#0A0B0D] text-white font-sans antialiased;
+    @apply bg-[#0B0F1A] text-white font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Enhanced mobile-specific optimizations */
+    
+    /* Enhanced mobile optimizations */
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    /* Prevent zoom on input focus */
+    -webkit-user-select: text;
+    -khtml-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
     touch-action: manipulation;
-    /* Mobile-specific optimizations */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+    
+    /* Quantum background */
+    background: linear-gradient(135deg, #0B0F1A 0%, #1A2233 100%);
+  }
+
+  /* Quantum ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(45, 244, 255, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(163, 78, 255, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 40% 60%, rgba(182, 240, 128, 0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
   }
 
   html {
@@ -101,472 +126,288 @@
     user-select: text;
   }
   
-  /* Universal button styles for all device sizes */
+  /* Quantum Button Styles - 48dp height, 160dp width */
   button, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 10px 14px;
-    border-radius: 8px;
+    min-height: 48px;
+    min-width: 48px;
+    padding: 12px 16px;
+    border-radius: 12px;
     font-size: 16px;
     font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    position: relative;
+    overflow: hidden;
+    background: #1C1C2C;
+    border: 1px solid rgba(45, 244, 255, 0.2);
+    color: #F4F4F4;
   }
 
+  /* Quantum button hover effects */
+  button:hover, [role="button"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--quantum-glow);
+    border-color: rgba(45, 244, 255, 0.4);
+  }
+
+  button:active, [role="button"]:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+    box-shadow: var(--quantum-glow-active);
+  }
+
+  /* Quantum input styles - 56dp height */
   input, select, textarea {
-    font-size: 16px; /* Prevents zoom on iOS */
-    padding: 12px 16px;
-    border-radius: 8px;
-    min-height: 44px;
+    font-size: 16px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    min-height: 56px;
     touch-action: manipulation;
+    background: rgba(26, 34, 51, 0.8);
+    border: 1px solid rgba(45, 244, 255, 0.2);
+    color: #F4F4F4;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
   }
 
-  /* Small mobile phones (320px - 375px) */
-  @media (max-width: 375px) {
-    button, [role="button"] {
-      min-height: 48px;
-      min-width: 48px;
-      padding: 12px 16px;
-      font-size: 15px;
-    }
-    
-    .grid-cols-4 {
-      gap: 8px;
-    }
-    
-    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-      margin-top: 1rem;
-    }
-    
-    .px-4 {
-      padding-left: 12px;
-      padding-right: 12px;
-    }
-  }
-
-  /* Standard mobile phones (375px - 414px) */
-  @media (min-width: 375px) and (max-width: 414px) {
-    button, [role="button"] {
-      min-height: 48px;
-      min-width: 48px;
-      padding: 12px 16px;
-      font-size: 16px;
-    }
-  }
-
-  /* Large mobile phones (414px - 768px) */
-  @media (min-width: 414px) and (max-width: 768px) {
-    button, [role="button"] {
-      min-height: 50px;
-      min-width: 50px;
-      padding: 14px 18px;
-      font-size: 16px;
-    }
-  }
-
-  /* Enhanced mobile-specific button styles */
-  @media (max-width: 768px) {
-    .form-input, .form-select, .form-textarea {
-      font-size: 16px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      min-height: 48px;
-    }
-
-    /* Mobile-optimized cards */
-    .card, .holo-card {
-      border-radius: 12px;
-      margin: 8px;
-      padding: 16px;
-    }
-
-    /* Mobile-optimized spacing */
-    .space-y-4 > :not([hidden]) ~ :not([hidden]) {
-      margin-top: 1rem;
-    }
-
-    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-      margin-top: 1.5rem;
-    }
-
-    .space-y-8 > :not([hidden]) ~ :not([hidden]) {
-      margin-top: 2rem;
-    }
-  }
-
-  /* Ultra-small phones (iPhone SE, older Android) */
-  @media (max-width: 320px) {
-    .grid-cols-4 {
-      gap: 4px;
-    }
-    
-    .px-4 {
-      padding-left: 8px;
-      padding-right: 8px;
-    }
-    
-    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-      margin-top: 0.75rem;
-    }
-    
-    .text-xs {
-      font-size: 0.7rem;
-    }
-  }
-
-  /* Tablets (768px - 1024px) */
-  @media (min-width: 768px) and (max-width: 1024px) {
-    button, [role="button"] {
-      min-height: 48px;
-      min-width: 48px;
-      padding: 12px 20px;
-      font-size: 16px;
-    }
-    
-    .grid-cols-4 {
-      gap: 16px;
-    }
-  }
-
-  /* Touch-specific enhancements */
-  @media (hover: none) and (pointer: coarse) {
-    button, [role="button"], .touch-target {
-      min-height: 48px;
-      min-width: 48px;
-      padding: 14px 18px;
-    }
-    
-    /* Enhanced visual feedback for touch */
-    button:active, [role="button"]:active {
-      transform: scale(0.95);
-      transition: transform 0.1s ease-in-out;
-    }
-  }
-
-  /* Ultra-small phones (iPhone SE, older Android) */
-  @media (max-width: 320px) {
-    .grid-cols-4 {
-      gap: 4px;
-    }
-    
-    .px-4 {
-      padding-left: 8px;
-      padding-right: 8px;
-    }
-    
-    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-      margin-top: 0.75rem;
-    }
-    
-    .text-xs {
-      font-size: 0.7rem;
-    }
-  }
-
-  /* Tablets (768px - 1024px) */
-  @media (min-width: 768px) and (max-width: 1024px) {
-    button, [role="button"] {
-      min-height: 48px;
-      min-width: 48px;
-      padding: 12px 20px;
-      font-size: 16px;
-    }
-    
-    .grid-cols-4 {
-      gap: 16px;
-    }
-  }
-
-  /* Large tablets and small laptops (1024px+) */
-  @media (min-width: 1024px) {
-    .mobile-only {
-      display: none;
-    }
-    
-    button, [role="button"] {
-      min-height: 44px;
-      min-width: 44px;
-      padding: 10px 16px;
-    }
-  }
-
-  /* Touch-specific enhancements */
-  @media (hover: none) and (pointer: coarse) {
-    button, [role="button"], .touch-target {
-      min-height: 48px;
-      min-width: 48px;
-      padding: 14px 18px;
-    }
-    
-    /* Enhanced visual feedback for touch */
-    button:active, [role="button"]:active {
-      transform: scale(0.95);
-      transition: transform 0.1s ease-in-out;
-    }
-  }
-}
-
-@layer utilities {
-  /* UltraTrader-style card components */
-  .ultra-card {
-    @apply bg-[#1A1B1E] border border-[#2A2B2E] rounded-xl;
-    backdrop-filter: blur(20px);
-    box-shadow: 
-      0 4px 24px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .ultra-card-dark {
-    @apply bg-[#151619] border border-[#2A2B2E] rounded-lg;
-  }
-
-  .ultra-gradient-card {
-    @apply bg-gradient-to-br from-[#1A1B1E] to-[#151619] border border-[#2A2B2E] rounded-xl;
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  .holo-card {
-    @apply bg-[#1A1B1E] border border-[#2A2B2E] rounded-xl;
-    backdrop-filter: blur(20px);
-    box-shadow: 
-      0 4px 24px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .holo-card-hover:hover {
-    @apply transform -translate-y-1;
-    box-shadow: 
-      0 20px 40px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2),
-      0 0 0 1px rgba(59, 130, 246, 0.3),
-      0 0 20px rgba(59, 130, 246, 0.1);
-  }
-
-  .holo-button {
-    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600;
-    @apply text-white font-medium px-4 py-2 rounded-lg;
-    @apply border border-blue-500/30 backdrop-blur-sm;
-    @apply transition-all duration-300 ease-in-out;
-    @apply shadow-lg hover:shadow-xl;
-    @apply focus:ring-2 focus:ring-blue-500/50 focus:outline-none;
-  }
-
-  .holo-button:hover {
-    @apply transform -translate-y-0.5 scale-105;
-    box-shadow: 
-      0 10px 20px rgba(59, 130, 246, 0.3),
-      0 0 20px rgba(59, 130, 246, 0.2);
-  }
-
-  .holo-button:active {
-    transform: translateY(0);
-  }
-
-  .gradient-text {
-    @apply bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent;
-  }
-
-  .holo-glow {
-    box-shadow: 
-      0 0 20px rgba(59, 130, 246, 0.4),
-      0 0 40px rgba(59, 130, 246, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  .profit-glow {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-  }
-
-  .loss-glow {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
-  }
-
-  /* Mobile-optimized scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    @apply bg-slate-600/50 rounded-full;
-    border-radius: 10px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-500/70;
-  }
-  
-  /* Enhanced touch-friendly focus states */
-  button:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  [role="button"]:focus-visible {
+  input:focus, select:focus, textarea:focus {
     outline: none;
-    outline-offset: 0px;
+    border-color: #2DF4FF;
+    box-shadow: var(--quantum-glow);
+    background: rgba(26, 34, 51, 0.9);
   }
-  
-  /* Mobile-specific animations */
+
+  /* Mobile-specific optimizations */
   @media (max-width: 768px) {
-    .animate-pulse {
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: .5;
-      }
-    }
-
-    /* Mobile-optimized transitions */
-    .transition-all {
-      transition-duration: 150ms;
-    }
-
-    /* Mobile-optimized hover effects */
-    .hover\:scale-105:hover {
-      transform: scale(1.02);
-    }
-
-    .hover\:translate-y-1:hover {
-      transform: translateY(2px);
-    }
-  }
-  
-  /* Prevent horizontal scroll on mobile */
-  @media (max-width: 768px) {
-    body {
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-    
-    .container {
-      padding-left: 1rem;
-      padding-right: 1rem;
-    }
-
-    /* Mobile-optimized grid layouts */
-    .grid {
-      gap: 1rem;
-    }
-    
-    .grid-cols-1 {
-      grid-template-columns: repeat(1, minmax(0, 1fr));
-    }
-
-    /* Mobile-optimized flex layouts */
-    .flex {
-      flex-wrap: wrap;
-    }
-
-    /* Mobile-optimized text sizes */
-    .text-sm {
-      font-size: 14px;
-    }
-
-    .text-base {
+    button, [role="button"] {
+      min-height: 52px;
+      min-width: 52px;
+      padding: 14px 18px;
       font-size: 16px;
+      border-radius: 14px;
+      word-wrap: break-word;
+      white-space: normal;
+      text-align: center;
     }
 
-    .text-lg {
-      font-size: 18px;
+    input, select, textarea {
+      font-size: 16px;
+      padding: 16px 20px;
+      border-radius: 14px;
+      min-height: 56px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
-    .text-xl {
-      font-size: 20px;
+    /* Ensure text stays within boundaries */
+    .text-container {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      max-width: 100%;
     }
 
-    .text-2xl {
-      font-size: 24px;
-    }
-  }
-  
-  /* Touch-friendly dropdowns */
-  @media (max-width: 768px) {
-    [data-radix-popper-content-wrapper] {
-      min-width: 200px !important;
-      max-width: calc(100vw - 32px) !important;
+    /* Improve button text wrapping */
+    .btn-text {
+      word-wrap: break-word;
+      white-space: normal;
+      line-height: 1.2;
     }
 
-    /* Mobile-optimized modals */
-    [data-radix-dialog-content] {
-      margin: 16px;
-      max-width: calc(100vw - 32px);
-      max-height: calc(100vh - 32px);
-    }
-  }
-  
-  /* Mobile-optimized cards */
-  @media (max-width: 768px) {
-    .holo-card {
-      margin: 0.5rem;
-      border-radius: 0.75rem;
-      padding: 1rem;
-    }
-  }
-  
-  /* Prevent text selection on interactive elements */
-  button, [role="button"], .no-select {
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-  
-  /* Mobile-optimized spacing */
-  @media (max-width: 768px) {
-    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-      margin-top: 1.5rem;
-    }
-    
-    .space-y-4 > :not([hidden]) ~ :not([hidden]) {
-      margin-top: 1rem;
-    }
-
-    /* Mobile-optimized padding */
-    .p-4 {
-      padding: 1rem;
-    }
-
-    .p-6 {
-      padding: 1.5rem;
-    }
-
-    .p-8 {
-      padding: 2rem;
-    }
-
-    /* Mobile-optimized margins */
-    .m-4 {
-      margin: 1rem;
-    }
-
-    .m-6 {
-      margin: 1.5rem;
-    }
-
-    .m-8 {
-      margin: 2rem;
+    .container {
+      padding-left: 24px;
+      padding-right: 24px;
     }
   }
 
-  /* Mobile-specific utility classes */
+  /* Touch-specific enhancements */
+  @media (hover: none) and (pointer: coarse) {
+    button:active, [role="button"]:active {
+      transform: scale(0.95);
+      transition: transform 0.1s ease;
+    }
+  }
+
+  /* Quantum Card Modules - 16dp padding, 16dp radius */
+  .quantum-card {
+    background: linear-gradient(135deg, #0B0F1A, #1A2233);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid rgba(45, 244, 255, 0.1);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--glass-shadow);
+    transition: all 0.3s ease;
+  }
+
+  .quantum-card:hover {
+    border-color: rgba(45, 244, 255, 0.3);
+    box-shadow: var(--quantum-glow), var(--glass-shadow);
+    transform: translateY(-2px);
+  }
+
+  .glass-card {
+    background: rgba(26, 34, 51, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(45, 244, 255, 0.2);
+    border-radius: 16px;
+  }
+
+  /* Quantum Button Variants */
+  .btn-quantum-primary {
+    background: linear-gradient(135deg, #2DF4FF, #A34EFF);
+    color: #0B0F1A;
+    font-weight: 600;
+    border: none;
+    box-shadow: var(--quantum-glow);
+  }
+
+  .btn-quantum-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--quantum-glow-active);
+  }
+
+  .btn-quantum-secondary {
+    background: #1C1C2C;
+    color: #F4F4F4;
+    border: 1px solid rgba(45, 244, 255, 0.3);
+  }
+
+  .btn-quantum-success {
+    background: linear-gradient(135deg, #B6F080, #10B981);
+    color: #0B0F1A;
+    font-weight: 600;
+    border: none;
+  }
+
+  .btn-quantum-warning {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: #0B0F1A;
+    font-weight: 600;
+    border: none;
+  }
+
+  .btn-quantum-danger {
+    background: linear-gradient(135deg, #FF6F61, #DC2626);
+    color: #F4F4F4;
+    font-weight: 600;
+    border: none;
+  }
+
+  /* Quantum Navigation */
+  .quantum-nav {
+    background: rgba(11, 15, 26, 0.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(45, 244, 255, 0.2);
+  }
+
+  .nav-item {
+    padding: 12px 16px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    color: #B2B2B2;
+  }
+
+  .nav-item:hover {
+    color: #F4F4F4;
+    background: rgba(45, 244, 255, 0.1);
+  }
+
+  .nav-item.active {
+    color: #2DF4FF;
+    background: rgba(45, 244, 255, 0.2);
+    box-shadow: var(--quantum-glow);
+  }
+
+  .quantum-header {
+    background: linear-gradient(135deg, #0B0F1A, #1A2233);
+    border-bottom: 1px solid rgba(45, 244, 255, 0.2);
+    backdrop-filter: blur(10px);
+  }
+
+  /* Quantum Text Colors */
+  .profit-text {
+    color: #B6F080;
+  }
+
+  .loss-text {
+    color: #FF6F61;
+  }
+
+  .neutral-text {
+    color: #B2B2B2;
+  }
+
+  /* Quantum Stat Cards */
+  .stat-card {
+    background: linear-gradient(135deg, #0B0F1A, #1A2233);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(45, 244, 255, 0.1);
+    backdrop-filter: blur(10px);
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #F4F4F4;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    color: #B2B2B2;
+    margin-top: 4px;
+  }
+
+  .stat-change {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .stat-change.positive {
+    color: #B6F080;
+  }
+
+  .stat-change.negative {
+    color: #FF6F61;
+  }
+
+  /* Quantum Form Elements */
+  .form-input {
+    background: rgba(26, 34, 51, 0.8);
+    border: 1px solid rgba(45, 244, 255, 0.2);
+    border-radius: 12px;
+    color: #F4F4F4;
+    backdrop-filter: blur(10px);
+  }
+
+  .form-select {
+    background: rgba(26, 34, 51, 0.8);
+    border: 1px solid rgba(45, 244, 255, 0.2);
+    border-radius: 12px;
+    color: #F4F4F4;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Quantum Loading States */
+  .loading-spinner {
+    border: 2px solid rgba(45, 244, 255, 0.2);
+    border-top: 2px solid #2DF4FF;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, rgba(45, 244, 255, 0.1) 25%, rgba(45, 244, 255, 0.2) 50%, rgba(45, 244, 255, 0.1) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Responsive utilities */
   .mobile-only {
     display: none;
   }
@@ -575,507 +416,223 @@
     display: block;
   }
 
-  @media (max-width: 768px) {
-    .mobile-only {
-      display: block;
-    }
-
-    .desktop-only {
-      display: none;
-    }
-  }
-
-  /* Mobile-optimized navigation */
-  @media (max-width: 768px) {
-    .nav-mobile {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(10px);
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      z-index: 50;
-      padding: 0.5rem;
-    }
-
-    .nav-mobile-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0.5rem;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-    }
-
-    .nav-mobile-item:active {
-      background: rgba(0, 217, 255, 0.1);
-    }
-  }
-
-  .safe-area-inset-top {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  .safe-area-inset-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .safe-area-inset-left {
-    padding-left: env(safe-area-inset-left);
-  }
-
-  .safe-area-inset-right {
-    padding-right: env(safe-area-inset-right);
-  }
-
-  .touch-manipulation {
-    touch-action: manipulation;
-  }
-
-    .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Horizontal scroll for mobile navigation */
-  .nav-scroll {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .nav-scroll::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Touch-friendly utilities */
+  /* Touch targets */
   .touch-target {
     min-height: 44px;
     min-width: 44px;
-    touch-action: manipulation;
   }
 
   .touch-target-large {
-    min-height: 56px;
-    min-width: 56px;
-    touch-action: manipulation;
+    min-height: 52px;
+    min-width: 52px;
   }
 
-  /* Prevent zoom on double tap */
+  /* Prevent zoom on input focus */
   .no-zoom {
-    touch-action: manipulation;
+    font-size: 16px;
   }
 
-  /* Touch & Mobile Optimization */
-  * {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-tap-highlight-color: rgba(0,0,0,0);
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
   }
 
-  /* Prevent text selection on UI elements */
-  button,
-  a,
-  .card,
-  .btn,
-  [role="button"],
-  [role="tab"],
-  [role="menuitem"],
-  .touch-manipulation {
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
+  ::-webkit-scrollbar-track {
+    background: rgba(26, 34, 51, 0.5);
   }
 
-  /* Allow text selection in input fields and textareas */
-  input,
-  textarea,
-  [contenteditable="true"],
-  .select-text {
-    -webkit-user-select: text;
-    -khtml-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
+  ::-webkit-scrollbar-thumb {
+    background: rgba(45, 244, 255, 0.3);
+    border-radius: 4px;
   }
 
-  /* Touch action styles */
-  .touch-pan-x {
-    touch-action: pan-x;
+  /* Focus ring for accessibility */
+  .focus-ring {
+    outline: 2px solid #2DF4FF;
+    outline-offset: 2px;
   }
 
-  .touch-pan-y {
-    touch-action: pan-y;
-  }
-
-  .touch-manipulation {
-    touch-action: manipulation;
-  }
-
-  .touch-none {
-    touch-action: none;
-  }
-
-  /* Remove tap highlight on all interactive elements */
   button, 
-  a, 
-  select, 
-  input, 
-  textarea,
   [role="button"],
-  [role="tab"],
-  [role="menuitem"],
-  [tabindex]:not([tabindex="-1"]) {
-    -webkit-tap-highlight-color: transparent;
-    outline: none;
-  }
-
-  /* Add focus styles for accessibility */
-  button:focus-visible,
-  a:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  [role="button"]:focus-visible,
-  [tabindex]:not([tabindex="-1"]):focus-visible {
-    outline: none;
-    outline-offset: 0px;
-  }
-
-  /* Prevent blue highlight on touch in iOS */
   input,
-  textarea,
-  button,
   select,
-  a {
-    -webkit-tap-highlight-color: rgba(0,0,0,0);
-  }
-}
-
-/* Mobile-first responsive containers */
-@layer components {
-  .container {
-    @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
-    max-width: 100%;
-  }
-
-  @media (min-width: 640px) {
-    .container {
-      max-width: 640px;
+  textarea {
+    &:focus-visible {
+      outline: 2px solid #2DF4FF;
+      outline-offset: 2px;
     }
   }
 
-  @media (min-width: 768px) {
-    .container {
-      max-width: 768px;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .container {
-      max-width: 1024px;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .container {
-      max-width: 1280px;
-    }
-  }
-
-  @media (min-width: 1536px) {
-    .container {
-      max-width: 1536px;
-    }
-  }
-}
-
-/* Enhanced Holographic and Glassmorphism Effects */
-@layer components {
-  .holo-card {
-    @apply bg-slate-800/30 backdrop-blur-xl border border-slate-600/30 rounded-xl;
-    background: linear-gradient(
-      135deg,
-      rgba(15, 23, 42, 0.8) 0%,
-      rgba(30, 41, 59, 0.6) 50%,
-      rgba(15, 23, 42, 0.9) 100%
-    );
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      0 0 0 1px rgba(255, 255, 255, 0.05);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .holo-card-hover:hover {
-    @apply transform -translate-y-1;
-    box-shadow: 
-      0 20px 40px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2),
-      0 0 0 1px rgba(59, 130, 246, 0.3),
-      0 0 20px rgba(59, 130, 246, 0.1);
-  }
-
-  .holo-button {
-    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600;
-    @apply text-white font-medium px-4 py-2 rounded-lg;
-    @apply border border-blue-500/30 backdrop-blur-sm;
-    @apply transition-all duration-300 ease-in-out;
-    @apply shadow-lg hover:shadow-xl;
-    @apply focus:ring-2 focus:ring-blue-500/50 focus:outline-none;
-  }
-
-  .holo-button:hover {
-    @apply transform -translate-y-0.5 scale-105;
-    box-shadow: 
-      0 10px 20px rgba(59, 130, 246, 0.3),
-      0 0 20px rgba(59, 130, 246, 0.2);
-  }
-
-  .holo-button:active {
-    transform: translateY(0);
-  }
-
-  .gradient-text {
-    @apply bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent;
-  }
-
-  .holo-glow {
-    box-shadow: 
-      0 0 20px rgba(59, 130, 246, 0.4),
-      0 0 40px rgba(59, 130, 246, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-}
-
-/* Mobile-optimized touch targets */
-@layer components {
-  .mobile-button {
-    @apply touch-target px-4 py-3 text-base font-medium;
-    @apply rounded-lg border transition-all duration-200;
-    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
-    @apply active:scale-95 touch-manipulation;
-  }
-
-  .mobile-card {
-    @apply holo-card p-4 mb-4;
-    @apply touch-manipulation;
-  }
-
-  .mobile-grid {
-    @apply grid gap-4;
-    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
-  }
-
-  .mobile-stats-grid {
-    @apply grid gap-3;
-    @apply grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6;
-  }
-}
-
-/* Responsive typography */
-@layer components {
-  .responsive-heading {
-    @apply text-2xl sm:text-3xl lg:text-4xl font-bold;
-    @apply leading-tight tracking-tight;
-  }
-
-  .responsive-subheading {
-    @apply text-lg sm:text-xl lg:text-2xl font-semibold;
-    @apply leading-relaxed;
-  }
-
-  .responsive-body {
-    @apply text-sm sm:text-base;
-    @apply leading-relaxed;
-  }
-
-  .responsive-caption {
-    @apply text-xs sm:text-sm;
-    @apply leading-normal;
-  }
-}
-
-/* Loading states and animations */
-@layer components {
-  .skeleton {
-    @apply animate-pulse bg-slate-700/50 rounded;
-  }
-
-  .fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-  }
-
-  .slide-up {
-    animation: slideUp 0.3s ease-out;
-  }
-
-  .bounce-in {
-    animation: bounceIn 0.6s ease-out;
-  }
-
+  /* Quantum Animations */
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
 
-  @keyframes slideUp {
-    from { 
-      opacity: 0; 
-      transform: translateY(20px); 
-    }
-    to { 
-      opacity: 1; 
-      transform: translateY(0); 
-    }
+  @keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
 
-  @keyframes bounceIn {
-    0% { 
-      opacity: 0; 
-      transform: scale(0.3); 
-    }
-    50% { 
-      opacity: 1; 
-      transform: scale(1.05); 
-    }
-    70% { 
-      transform: scale(0.9); 
-    }
-    100% { 
-      opacity: 1; 
-      transform: scale(1); 
-    }
-  }
-}
-
-/* Mobile navigation and layout */
-@layer components {
-  .mobile-nav {
-    @apply fixed bottom-0 left-0 right-0 z-50;
-    @apply bg-slate-900/90 backdrop-blur-lg border-t border-slate-700/50;
-    @apply p-2 safe-area-inset-bottom;
+  @keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
   }
 
-  .mobile-nav-item {
-    @apply flex flex-col items-center justify-center;
-    @apply p-2 rounded-lg transition-colors duration-200;
-    @apply text-xs font-medium;
-    @apply hover:bg-slate-700/50 active:bg-slate-600/50;
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 
-  .mobile-header {
-    @apply sticky top-0 z-40;
-    @apply bg-slate-900/90 backdrop-blur-lg border-b border-slate-700/50;
-    @apply p-4 safe-area-inset-top;
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
-}
 
-/* Enhanced responsive breakpoints */
-@layer utilities {
-  .xs\:block {
-    @media (min-width: 475px) {
-      display: block;
+  @keyframes quantum-pulse {
+    0%, 100% { box-shadow: var(--quantum-glow); }
+    50% { box-shadow: var(--quantum-pulse); }
+  }
+
+  @keyframes ripple {
+    0% {
+      transform: scale(0);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(4);
+      opacity: 0;
     }
   }
 
-  .xs\:hidden {
-    @media (min-width: 475px) {
-      display: none;
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  .animate-quantum-pulse {
+    animation: quantum-pulse 2s ease-in-out infinite;
+  }
+
+  /* Mobile responsive adjustments */
+  @media (max-width: 768px) {
+    .container {
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+
+    .quantum-card {
+      padding: 20px;
+      border-radius: 20px;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+    }
+
+    .btn-quantum-primary, .btn-quantum-secondary, .btn-quantum-success, .btn-quantum-warning, .btn-quantum-danger {
+      min-height: 52px;
+      font-size: 16px;
+      border-radius: 14px;
     }
   }
 
-  .xs\:grid-cols-2 {
-    @media (min-width: 475px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Tablet optimizations */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+
+    button, [role="button"] {
+      min-height: 50px;
+      min-width: 50px;
+      padding: 12px 16px;
+      font-size: 15px;
+    }
+
+    input, select, textarea {
+      font-size: 15px;
+      padding: 14px 16px;
+      min-height: 52px;
     }
   }
 
-  .xs\:text-sm {
-    @media (min-width: 475px) {
-      font-size: 0.875rem;
-      line-height: 1.25rem;
+  /* Large screen optimizations */
+  @media (min-width: 1025px) {
+    .container {
+      padding-left: 3rem;
+      padding-right: 3rem;
+    }
+
+    button, [role="button"] {
+      min-height: 48px;
+      min-width: 48px;
+      padding: 12px 16px;
+      font-size: 14px;
+    }
+
+    input, select, textarea {
+      font-size: 14px;
+      padding: 12px 16px;
+      min-height: 48px;
     }
   }
-}
 
-/* Focus management for accessibility */
-@layer base {
-  .focus-ring {
-    @apply focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-900;
-    @apply focus:outline-none;
+  /* Extra small screens */
+  @media (max-width: 480px) {
+    .container {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+
+    button, [role="button"] {
+      min-height: 56px;
+      min-width: 56px;
+      padding: 16px 20px;
+      font-size: 16px;
+      border-radius: 16px;
+    }
+
+    input, select, textarea {
+      font-size: 16px;
+      padding: 18px 22px;
+      border-radius: 16px;
+      min-height: 60px;
+    }
+
+    /* Ensure text doesn't overflow on very small screens */
+    .text-container {
+      font-size: 14px;
+      line-height: 1.3;
+    }
   }
 
-  button, 
-  [role="button"], 
-  input, 
-  select, 
-  textarea, 
-  [tabindex]:not([tabindex="-1"]) {
-    @apply focus-ring;
-  }
-}
+  /* High contrast mode */
+  @media (prefers-contrast: high) {
+    .quantum-card {
+      border: 2px solid #2DF4FF;
+    }
 
-/* Print styles */
-@media print {
-  .no-print {
-    display: none !important;
+    .btn-quantum-primary, .btn-quantum-secondary, .btn-quantum-success, .btn-quantum-warning, .btn-quantum-danger {
+      border: 2px solid currentColor;
+    }
   }
 
-  .holo-card {
-    background: white !important;
-    color: black !important;
-    border: 1px solid #ccc !important;
-    box-shadow: none !important;
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .holo-card {
-    @apply border-2 border-white;
-  }
-
-  .holo-button {
-    @apply border-2 border-white;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* UltraTrader-specific mobile classes */
-@layer utilities {
-  .ultra-trader-dashboard {
-    background: var(--ultra-bg);
-    color: var(--ultra-text);
-  }
-
-  .ultra-mobile-nav {
-    background: rgba(10, 11, 13, 0.95);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid var(--ultra-border);
-  }
-
-  .ultra-nav-item {
-    transition: all 0.2s ease-in-out;
-  }
-
-  .ultra-nav-item.active {
-    color: var(--ultra-accent);
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

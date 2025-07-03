@@ -3,22 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
-  LineChart, 
-  BookOpen, 
-  PlusCircle, 
   BarChart3, 
+  PlusCircle, 
+  BookOpen, 
+  Brain,
   Settings,
-  Newspaper,
-  Target,
-  Calendar,
-  Lightbulb,
   Bell,
-  Zap,
-  TestTube
+  Calendar,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
 
 const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate();
@@ -27,71 +22,81 @@ const MobileBottomNav: React.FC = () => {
 
   const navItems = [
     {
+      icon: Home,
+      label: 'Home',
+      path: '/',
+      testId: 'home-tab'
+    },
+    {
+      icon: BarChart3,
+      label: 'Analytics',
+      path: '/history',
+      testId: 'analytics-tab'
+    },
+    {
       icon: PlusCircle,
       label: 'Add Trade',
       path: '/add-trade',
       testId: 'add-trade-tab'
     },
     {
-      icon: BarChart3,
-      label: 'Portfolio',
-      path: '/portfolio',
-      testId: 'portfolio-tab'
+      icon: BookOpen,
+      label: 'Journal',
+      path: '/journal',
+      testId: 'journal-tab'
     },
     {
-      icon: Calendar,
-      label: 'Calendar',
-      path: '/calendar',
-      testId: 'calendar-tab'
-    },
-    {
-      icon: Zap,
+      icon: Brain,
       label: 'AI Coach',
       path: '/ai-coach',
       testId: 'ai-coach-tab'
-    },
-    {
-      icon: TestTube,
-      label: 'Tests',
-      path: '/functional-tests',
-      testId: 'functional-tests-tab'
     }
   ];
 
-  const handleNavClick = (label: string, description: string) => {
+  const handleNavClick = (label: string, path: string) => {
+    navigate(path);
     toast({
       title: `Navigating to ${label}`,
-      description: description,
+      description: `Opening ${label.toLowerCase()} section`,
       duration: 1000
     });
   };
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 bg-background border-t z-50 flex justify-around p-1 space-x-0.5"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-t border-[#2A2B2E] p-4"
       role="navigation"
       aria-label="Mobile Navigation"
     >
-      {navItems.map((item) => (
-        <Button
-          key={item.path}
-          variant={location.pathname === item.path ? 'secondary' : 'ghost'}
-          size="icon"
-          onClick={() => {
-            navigate(item.path);
-            handleNavClick(item.label, '');
-          }}
-          className="flex-1 max-w-[60px] min-w-[50px] px-1"
-          data-testid={item.testId}
-        >
-          <div className="flex flex-col items-center">
-            <item.icon 
-              className={`h-4 w-4 ${location.pathname === item.path ? 'text-primary' : 'text-muted-foreground'}`} 
-            />
-            <span className="text-[10px] mt-0.5 leading-tight">{item.label}</span>
-          </div>
-        </Button>
-      ))}
+      <div className="flex items-center justify-around">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Button
+              key={item.path}
+              variant="ghost"
+              onClick={() => handleNavClick(item.label, item.path)}
+              className={cn(
+                "nav-item h-12 px-3",
+                isActive 
+                  ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" 
+                  : "text-slate-400 hover:text-white hover:bg-slate-700/30"
+              )}
+              data-testid={item.testId}
+            >
+              <div className="flex flex-col items-center space-y-1">
+                <item.icon className={cn(
+                  "h-5 w-5 transition-colors",
+                  isActive ? "text-blue-400" : "text-slate-400"
+                )} />
+                <span className="text-xs font-medium leading-tight">
+                  {item.label}
+                </span>
+              </div>
+            </Button>
+          );
+        })}
+      </div>
     </nav>
   );
 };

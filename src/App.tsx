@@ -28,14 +28,26 @@ const AICoach = lazy(() => import('./pages/AICoach'));
 const AIStrategyBuilder = lazy(() => import('./pages/AIStrategyBuilder'));
 const DataManagement = lazy(() => import('./components/DataManagement'));
 const FunctionalTestSuite = lazy(() => import('./components/FunctionalTestSuite'));
+const TestPage = lazy(() => import('./pages/TestPage'));
+const SimpleTest = lazy(() => import('./pages/SimpleTest'));
+const MinimalTest = lazy(() => import('./pages/MinimalTest'));
 
 // Enhanced loading component with better UX
 const LoadingSpinner = ({ message = "Loading..." }: { message?: string }) => (
-  <div className="min-h-screen bg-[#0A0B0D] flex items-center justify-center">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
-      <p className="text-slate-400">{message}</p>
-      <div className="mt-2 text-xs text-slate-500">Please wait...</div>
+  <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+    <div className="text-center space-y-6">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-slate-700 rounded-full animate-spin">
+          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin"></div>
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full animate-pulse"></div>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <p className="text-white font-medium text-lg">{message}</p>
+        <p className="text-slate-400 text-sm">Please wait while we prepare your trading dashboard...</p>
+      </div>
     </div>
   </div>
 );
@@ -53,122 +65,41 @@ const preloadCriticalComponents = () => {
   }, 1000);
 };
 
-// Protected Route component with optimized loading
+// Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useUser();
-  
-  logger.log('ProtectedRoute - user:', user, 'isLoading:', isLoading);
 
-  // Show loading with timeout to prevent infinite loading
+  // Show loading spinner
   if (isLoading) {
-    logger.log('ProtectedRoute - showing loading spinner');
-    return (
-      <>
-        <LoadingSpinner message="Loading your account..." />
-        <DebugInfo user={user} isLoading={isLoading} error={null} />
-      </>
-    );
+    return <LoadingSpinner message="Loading user data..." />;
   }
 
   // If no user exists, redirect to auth
   if (!user) {
-    logger.log('ProtectedRoute - no user, redirecting to auth');
-    return (
-      <>
-        <Navigate to="/auth" replace />
-        <DebugInfo user={user} isLoading={isLoading} error={null} />
-      </>
-    );
+    return <Navigate to="/auth" replace />;
   }
 
-  // If If onboarding not completed, show onboarding
+  // If onboarding not completed, show onboarding
   if (!user.onboardingCompleted) {
-    logger.log('ProtectedRoute - onboarding not completed, showing onboarding');
-    return (
-      <>
-        <Onboarding />
-        <DebugInfo user={user} isLoading={isLoading} error={null} />
-      </>
-    );
+    return <Onboarding />;
   }
 
-  logger.log('ProtectedRoute - user authenticated, showing children');
-  return (
-    <>
-      {children}
-      <DebugInfo user={user} isLoading={isLoading} error={null} />
-    </>
-  );
+  // User authenticated, show protected content
+  return <>{children}</>;
 };
 
 // Layout wrapper for protected routes with optimized touch handling
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const swipableRoutes = useMemo(() => [
-    '/', // Dashboard
-    '/news',
-    '/live-trades',
-    '/add-trade',
-    '/history',
-    '/alarms',
-    '/journal',
-    // Add other main routes here if they should be swipable
-  ], []);
-
-  let touchStartX = 0;
-  let touchEndX = 0;
-  let touchStartTime = 0;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX = e.touches[0].clientX;
-    touchStartTime = Date.now();
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    touchEndX = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = () => {
-    if (!isMobile) return; // Only enable on mobile
-
-    const touchDuration = Date.now() - touchStartTime;
-    if (touchDuration > 300) return; // Ignore long touches
-
-    const currentPathIndex = swipableRoutes.indexOf(location.pathname);
-    if (currentPathIndex === -1) return; // Not a swipable route
-
-    const threshold = 50; // Minimum swipe distance
-    const swipeDistance = Math.abs(touchEndX - touchStartX);
-
-    if (swipeDistance < threshold) return; // Not enough distance
-
-    if (touchEndX < touchStartX - threshold) {
-      // Swiped left (go to next page)
-      if (currentPathIndex < swipableRoutes.length - 1) {
-        navigate(swipableRoutes[currentPathIndex + 1]);
-      }
-    } else if (touchEndX > touchStartX + threshold) {
-      // Swiped right (go to previous page)
-      if (currentPathIndex > 0) {
-        navigate(swipableRoutes[currentPathIndex - 1]);
-      }
-    }
-  };
 
   return (
-    <div 
-      className="min-h-screen bg-[#0A0B0D] text-white relative flex flex-col"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative flex flex-col">
       {isMobile && <MobileTopNav />}
       <nav style={{ display: 'none' }} data-testid="nav"></nav>
-      <main className="flex-1 relative z-10 overflow-y-auto pt-20" data-testid="main-content">
-        {children}
+      <main className="flex-1 relative z-10 overflow-y-auto pt-24 pb-24" data-testid="main-content">
+        <div className="container mx-auto px-4 max-w-7xl">
+          {children}
+        </div>
       </main>
     </div>
   );
@@ -271,6 +202,9 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/auth" element={<Auth />} />
+            <Route path="/test" element={<TestPage />} />
+            <Route path="/simple" element={<SimpleTest />} />
+            <Route path="/minimal" element={<MinimalTest />} />
             
             {/* Protected routes */}
             <Route path="/" element={

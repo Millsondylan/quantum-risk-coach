@@ -2,77 +2,73 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
+  Home,
+  BarChart3,
+  PlusCircle,
+  BookOpen,
+  Brain,
   Settings,
-  User,
   Bell,
-  PlusCircle
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MobileTopNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
+  const isMobile = useIsMobile();
 
-  const topMenuItems = [
+  // Only show on mobile devices
+  if (!isMobile) {
+    return null;
+  }
+
+  const navItems = [
     {
-      label: 'Overview',
+      icon: Home,
+      label: 'Dashboard',
       path: '/',
-      testId: 'overview-tab'
+      testId: 'dashboard-tab'
     },
     {
-      label: 'News',
-      path: '/news',
-      testId: 'news-tab'
-    },
-    {
-      label: 'Live Trades',
-      path: '/live-trades',
-      testId: 'live-trades-tab'
-    },
-    {
-      label: 'History',
+      icon: BarChart3,
+      label: 'Analytics',
       path: '/history',
-      testId: 'history-tab'
+      testId: 'analytics-tab'
     },
     {
+      icon: PlusCircle,
+      label: 'Add Trade',
+      path: '/add-trade',
+      testId: 'add-trade-tab'
+    },
+    {
+      icon: BookOpen,
       label: 'Journal',
       path: '/journal',
       testId: 'journal-tab'
     },
     {
+      icon: Brain,
       label: 'AI Coach',
       path: '/ai-coach',
       testId: 'ai-coach-tab'
-    },
-    {
-      label: 'Tests',
-      path: '/functional-tests',
-      testId: 'functional-tests-tab'
     }
   ];
 
-  const handleNavClick = (label: string) => {
-    toast({
-      title: `Navigating to ${label}`,
-      description: '',
-      duration: 1000
-    });
-  };
-
   return (
-    <header className="fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-b z-50">
-      {/* Top row with user info and settings */}
-      <div className="flex items-center justify-between px-3 py-2">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-b border-[#2A2B2E] p-4">
+      {/* Top row with user info and actions */}
+      <div className="flex items-center justify-between mb-4">
         {/* User info */}
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
-            <User className="h-4 w-4 text-primary" />
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+            <User className="h-5 w-5 text-white" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-foreground">Trader</span>
-            <span className="text-xs text-muted-foreground">Active</span>
+            <span className="text-sm font-semibold text-white">Trader</span>
+            <span className="text-xs text-slate-400">Active Session</span>
           </div>
         </div>
 
@@ -81,57 +77,52 @@ const MobileTopNav: React.FC = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
-            onClick={() => navigate('/notifications')}
+            className="h-10 w-10 rounded-xl bg-slate-800/50 hover:bg-slate-700/50"
+            onClick={() => navigate('/alarms')}
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="h-5 w-5 text-slate-300" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-10 w-10 rounded-xl bg-slate-800/50 hover:bg-slate-700/50"
             onClick={() => navigate('/settings')}
           >
-            <Settings className="h-4 w-4" />
+            <Settings className="h-5 w-5 text-slate-300" />
           </Button>
         </div>
       </div>
 
-      {/* Bottom row with compact menu */}
-      <div className="flex items-center justify-between px-3 py-1 border-t border-border/50">
-        <div className="flex items-center space-x-1 flex-1 overflow-x-auto scrollbar-hide">
-          {topMenuItems.map((item) => (
+      {/* Bottom row with main navigation */}
+      <nav className="flex items-center justify-between bg-slate-800/50 rounded-2xl p-2 backdrop-blur-xl border border-slate-700/30">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
             <Button
               key={item.path}
-              variant={location.pathname === item.path ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => {
-                navigate(item.path);
-                handleNavClick(item.label);
-              }}
+              variant="ghost"
+              onClick={() => navigate(item.path)}
               className={cn(
-                "h-7 px-2 text-xs font-medium whitespace-nowrap flex-shrink-0",
-                location.pathname === item.path 
-                  ? "bg-secondary text-secondary-foreground" 
-                  : "text-muted-foreground hover:text-foreground"
+                "nav-item flex-1 mx-1 h-12",
+                isActive 
+                  ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" 
+                  : "text-slate-400 hover:text-white hover:bg-slate-700/30"
               )}
               data-testid={item.testId}
             >
-              {item.label}
+              <div className="flex flex-col items-center space-y-1">
+                <item.icon className={cn(
+                  "h-5 w-5 transition-colors",
+                  isActive ? "text-blue-400" : "text-slate-400"
+                )} />
+                <span className="text-xs font-medium leading-tight">
+                  {item.label}
+                </span>
+              </div>
             </Button>
-          ))}
-        </div>
-        
-        {/* Add Trade button */}
-        <Button
-          variant="default"
-          size="icon"
-          className="h-7 w-7 ml-2 bg-primary hover:bg-primary/90"
-          onClick={() => navigate('/add-trade')}
-        >
-          <PlusCircle className="h-3 w-3" />
-        </Button>
-      </div>
+          );
+        })}
+      </nav>
     </header>
   );
 };

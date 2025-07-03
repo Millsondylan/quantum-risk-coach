@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 /*
  * Local Database Wrapper - All data saved to user's device
@@ -83,12 +84,21 @@ class IndexedDBStorage {
   private dbName = 'QuantumRiskCoachDB';
   private version = 1;
   private db: IDBDatabase | null = null;
+  private initPromise: Promise<void> | null = null;
 
   async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        console.error('IndexedDB error:', request.error);
+        reject(request.error);
+      };
+
       request.onsuccess = () => {
         this.db = request.result;
         resolve();
@@ -113,6 +123,7 @@ class IndexedDBStorage {
           const tradeStore = db.createObjectStore('trades', { keyPath: 'id' });
           tradeStore.createIndex('accountId', 'accountId', { unique: false });
           tradeStore.createIndex('entryDate', 'entryDate', { unique: false });
+          tradeStore.createIndex('status', 'status', { unique: false });
         }
 
         if (!db.objectStoreNames.contains('settings')) {
@@ -124,6 +135,8 @@ class IndexedDBStorage {
         }
       };
     });
+
+    return this.initPromise;
   }
 
   private async getStore(storeName: string, mode: IDBTransactionMode = 'readonly') {
@@ -134,244 +147,401 @@ class IndexedDBStorage {
 
   // Portfolio operations
   async createPortfolio(portfolio: Portfolio): Promise<void> {
-    const store = await this.getStore('portfolios', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.add(portfolio);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('portfolios', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.add(portfolio);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error creating portfolio:', error);
+      throw error;
+    }
   }
 
   async getPortfolios(): Promise<Portfolio[]> {
-    const store = await this.getStore('portfolios');
-    return new Promise((resolve, reject) => {
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('portfolios');
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error getting portfolios:', error);
+      return [];
+    }
   }
 
   async updatePortfolio(portfolio: Portfolio): Promise<void> {
-    const store = await this.getStore('portfolios', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.put(portfolio);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('portfolios', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.put(portfolio);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error updating portfolio:', error);
+      throw error;
+    }
   }
 
   async deletePortfolio(id: string): Promise<void> {
-    const store = await this.getStore('portfolios', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.delete(id);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('portfolios', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error deleting portfolio:', error);
+      throw error;
+    }
   }
 
   // Account operations
   async createAccount(account: Account): Promise<void> {
-    const store = await this.getStore('accounts', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.add(account);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('accounts', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.add(account);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error creating account:', error);
+      throw error;
+    }
   }
 
   async getAccounts(portfolioId: string): Promise<Account[]> {
-    const store = await this.getStore('accounts');
-    const index = store.index('portfolioId');
-    return new Promise((resolve, reject) => {
-      const request = index.getAll(portfolioId);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('accounts');
+      const index = store.index('portfolioId');
+      return new Promise((resolve, reject) => {
+        const request = index.getAll(portfolioId);
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error getting accounts:', error);
+      return [];
+    }
   }
 
   async updateAccount(account: Account): Promise<void> {
-    const store = await this.getStore('accounts', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.put(account);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('accounts', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.put(account);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error updating account:', error);
+      throw error;
+    }
+  }
+
+  async deleteAccount(id: string): Promise<void> {
+    try {
+      const store = await this.getStore('accounts', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
   }
 
   // Trade operations
   async createTrade(trade: Trade): Promise<void> {
-    const store = await this.getStore('trades', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.add(trade);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('trades', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.add(trade);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error creating trade:', error);
+      throw error;
+    }
   }
 
-  async getTrades(accountId: string): Promise<Trade[]> {
-    const store = await this.getStore('trades');
-    const index = store.index('accountId');
-    return new Promise((resolve, reject) => {
-      const request = index.getAll(accountId);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+  async getTrades(accountId?: string): Promise<Trade[]> {
+    try {
+      const store = await this.getStore('trades');
+      if (accountId) {
+        const index = store.index('accountId');
+        return new Promise((resolve, reject) => {
+          const request = index.getAll(accountId);
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        });
+      } else {
+        return new Promise((resolve, reject) => {
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        });
+      }
+    } catch (error) {
+      console.error('Error getting trades:', error);
+      return [];
+    }
   }
 
   async updateTrade(trade: Trade): Promise<void> {
-    const store = await this.getStore('trades', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.put(trade);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('trades', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.put(trade);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error updating trade:', error);
+      throw error;
+    }
+  }
+
+  async deleteTrade(id: string): Promise<void> {
+    try {
+      const store = await this.getStore('trades', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error deleting trade:', error);
+      throw error;
+    }
   }
 
   async bulkInsertTrades(trades: Trade[]): Promise<void> {
-    const store = await this.getStore('trades', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const promises = trades.map(trade => {
-        return new Promise<void>((res, rej) => {
+    try {
+      const store = await this.getStore('trades', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const transaction = store.transaction;
+        let completed = 0;
+        let hasError = false;
+
+        trades.forEach(trade => {
           const request = store.add(trade);
-          request.onsuccess = () => res();
-          request.onerror = () => rej(request.error);
+          request.onsuccess = () => {
+            completed++;
+            if (completed === trades.length && !hasError) {
+              resolve();
+            }
+          };
+          request.onerror = () => {
+            if (!hasError) {
+              hasError = true;
+              reject(request.error);
+            }
+          };
         });
       });
-
-      Promise.all(promises)
-        .then(() => resolve())
-        .catch(reject);
-    });
+    } catch (error) {
+      console.error('Error bulk inserting trades:', error);
+      throw error;
+    }
   }
 
   // Settings operations
   async setSetting(key: string, value: any): Promise<void> {
-    const store = await this.getStore('settings', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.put({ key, value: JSON.stringify(value) });
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('settings', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.put({ key, value });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error setting setting:', error);
+      throw error;
+    }
   }
 
   async getSetting(key: string): Promise<any> {
-    const store = await this.getStore('settings');
-    return new Promise((resolve, reject) => {
-      const request = store.get(key);
-      request.onsuccess = () => {
-        const result = request.result;
-        resolve(result ? JSON.parse(result.value) : null);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('settings');
+      return new Promise((resolve, reject) => {
+        const request = store.get(key);
+        request.onsuccess = () => resolve(request.result?.value || null);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error getting setting:', error);
+      return null;
+    }
   }
 
   // User operations
   async createUser(username: string, userData: any): Promise<void> {
-    const store = await this.getStore('users', 'readwrite');
-    return new Promise((resolve, reject) => {
-      const request = store.put({ username, ...userData, createdAt: new Date().toISOString() });
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('users', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.put({ username, ...userData });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
   }
 
   async getUser(username: string): Promise<any> {
-    const store = await this.getStore('users');
-    return new Promise((resolve, reject) => {
-      const request = store.get(username);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('users');
+      return new Promise((resolve, reject) => {
+        const request = store.get(username);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return null;
+    }
   }
 
   async getAllUsers(): Promise<any[]> {
-    const store = await this.getStore('users');
-    return new Promise((resolve, reject) => {
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const store = await this.getStore('users');
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
   }
 
-  // Export/Import functionality
+  // Data export/import
   async exportData(): Promise<any> {
-    const portfolios = await this.getPortfolios();
-    const accounts = await this.getStore('accounts').then(store => 
-      new Promise<any[]>((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      })
-    );
-    const trades = await this.getStore('trades').then(store => 
-      new Promise<any[]>((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      })
-    );
-    const settings = await this.getStore('settings').then(store => 
-      new Promise<any[]>((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      })
-    );
+    try {
+      const portfolios = await this.getPortfolios();
+      const accounts = await this.getAllAccounts();
+      const trades = await this.getAllTrades();
+      const settings = await this.getAllSettings();
 
-    return {
-      portfolios,
-      accounts,
-      trades,
-      settings,
-      exportDate: new Date().toISOString(),
-      version: '1.0'
-    };
+      return {
+        portfolios,
+        accounts,
+        trades,
+        settings,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      };
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      throw error;
+    }
   }
 
   async importData(data: any): Promise<void> {
-    // Clear existing data
-    await this.clearAllData();
+    try {
+      await this.clearAllData();
 
-    // Import new data
-    if (data.portfolios) {
-      for (const portfolio of data.portfolios) {
-        await this.createPortfolio(portfolio);
+      if (data.portfolios) {
+        for (const portfolio of data.portfolios) {
+          await this.createPortfolio(portfolio);
+        }
       }
-    }
 
-    if (data.accounts) {
-      for (const account of data.accounts) {
-        await this.createAccount(account);
+      if (data.accounts) {
+        for (const account of data.accounts) {
+          await this.createAccount(account);
+        }
       }
-    }
 
-    if (data.trades) {
-      await this.bulkInsertTrades(data.trades);
-    }
-
-    if (data.settings) {
-      for (const setting of data.settings) {
-        await this.setSetting(setting.key, JSON.parse(setting.value));
+      if (data.trades) {
+        await this.bulkInsertTrades(data.trades);
       }
+
+      if (data.settings) {
+        for (const setting of data.settings) {
+          await this.setSetting(setting.key, setting.value);
+        }
+      }
+    } catch (error) {
+      console.error('Error importing data:', error);
+      throw error;
     }
   }
 
   async clearAllData(): Promise<void> {
-    const stores = ['portfolios', 'accounts', 'trades', 'settings', 'users'];
-    for (const storeName of stores) {
-      const store = await this.getStore(storeName, 'readwrite');
-      await new Promise<void>((resolve, reject) => {
-        const request = store.clear();
-        request.onsuccess = () => resolve();
+    try {
+      const stores = ['trades', 'accounts', 'portfolios', 'settings', 'users'];
+      for (const storeName of stores) {
+        const store = await this.getStore(storeName, 'readwrite');
+        await new Promise((resolve, reject) => {
+          const request = store.clear();
+          request.onsuccess = () => resolve(undefined);
+          request.onerror = () => reject(request.error);
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing all data:', error);
+      throw error;
+    }
+  }
+
+  private async getAllAccounts(): Promise<Account[]> {
+    try {
+      const store = await this.getStore('accounts');
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
         request.onerror = () => reject(request.error);
       });
+    } catch (error) {
+      console.error('Error getting all accounts:', error);
+      return [];
+    }
+  }
+
+  private async getAllTrades(): Promise<Trade[]> {
+    try {
+      const store = await this.getStore('trades');
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error getting all trades:', error);
+      return [];
+    }
+  }
+
+  private async getAllSettings(): Promise<any[]> {
+    try {
+      const store = await this.getStore('settings');
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('Error getting all settings:', error);
+      return [];
     }
   }
 }
 
-// Mobile Platform: SQLite Implementation (existing code with improvements)
-/*
+// Mobile Platform: SQLite Implementation
 class SQLiteStorage {
   private sqlite: SQLiteConnection;
   private db: SQLiteDBConnection | null = null;
@@ -381,16 +551,22 @@ class SQLiteStorage {
   async init(): Promise<void> {
     if (this.db) return;
 
-    this.sqlite = new SQLiteConnection(CapacitorSQLite);
-    this.db = await this.sqlite.createConnection(
-      this.DB_NAME, 
-      false, 
-      'encryption', 
-      this.DB_SECRET_KEY, 
-      1
-    );
-    await this.db.open();
-    await this._applySchema();
+    try {
+      this.sqlite = new SQLiteConnection(CapacitorSQLite);
+      this.db = await this.sqlite.createConnection(
+        this.DB_NAME, 
+        false, 
+        'encryption', 
+        this.DB_SECRET_KEY, 
+        1
+      );
+      await this.db.open();
+      await this._applySchema();
+      console.log('✅ SQLite database initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing SQLite:', error);
+      throw error;
+    }
   }
 
   private async _applySchema(): Promise<void> {
@@ -521,6 +697,11 @@ class SQLiteStorage {
     `, [account.name, account.type, account.broker, account.balance, account.currency, account.id]);
   }
 
+  async deleteAccount(id: string): Promise<void> {
+    await this.init();
+    await this.db!.execute('DELETE FROM accounts WHERE id = ?', [id]);
+  }
+
   async createTrade(trade: Trade): Promise<void> {
     await this.init();
     await this.db!.execute(`
@@ -620,6 +801,11 @@ class SQLiteStorage {
       trade.mood || null, 
       trade.id
     ]);
+  }
+
+  async deleteTrade(id: string): Promise<void> {
+    await this.init();
+    await this.db!.execute('DELETE FROM trades WHERE id = ?', [id]);
   }
 
   async bulkInsertTrades(trades: Trade[]): Promise<void> {
@@ -728,28 +914,27 @@ class SQLiteStorage {
     await this.db!.execute('DELETE FROM settings');
     await this.db!.execute('DELETE FROM users');
   }
-
-  async deleteTrade(tradeId: string): Promise<void> {
-    await this.init();
-    await this.db!.execute('DELETE FROM trades WHERE id = ?', [tradeId]);
-  }
 }
-*/
 
-const getStorage = async (): Promise<IndexedDBStorage> => {
+const getStorage = async (): Promise<IndexedDBStorage | SQLiteStorage> => {
   if (Capacitor.isNativePlatform()) {
     // Mobile Platform: SQLite
-    // const sqliteStorage = new SQLiteStorage();
-    // await sqliteStorage.init();
-    // return sqliteStorage;
-    // Fallback to IndexedDB for now due to SQLite issues
-    const indexedDBStorage = new IndexedDBStorage();
-    await indexedDBStorage.init();
-    return indexedDBStorage;
+    try {
+      const sqliteStorage = new SQLiteStorage();
+      await sqliteStorage.init();
+      console.log('✅ Using SQLite storage for mobile platform');
+      return sqliteStorage;
+    } catch (error) {
+      console.warn('⚠️ SQLite initialization failed, falling back to IndexedDB:', error);
+      const indexedDBStorage = new IndexedDBStorage();
+      await indexedDBStorage.init();
+      return indexedDBStorage;
+    }
   } else {
     // Web Platform: IndexedDB
     const indexedDBStorage = new IndexedDBStorage();
     await indexedDBStorage.init();
+    console.log('✅ Using IndexedDB storage for web platform');
     return indexedDBStorage;
   }
 };

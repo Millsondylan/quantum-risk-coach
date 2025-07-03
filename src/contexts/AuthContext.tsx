@@ -1,10 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-}
+import { User, getDefaultPreferences } from '@/types/user';
 
 interface AuthContextType {
   user: User | null;
@@ -68,8 +63,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Sign in successful
       const authUser: User = {
         id: user.id,
+        name: user.username,
         username: user.username,
-        email: user.email
+        preferences: user.preferences || getDefaultPreferences(),
+        onboardingCompleted: user.onboardingCompleted || false,
+        createdAt: user.created_at || new Date().toISOString(),
+        lastActive: new Date().toISOString()
       };
       
       setUser(authUser);
@@ -101,7 +100,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         username,
         created_at: new Date().toISOString(),
         subscription_status: 'unlimited',
-        posts_remaining: 999999
+        posts_remaining: 999999,
+        preferences: getDefaultPreferences(),
+        onboardingCompleted: false
       };
       
       // Save user to registry
@@ -114,8 +115,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Sign in the new user
       const authUser: User = {
         id: newUser.id,
+        name: newUser.username,
         username: newUser.username,
-        email: newUser.email
+        preferences: newUser.preferences,
+        onboardingCompleted: newUser.onboardingCompleted,
+        createdAt: newUser.created_at,
+        lastActive: new Date().toISOString()
       };
       
       setUser(authUser);

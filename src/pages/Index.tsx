@@ -27,7 +27,9 @@ import {
   Info,
   Activity,
   PieChart,
-  TestTube
+  TestTube,
+  PlusCircle,
+  BookOpen
 } from 'lucide-react';
 import PersonalChallenges from '@/components/PersonalChallenges';
 import RiskAnalyzer from '@/components/RiskAnalyzer';
@@ -102,24 +104,27 @@ const Index = () => {
 
   useEffect(() => {
     const checkFirstLaunch = async () => {
-      const hasExistingPortfolios = (await localDatabase.getPortfolios()).length > 0;
-      setIsFirstLaunch(!hasExistingPortfolios);
-      
-      if (!hasExistingPortfolios) {
-        setOnboardingModalOpen(true);
+      try {
+        const hasExistingPortfolios = (await localDatabase.getPortfolios()).length > 0;
+        setIsFirstLaunch(!hasExistingPortfolios);
+        
+        if (!hasExistingPortfolios && user && !user.onboardingCompleted) {
+          setOnboardingModalOpen(true);
+        }
+      } catch (error) {
+        console.error('Error checking first launch:', error);
+        setIsFirstLaunch(false);
       }
     };
     
     checkFirstLaunch();
-  }, []);
+  }, [user]);
 
-  // Calculate real portfolio stats from actual trade data
   const portfolioStats = useMemo(() => {
     const stats = getTradeStats();
     const closedTrades = trades.filter(trade => (trade as any).status === 'closed');
     const openTrades = trades.filter(trade => (trade as any).status === 'open');
     
-    // Calculate average holding time from closed trades
     const avgHoldingTime = closedTrades.length > 0 ? closedTrades.reduce((total, trade) => {
       if (trade.exitDate && trade.entryDate) {
         const entryTime = new Date(trade.entryDate).getTime();
@@ -133,13 +138,11 @@ const Index = () => {
     const avgHoldingHours = Math.floor((avgHoldingTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const avgHoldingMinutes = Math.floor((avgHoldingTime % (1000 * 60 * 60)) / (1000 * 60));
 
-    // Calculate average risk-reward ratio
     const tradesWithRR = closedTrades.filter(trade => trade.riskReward && trade.riskReward > 0);
     const averageRR = tradesWithRR.length > 0 
       ? tradesWithRR.reduce((sum, trade) => sum + (trade.riskReward || 0), 0) / tradesWithRR.length 
       : 0;
 
-    // Calculate profit factor (total wins / total losses)
     const totalWins = closedTrades
       .filter(trade => (trade.profitLoss || 0) > 0)
       .reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
@@ -148,10 +151,8 @@ const Index = () => {
       .reduce((sum, trade) => sum + (trade.profitLoss || 0), 0));
     const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? 999 : 0;
 
-    // Calculate expected value per trade
     const expectedValue = stats.totalTrades > 0 ? stats.totalProfitLoss / stats.totalTrades : 0;
 
-    // Calculate balance from actual trades only
     const currentBalance = stats.totalProfitLoss;
 
     return {
@@ -184,7 +185,6 @@ const Index = () => {
 
   const renderTimeMetrics = () => (
     <div className="p-4 space-y-6 pb-24">
-      {/* Win Rate by Duration */}
       <div className="space-y-3">
         <h3 className="text-white font-medium">Win Rate by Duration</h3>
         <div className="space-y-3">
@@ -199,7 +199,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Avg Hold Time */}
       <div className="space-y-3">
         <h3 className="text-white font-medium">Avg Hold Time</h3>
         <div className="space-y-3">
@@ -214,7 +213,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Avg Hold Time - Longs/Shorts */}
       <div className="space-y-3">
         <h3 className="text-white font-medium">Avg Hold Time</h3>
         <div className="space-y-3">
@@ -229,14 +227,12 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Day of Week */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <h3 className="text-white font-medium">Day of Week</h3>
           <Info className="w-4 h-4 text-slate-400" />
         </div>
         
-        {/* PNL Chart */}
         <div className="space-y-2">
           <div className="text-slate-400 text-sm">PNL</div>
           <div className="h-32 bg-[#1A1B1E] border border-[#2A2B2E] rounded-lg flex items-end justify-between p-4">
@@ -275,205 +271,193 @@ const Index = () => {
   );
 
   const renderDashboard = () => (
-    <div className="p-4 space-y-6 pb-24">
-      {/* Quick Actions */}
-      <div className="flex justify-end">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => navigate('/functional-tests')}
-          className="flex items-center gap-2 text-xs"
-        >
-          <TestTube className="w-3 h-3" />
-          Run Tests
-        </Button>
-      </div>
-
-      {/* Enhanced Portfolio Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">Total P&L</p>
-                <p className={`text-2xl font-bold ${portfolioStats.realizedPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  ${portfolioStats.realizedPnL.toFixed(2)}
-                </p>
-                <p className="text-xs text-slate-500">All time</p>
-              </div>
-              <DollarSign className="w-8 h-8 text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">Win Rate</p>
-                <p className="text-2xl font-bold text-green-400">
-                  {portfolioStats.winRate.toFixed(1)}%
-                </p>
-                <p className="text-xs text-slate-500">{portfolioStats.tradeCount} trades</p>
-              </div>
-              <Target className="w-8 h-8 text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">Profit Factor</p>
-                <p className="text-2xl font-bold text-purple-400">
-                  {portfolioStats.profitFactor}
-                </p>
-                <p className="text-xs text-slate-500">Risk/Reward</p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-purple-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border-cyan-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">Open Positions</p>
-                <p className="text-2xl font-bold text-cyan-400">
-                  {portfolioStats.openTrades}
-                </p>
-                <p className="text-xs text-slate-500">Active trades</p>
-              </div>
-              <Activity className="w-8 h-8 text-cyan-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Enhanced Analytics Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Equity Curve */}
-        <div className="lg:col-span-2">
-          <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-400" />
-                Equity Curve
-              </CardTitle>
-              <CardDescription>Portfolio performance over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EquityCurveChart />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Risk Metrics */}
-        <div className="space-y-4">
-          <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-            <CardHeader>
-              <CardTitle className="text-white text-lg">Risk Analysis</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Max Drawdown</span>
-                <span className="text-red-400 font-medium">
-                  ${Math.abs(portfolioStats.realizedPnL * 0.15).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Sharpe Ratio</span>
-                <span className="text-white font-medium">
-                  {(portfolioStats.winRate / 100 * portfolioStats.profitFactor).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Expected Value</span>
-                <span className="text-white font-medium">
-                  ${portfolioStats.expectedValue.toFixed(2)}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-            <CardHeader>
-              <CardTitle className="text-white text-lg">Trading Behavior</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Avg Hold Time</span>
-                <span className="text-white font-medium">
-                  {portfolioStats.avgHoldingDays}d {portfolioStats.avgHoldingHours}h
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Best Hour</span>
-                <span className="text-white font-medium">14:00 UTC</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Most Traded</span>
-                <span className="text-white font-medium">EURUSD</span>
-              </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-6 animate-fade-in">
+      {/* Welcome Section */}
+      <div className="modern-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-1">Welcome back, Trader!</h1>
+            <p className="text-slate-400">Here's your trading overview for today</p>
+          </div>
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+            <BarChart3 className="h-6 w-6 text-white" />
+          </div>
         </div>
       </div>
 
-      {/* Enhanced Components */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-400" />
-              Recent Trades
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RecentTrades />
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Brain className="w-5 h-5 text-purple-400" />
-              AI Insights
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AICoachCard />
-          </CardContent>
-        </Card>
+      {/* Quick Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="stat-card">
+          <div className="stat-value profit-text">
+            ${portfolioStats.balance.toFixed(2)}
+          </div>
+          <div className="stat-label">Total P&L</div>
+          <div className="stat-change positive">+2.4% today</div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-value text-white">
+            {portfolioStats.tradeCount}
+          </div>
+          <div className="stat-label">Total Trades</div>
+          <div className="stat-change neutral">This month</div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-value text-white">
+            {portfolioStats.winRate}%
+          </div>
+          <div className="stat-label">Win Rate</div>
+          <div className="stat-change positive">+5.2% vs last month</div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-value text-white">
+            {portfolioStats.openTrades}
+          </div>
+          <div className="stat-label">Open Trades</div>
+          <div className="stat-change neutral">Active positions</div>
+        </div>
       </div>
 
-      {/* Asset Allocation */}
-      <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <PieChart className="w-5 h-5 text-cyan-400" />
-            Asset Allocation
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AssetAllocationChart />
-        </CardContent>
-      </Card>
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="modern-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+            <PlusCircle className="h-5 w-5 text-blue-400" />
+          </div>
+          <div className="space-y-3">
+            <Button 
+              className="btn-primary w-full"
+              onClick={() => navigate('/add-trade')}
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add New Trade
+            </Button>
+            <Button 
+              className="btn-secondary w-full"
+              onClick={() => navigate('/journal')}
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              View Journal
+            </Button>
+          </div>
+        </div>
 
-      {/* Watchlist */}
-      <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Eye className="w-5 h-5 text-yellow-400" />
-            Watchlist
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WatchlistManager />
-        </CardContent>
-      </Card>
+        <div className="modern-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">AI Insights</h3>
+            <Brain className="h-5 w-5 text-purple-400" />
+          </div>
+          <div className="space-y-3">
+            <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/30">
+              <p className="text-sm text-slate-300 mb-2">Market Analysis</p>
+              <p className="text-xs text-slate-400">Your recent trades show a bullish bias on EUR/USD</p>
+            </div>
+            <Button 
+              className="btn-secondary w-full"
+              onClick={() => navigate('/ai-coach')}
+            >
+              <Brain className="h-4 w-4 mr-2" />
+              Get AI Advice
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="modern-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate('/history')}
+            className="text-blue-400 hover:text-blue-300"
+          >
+            View All
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {trades.slice(0, 3).map((trade, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-700/20">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${(trade.profitLoss || 0) > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+                <div>
+                  <p className="text-sm font-medium text-white">{trade.symbol}</p>
+                  <p className="text-xs text-slate-400">{trade.entryDate}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`text-sm font-semibold ${(trade.profitLoss || 0) > 0 ? 'profit-text' : 'loss-text'}`}>
+                  ${(trade.profitLoss || 0).toFixed(2)}
+                </p>
+                <p className="text-xs text-slate-400">{trade.type}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Performance Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="modern-card p-6">
+          <h4 className="text-sm font-semibold text-slate-300 mb-3">Risk Metrics</h4>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Avg R:R</span>
+              <span className="text-sm font-medium text-white">{portfolioStats.averageRR}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Profit Factor</span>
+              <span className="text-sm font-medium text-white">{portfolioStats.profitFactor}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Expected Value</span>
+              <span className="text-sm font-medium text-white">${portfolioStats.expectedValue.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="modern-card p-6">
+          <h4 className="text-sm font-semibold text-slate-300 mb-3">Time Analysis</h4>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Avg Hold Time</span>
+              <span className="text-sm font-medium text-white">
+                {portfolioStats.avgHoldingDays}d {portfolioStats.avgHoldingHours}h
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Best Time</span>
+              <span className="text-sm font-medium text-white">09:00-11:00</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Best Day</span>
+              <span className="text-sm font-medium text-white">Wednesday</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="modern-card p-6">
+          <h4 className="text-sm font-semibold text-slate-300 mb-3">Portfolio Health</h4>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Drawdown</span>
+              <span className="text-sm font-medium text-white">-2.1%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Sharpe Ratio</span>
+              <span className="text-sm font-medium text-white">1.8</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-400">Max Risk</span>
+              <span className="text-sm font-medium text-white">1.5%</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -484,7 +468,6 @@ const Index = () => {
 
     return (
       <div className="p-4 space-y-6">
-        {/* Calendar View Toggle */}
         <div className="flex">
           <Button
             variant={calendarView === 'Monthly' ? 'default' : 'outline'}
@@ -502,7 +485,6 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Month Navigation */}
         <div className="flex items-center justify-between">
           <Button 
             variant="ghost" 
@@ -523,9 +505,7 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Calendar Grid */}
         <div className="space-y-4">
-          {/* Day Headers */}
           <div className="grid grid-cols-7 gap-1 text-center text-slate-400 text-sm">
             <div className="p-2">Mon</div>
             <div className="p-2">Tue</div>
@@ -536,14 +516,11 @@ const Index = () => {
             <div className="p-2">Sun</div>
           </div>
 
-          {/* Calendar Days */}
           <div className="grid grid-cols-7 gap-1">
-            {/* Empty cells for days before month starts */}
             {Array.from({ length: startDay }, (_, i) => (
               <div key={`empty-${i}`} className="p-3"></div>
             ))}
             
-            {/* Days of the month */}
             {Array.from({ length: daysInMonth }, (_, i) => {
               const day = i + 1;
               const isToday = day === today;
@@ -564,7 +541,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Weekly Info */}
         <div className="space-y-3">
           <h3 className="text-white font-medium">Weekly Info</h3>
           <div className="bg-[#1A1B1E] border border-[#2A2B2E] rounded-lg p-4">
@@ -577,7 +553,6 @@ const Index = () => {
 
   const handleManualJournalSetup = () => {
     setManualJournalModalOpen(true);
-    setOnboardingModalOpen(false);
   };
 
   return (
@@ -631,38 +606,63 @@ const Index = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Onboarding Dialog */}
       <Dialog open={onboardingModalOpen} onOpenChange={setOnboardingModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Welcome to Quantum Risk Coach</DialogTitle>
+            <DialogTitle>Welcome to Quantum Risk Coach!</DialogTitle>
             <DialogDescription>
-              How would you like to track your trades?
+              Let's set up your trading journal to get started.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            {/* Placeholder for supported brokers */}
+          <div className="space-y-4">
+            <div className="text-sm text-slate-400">
+              Choose how you'd like to start tracking your trades:
+            </div>
+            <div className="space-y-2">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => {
+                  setOnboardingModalOpen(false);
+                  navigate('/add-trade');
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Trade
+              </Button>
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={handleManualJournalSetup}
+              >
+                <Target className="w-4 h-4 mr-2" />
+                Set Up Manual Journal
+              </Button>
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => {
+                  setOnboardingModalOpen(false);
+                  navigate('/mt4-connection');
+                }}
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Connect Broker Account
+              </Button>
+            </div>
           </div>
-          
-          <div className="mt-4">
+          <DialogFooter>
             <Button 
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={handleManualJournalSetup}
+              variant="ghost" 
+              onClick={() => setOnboardingModalOpen(false)}
             >
-              Manual Journal
-            </Button>
-          </div>
-          
-          <DialogFooter className="mt-6">
-            <Button variant="outline" onClick={() => setOnboardingModalOpen(false)}>
               Skip for Now
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <ManualJournalModal 
+      <ManualJournalModal
         open={isManualJournalModalOpen}
         onOpenChange={setManualJournalModalOpen}
       />

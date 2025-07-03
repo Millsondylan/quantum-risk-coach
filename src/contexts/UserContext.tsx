@@ -1,9 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { applyTheme } from '@/lib/theme';
-import { realDataService } from '@/lib/realDataService';
 import type { UserPreferences, UserData, TradingGoal, NotificationPreferences } from '@/types/user';
 import { getDefaultPreferences } from '@/types/user';
-import { logger } from '@/lib/logger';
 
 interface UserContextType {
   user: UserData | null;
@@ -29,56 +26,31 @@ export const useUser = () => {
 const storage = {
   async set(key: string, value: any) {
     if (typeof window !== 'undefined') {
-      try {
-        // Try Capacitor first
-        const { Preferences } = await import('@capacitor/preferences');
-        await Preferences.set({ key, value: JSON.stringify(value) });
-      } catch {
-        // Fallback to localStorage
-        localStorage.setItem(key, JSON.stringify(value));
-      }
+      // Use localStorage for now to avoid Capacitor issues
+      localStorage.setItem(key, JSON.stringify(value));
     }
   },
   
   async get(key: string) {
     if (typeof window !== 'undefined') {
-      try {
-        // Try Capacitor first
-        const { Preferences } = await import('@capacitor/preferences');
-        const { value } = await Preferences.get({ key });
-        return value ? JSON.parse(value) : null;
-      } catch {
-        // Fallback to localStorage
-        const value = localStorage.getItem(key);
-        return value ? JSON.parse(value) : null;
-      }
+      // Use localStorage for now to avoid Capacitor issues
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : null;
     }
     return null;
   },
   
   async remove(key: string) {
     if (typeof window !== 'undefined') {
-      try {
-        // Try Capacitor first
-        const { Preferences } = await import('@capacitor/preferences');
-        await Preferences.remove({ key });
-      } catch {
-        // Fallback to localStorage
-        localStorage.removeItem(key);
-      }
+      // Use localStorage for now to avoid Capacitor issues
+      localStorage.removeItem(key);
     }
   },
   
   async clear() {
     if (typeof window !== 'undefined') {
-      try {
-        // Try Capacitor first
-        const { Preferences } = await import('@capacitor/preferences');
-        await Preferences.clear();
-      } catch {
-        // Fallback to localStorage
-        localStorage.clear();
-      }
+      // Use localStorage for now to avoid Capacitor issues
+      localStorage.clear();
     }
   }
 };
@@ -88,35 +60,28 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modified useEffect to handle initialization more gracefully with timeout
+  // Modified useEffect to handle initialization more gracefully
   useEffect(() => {
     const loadUserData = async () => {
-      logger.log('Loading user data...');
+      console.log('🔍 Loading user data...');
       try {
-        // Add timeout to prevent hanging
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Storage timeout')), 5000)
-        );
+        const userData = await storage.get('user') as UserData | null;
         
-        const userDataPromise = storage.get('user');
-        const userData = await Promise.race([userDataPromise, timeoutPromise]) as UserData | null;
-        
-        logger.log('User data loaded:', userData);
+        console.log('🔍 User data loaded:', userData);
         
         if (userData) {
           setUser(userData);
-          applyTheme(userData.preferences?.theme || 'auto');
         } else {
           // No user data found - don't create a default user
           // This will cause the app to redirect to auth page
-          logger.log('No user data found, will redirect to auth');
+          console.log('🔍 No user data found, will redirect to auth');
         }
       } catch (error) {
         console.error('Error loading user data:', error);
         setError(error instanceof Error ? error.message : 'Unknown error');
         
         // Don't create a fallback user - let the app redirect to auth
-        logger.log('Error loading user data, will redirect to auth');
+        console.log('🔍 Error loading user data, will redirect to auth');
       } finally {
         setIsLoading(false);
       }
@@ -126,7 +91,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []); // Empty dependency array means this effect runs once on mount
 
   const updatePreferences = useCallback(async (newPreferences: Partial<UserPreferences>) => {
-    logger.log('Updating preferences...', newPreferences);
+    console.log('🔍 Updating preferences...', newPreferences);
     setUser(prevUser => {
       if (!prevUser) return null;
       const updatedUser = {
@@ -138,14 +103,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       // Use setTimeout to avoid blocking UI
       setTimeout(() => storage.set('user', updatedUser), 0);
-      applyTheme(updatedUser.preferences.theme);
-      logger.log('Preferences updated and saved.', updatedUser);
+      console.log('🔍 Preferences updated and saved.', updatedUser);
       return updatedUser;
     });
   }, []);
 
   const completeOnboarding = useCallback(async (preferences: UserPreferences) => {
-    logger.log('Completing onboarding...', preferences);
+    console.log('🔍 Completing onboarding...', preferences);
     setUser(prevUser => {
       if (!prevUser) return null;
       const updatedUser = {
@@ -158,7 +122,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       // Use setTimeout to avoid blocking UI
       setTimeout(() => storage.set('user', updatedUser), 0);
-      logger.log('Onboarding completed and user saved.', updatedUser);
+      console.log('🔍 Onboarding completed and user saved.', updatedUser);
       return updatedUser;
     });
   }, []);
@@ -180,16 +144,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     // Use setTimeout to avoid blocking UI
     setTimeout(() => storage.remove('user'), 0);
-    logger.log('User data cleared.');
+    console.log('🔍 User data cleared.');
   }, []);
 
   const createUser = useCallback(async (name: string) => {
     try {
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('User creation timeout')), 10000)
-      );
-      
       const newUser: UserData = {
         id: `user_${Date.now()}`,
         name,
@@ -201,13 +160,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(newUser);
       
-      // Use Promise.race to add timeout to storage operation
-      await Promise.race([
-        storage.set('user', newUser),
-        timeoutPromise
-      ]);
-      
-      applyTheme(newUser.preferences.theme);
+      // Save user to storage
+      await storage.set('user', newUser);
     } catch (error) {
       console.error('Error creating user:', error);
       throw new Error('Failed to create user. Please try again.');

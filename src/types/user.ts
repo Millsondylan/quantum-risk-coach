@@ -89,6 +89,16 @@ export interface UserPreferences {
   enableAdvancedAnalytics?: boolean;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  username?: string;
+  preferences: UserPreferences;
+  onboardingCompleted: boolean;
+  createdAt: string;
+  lastActive: string;
+}
+
 export interface UserData {
   id: string;
   name: string;
