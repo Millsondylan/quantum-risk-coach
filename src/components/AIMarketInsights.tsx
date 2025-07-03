@@ -32,6 +32,35 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { realDataService } from '@/lib/realDataService';
+import type { NewsItem as APINewsItem, EconomicEvent as APIEconomicEvent } from '@/lib/realDataService';
+
+// Extend the API types with local modifications
+interface NewsItem extends APINewsItem {
+  id: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  timestamp: Date;
+  affectedInstruments: string[];
+  summary: string;
+}
+
+interface EconomicEvent extends APIEconomicEvent {
+  id: string;
+  timestamp: Date;
+  importance: 'high' | 'medium' | 'low';
+}
+
+interface AIInsight {
+  id: string;
+  type: 'opportunity' | 'warning' | 'trend' | 'correlation';
+  title: string;
+  description: string;
+  confidence: number;
+  timeframe: string;
+  instruments: string[];
+  action: 'buy' | 'sell' | 'hold' | 'watch';
+  riskLevel: 'low' | 'medium' | 'high';
+  expiresAt: Date;
+}
 
 interface MarketSentiment {
   symbol: string;
@@ -49,42 +78,6 @@ interface MarketSentiment {
     technical: string[];
     fundamental: string[];
   };
-}
-
-interface NewsItem {
-  id: string;
-  title: string;
-  impact: 'high' | 'medium' | 'low';
-  sentiment: 'positive' | 'negative' | 'neutral';
-  timestamp: Date;
-  source: string;
-  affectedInstruments: string[];
-  summary: string;
-}
-
-interface EconomicEvent {
-  id: string;
-  title: string;
-  currency: string;
-  importance: 'high' | 'medium' | 'low';
-  impact: 'high' | 'medium' | 'low';
-  actual?: number | string;
-  forecast?: number | string;
-  previous?: number | string;
-  timestamp: Date;
-}
-
-interface AIInsight {
-  id: string;
-  type: 'opportunity' | 'warning' | 'trend' | 'correlation';
-  title: string;
-  description: string;
-  confidence: number;
-  timeframe: string;
-  instruments: string[];
-  action: 'buy' | 'sell' | 'hold' | 'watch';
-  riskLevel: 'low' | 'medium' | 'high';
-  expiresAt: Date;
 }
 
 const AIMarketInsights = () => {
@@ -131,15 +124,13 @@ const AIMarketInsights = () => {
         };
       });
 
-      // Use real news data if available
-      const news: NewsItem[] = newsData.status === 'fulfilled' && newsData.value.length > 0 
-        ? newsData.value.slice(0, 3).map((item: any, index: number) => ({
+      // Transform news data to NewsItem interface
+      const news: NewsItem[] = newsData.status === 'fulfilled'
+        ? newsData.value.slice(0, 3).map((item: APINewsItem, index: number) => ({
             id: (index + 1).toString(),
-            title: item.title || 'Market Update',
-            impact: item.impact || 'medium',
-            sentiment: 'neutral', // Not available in NewsItem interface
+            ...item, // Spread the original item first
+            sentiment: 'neutral', // Add missing field
             timestamp: new Date(item.publishedAt || Date.now()),
-            source: item.source || 'Market Data',
             affectedInstruments: ['EUR/USD'], // Default since not available in interface
             summary: item.description || 'Market data update'
           }))
@@ -148,15 +139,10 @@ const AIMarketInsights = () => {
       // Get real economic events from API
       const economicEventsData = await realDataService.getEconomicCalendar();
       const events: EconomicEvent[] = economicEventsData.slice(0, 5).map(event => ({
+        ...event, // Spread the original event first
         id: event.title + event.date, // Simple unique ID
-        title: event.title,
-        currency: event.currency,
-        importance: event.impact,
-        impact: event.impact, // Assuming impact can be used for sentiment
-        actual: event.actual,
-        forecast: event.forecast,
-        previous: event.previous,
         timestamp: new Date(`${event.date}T${event.time}`),
+        importance: event.impact // Map impact to importance
       }));
 
       const insights: AIInsight[] = [];

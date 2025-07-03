@@ -1,12 +1,13 @@
-import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
+import { UserData, UserPreferences } from '@/types/user';
+import { Trade as LocalDatabaseTrade } from '@/lib/localDatabase';
+import { v4 as uuidv4 } from 'uuid';
 
 /*
  * Local Storage Database - All data saved to user's device
  * ========================================================
  * 
  * Web Platform: Uses IndexedDB for persistent local storage
- * Mobile Platform: Uses SQLite for encrypted local storage
  * 
  * All data is stored locally on the user's device - no external servers required.
  * This ensures complete privacy and offline functionality.
@@ -18,100 +19,101 @@ export interface Portfolio {
   color: string;
   icon?: string;
   createdAt: string;
+  startingBalance?: number;
 }
 
 export interface Account {
   id: string;
   portfolioId: string;
   name: string;
-  type: 'broker' | 'manual';
-  broker?: string;
-  balance: number;
+  broker: string;
+  accountType: 'demo' | 'live';
   currency: string;
+  balance: number;
   createdAt: string;
+  updatedAt: string;
+  connectionId?: string;
 }
 
-export interface Trade {
+export interface JournalEntry {
   id: string;
-  accountId: string;
-  symbol: string;
-  side: 'buy' | 'sell';
-  amount: number;
-  price: number;
-  fee: number;
-  profit?: number;
-  status: 'open' | 'closed' | 'cancelled';
-  entryDate: string;
-  exitDate?: string;
-  riskReward?: number;
+  date: string;
+  title?: string;
+  content: string;
+  mood?: 'positive' | 'negative' | 'neutral' | 'excited' | 'stressed' | 'calm' | 'greedy' | 'fearful';
+  tags: string[];
 }
 
-export interface UserSettings {
-  theme: 'light' | 'dark';
-  language: string;
-  notifications: {
-    enabled: boolean;
-    sound: boolean;
-    email: boolean;
-  };
-  tradingPreferences: {
-    defaultCurrency: string;
-    riskTolerance: 'low' | 'medium' | 'high';
-    defaultLeverage: number;
-  };
-}
+export type Trade = LocalDatabaseTrade;
 
 // Web Platform: IndexedDB Implementation
-class IndexedDBStorage {
+export class IndexedDBStorage {
   private dbName = 'QuantumRiskCoachDB';
-  private version = 1;
+  private version = 3;
   private db: IDBDatabase | null = null;
+  private initializationPromise: Promise<void> | null = null;
 
   async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+    this.initializationPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-
-        // Create object stores
+        
+        // Create object stores if they don't exist
         if (!db.objectStoreNames.contains('portfolios')) {
           const portfolioStore = db.createObjectStore('portfolios', { keyPath: 'id' });
           portfolioStore.createIndex('createdAt', 'createdAt', { unique: false });
         }
-
         if (!db.objectStoreNames.contains('accounts')) {
           const accountStore = db.createObjectStore('accounts', { keyPath: 'id' });
           accountStore.createIndex('portfolioId', 'portfolioId', { unique: false });
           accountStore.createIndex('createdAt', 'createdAt', { unique: false });
         }
-
         if (!db.objectStoreNames.contains('trades')) {
-          const tradeStore = db.createObjectStore('trades', { keyPath: 'id' });
+          const tradeStore = db.createObjectStore('trades', { keyPath: 'id', autoIncrement: true });
           tradeStore.createIndex('accountId', 'accountId', { unique: false });
-          tradeStore.createIndex('entryDate', 'entryDate', { unique: false });
         }
-
+        if (!db.objectStoreNames.contains('journal_entries')) {
+          db.createObjectStore('journal_entries', { keyPath: 'id', autoIncrement: true });
+        }
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'key' });
         }
-
         if (!db.objectStoreNames.contains('users')) {
-          db.createObjectStore('users', { keyPath: 'username' });
+          const userStore = db.createObjectStore('users', { keyPath: 'id' });
+          userStore.createIndex('username', 'username', { unique: false });
         }
       };
+
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+      request.onerror = (event) => {
+        console.error('IndexedDB initialization error:', event);
+        reject(new Error('Failed to initialize IndexedDB'));
+      };
     });
+    return this.initializationPromise;
   }
 
-  private async getStore(storeName: string, mode: IDBTransactionMode = 'readonly') {
-    if (!this.db) await this.init();
-    const transaction = this.db!.transaction(storeName, mode);
+  private async ensureDatabase(): Promise<IDBDatabase> {
+    if (!this.db) {
+      await this.init();
+    }
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+    return this.db;
+  }
+
+  private async getStore(storeName: string, mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
+    const db = await this.ensureDatabase();
+    const transaction = db.transaction([storeName], mode);
     return transaction.objectStore(storeName);
   }
 
@@ -119,15 +121,15 @@ class IndexedDBStorage {
   async createPortfolio(portfolio: Portfolio): Promise<void> {
     const store = await this.getStore('portfolios', 'readwrite');
     return new Promise((resolve, reject) => {
-      // Check if portfolio already exists
       const checkRequest = store.get(portfolio.id);
       checkRequest.onsuccess = () => {
         if (checkRequest.result) {
-          // Portfolio already exists, resolve without error
           resolve();
         } else {
-          // Portfolio doesn't exist, create it
-          const addRequest = store.add(portfolio);
+          const addRequest = store.add({
+            ...portfolio,
+            startingBalance: portfolio.startingBalance || 0
+          });
           addRequest.onsuccess = () => resolve();
           addRequest.onerror = () => reject(addRequest.error);
         }
@@ -173,11 +175,16 @@ class IndexedDBStorage {
     });
   }
 
-  async getAccounts(portfolioId: string): Promise<Account[]> {
+  async getAccounts(portfolioId?: string): Promise<Account[]> {
     const store = await this.getStore('accounts');
-    const index = store.index('portfolioId');
     return new Promise((resolve, reject) => {
-      const request = index.getAll(portfolioId);
+      let request: IDBRequest;
+      if (portfolioId) {
+        const index = store.index('portfolioId');
+        request = index.getAll(portfolioId);
+      } else {
+        request = store.getAll();
+      }
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -192,27 +199,36 @@ class IndexedDBStorage {
     });
   }
 
-  // Trade operations
-  async createTrade(trade: Trade): Promise<void> {
-    const store = await this.getStore('trades', 'readwrite');
+  async deleteAccount(id: string): Promise<void> {
+    const store = await this.getStore('accounts', 'readwrite');
     return new Promise((resolve, reject) => {
-      const request = store.add(trade);
+      const request = store.delete(id);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
-  async getTrades(accountId: string): Promise<Trade[]> {
-    const store = await this.getStore('trades');
-    const index = store.index('accountId');
+  // Trade operations
+  async addTrade(trade: LocalDatabaseTrade): Promise<string> {
+    const store = await this.getStore('trades', 'readwrite');
     return new Promise((resolve, reject) => {
-      const request = index.getAll(accountId);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      const id = trade.id || uuidv4();
+      const addRequest = store.add({
+        ...trade,
+        id: id,
+        entryTime: trade.entryTime || new Date().toISOString(),
+        exitTime: trade.exitTime || new Date().toISOString(),
+        profit: trade.profit || 0,
+        quantity: trade.quantity || 0,
+        entryPrice: trade.entryPrice || 0,
+        exitPrice: trade.exitPrice || 0,
+      });
+      addRequest.onsuccess = () => resolve(id);
+      addRequest.onerror = () => reject(addRequest.error);
     });
   }
 
-  async updateTrade(trade: Trade): Promise<void> {
+  async updateTrade(trade: LocalDatabaseTrade): Promise<void> {
     const store = await this.getStore('trades', 'readwrite');
     return new Promise((resolve, reject) => {
       const request = store.put(trade);
@@ -221,21 +237,73 @@ class IndexedDBStorage {
     });
   }
 
-  async bulkInsertTrades(trades: Trade[]): Promise<void> {
+  async getTrades(accountId?: string): Promise<LocalDatabaseTrade[]> {
+    const store = await this.getStore('trades');
+    return new Promise((resolve, reject) => {
+      let request: IDBRequest;
+      if (accountId) {
+        const index = store.index('accountId');
+        request = index.getAll(accountId);
+      } else {
+        request = store.getAll();
+      }
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAllTrades(): Promise<LocalDatabaseTrade[]> {
+    const store = await this.getStore('trades');
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async bulkInsertTrades(trades: LocalDatabaseTrade[]): Promise<void> {
     const store = await this.getStore('trades', 'readwrite');
     return new Promise((resolve, reject) => {
-      const promises = trades.map(trade => {
-        return new Promise<void>((res, rej) => {
-          const request = store.add(trade);
-          request.onsuccess = () => res();
-          request.onerror = () => rej(request.error);
+      const transaction = store.transaction;
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+
+      trades.forEach(trade => {
+        store.add({
+          ...trade,
+          id: trade.id || uuidv4(),
+          entryTime: trade.entryTime || new Date().toISOString(),
+          exitTime: trade.exitTime || new Date().toISOString(),
+          profit: trade.profit || 0,
+          quantity: trade.quantity || 0,
+          entryPrice: trade.entryPrice || 0,
+          exitPrice: trade.exitPrice || 0,
         });
       });
-
-      Promise.all(promises)
-        .then(() => resolve())
-        .catch(reject);
     });
+  }
+
+  async deleteTrade(tradeId: string): Promise<void> {
+    const store = await this.getStore('trades', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.delete(tradeId);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getTradesByPortfolioId(portfolioId: string): Promise<LocalDatabaseTrade[]> {
+    const allAccounts = await this.getAccounts();
+    const portfolioAccountIds = allAccounts
+      .filter(account => account.portfolioId === portfolioId)
+      .map(account => account.id);
+
+    if (portfolioAccountIds.length === 0) {
+      return [];
+    }
+
+    const allTrades = await this.getAllTrades();
+    return allTrades.filter(trade => trade.accountId && portfolioAccountIds.includes(trade.accountId));
   }
 
   // Settings operations
@@ -253,33 +321,96 @@ class IndexedDBStorage {
     return new Promise((resolve, reject) => {
       const request = store.get(key);
       request.onsuccess = () => {
-        const result = request.result;
-        resolve(result ? JSON.parse(result.value) : null);
+        if (request.result) {
+          resolve(JSON.parse(request.result.value));
+        } else {
+          resolve(null);
+        }
       };
       request.onerror = () => reject(request.error);
     });
   }
 
-  // User operations
-  async createUser(username: string, userData: any): Promise<void> {
-    const store = await this.getStore('users', 'readwrite');
+  // Journal Entry operations
+  async createJournalEntry(entry: JournalEntry): Promise<string> {
+    const store = await this.getStore('journal_entries', 'readwrite');
     return new Promise((resolve, reject) => {
-      const request = store.put({ username, ...userData, createdAt: new Date().toISOString() });
+      const id = entry.id || uuidv4();
+      const addRequest = store.add({
+        ...entry,
+        id: id,
+        date: entry.date || new Date().toISOString(),
+        tags: JSON.stringify(entry.tags || []),
+      });
+      addRequest.onsuccess = () => resolve(id);
+      addRequest.onerror = () => reject(addRequest.error);
+    });
+  }
+
+  async getJournalEntries(): Promise<JournalEntry[]> {
+    const store = await this.getStore('journal_entries');
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result.map((row: any) => ({
+        ...row,
+        tags: row.tags ? JSON.parse(row.tags) : [],
+      })));
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async updateJournalEntry(entry: Partial<JournalEntry>): Promise<void> {
+    const store = await this.getStore('journal_entries', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.put({
+        ...entry,
+        tags: entry.tags ? JSON.stringify(entry.tags) : undefined,
+      });
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
-  async getUser(username: string): Promise<any> {
-    const store = await this.getStore('users');
+  async deleteJournalEntry(id: string): Promise<void> {
+    const store = await this.getStore('journal_entries', 'readwrite');
     return new Promise((resolve, reject) => {
-      const request = store.get(username);
-      request.onsuccess = () => resolve(request.result);
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
-  async getAllUsers(): Promise<any[]> {
+  // User operations
+  async createUser(username: string, userData: Partial<UserData>): Promise<UserData> {
+    const store = await this.getStore('users', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const fullUserData: UserData = {
+        id: userData.id || uuidv4(),
+        name: username,
+        username: username,
+        preferences: userData.preferences || {} as UserPreferences,
+        onboardingCompleted: userData.onboardingCompleted || false,
+        createdAt: userData.createdAt || new Date().toISOString(),
+        lastActive: userData.lastActive || new Date().toISOString(),
+      };
+
+      const request = store.add(fullUserData);
+      request.onsuccess = () => resolve(fullUserData);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getUser(username: string): Promise<UserData | null> {
+    const store = await this.getStore('users');
+    const index = store.index('username');
+    return new Promise((resolve, reject) => {
+      const request = index.get(username);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAllUsers(): Promise<UserData[]> {
     const store = await this.getStore('users');
     return new Promise((resolve, reject) => {
       const request = store.getAll();
@@ -288,46 +419,30 @@ class IndexedDBStorage {
     });
   }
 
-  // Export/Import functionality
+  // Data management operations
   async exportData(): Promise<any> {
     const portfolios = await this.getPortfolios();
-    const accounts = await this.getStore('accounts').then(store => 
-      new Promise<any[]>((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      })
-    );
-    const trades = await this.getStore('trades').then(store => 
-      new Promise<any[]>((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      })
-    );
-    const settings = await this.getStore('settings').then(store => 
-      new Promise<any[]>((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      })
-    );
+    const accounts = await this.getAccounts();
+    const trades = await this.getAllTrades();
+    const settings = await this.getSetting(null); // Assuming getSetting can retrieve all if null is passed, otherwise needs a dedicated method
+    const users = await this.getAllUsers();
+    const journalEntries = await this.getJournalEntries();
 
     return {
       portfolios,
       accounts,
       trades,
       settings,
+      users,
+      journalEntries,
       exportDate: new Date().toISOString(),
       version: '1.0'
     };
   }
 
   async importData(data: any): Promise<void> {
-    // Clear existing data
     await this.clearAllData();
 
-    // Import new data
     if (data.portfolios) {
       for (const portfolio of data.portfolios) {
         await this.createPortfolio(portfolio);
@@ -341,18 +456,36 @@ class IndexedDBStorage {
     }
 
     if (data.trades) {
-      await this.bulkInsertTrades(data.trades);
+      for (const trade of data.trades) {
+        await this.addTrade(trade);
+      }
     }
 
     if (data.settings) {
       for (const setting of data.settings) {
-        await this.setSetting(setting.key, JSON.parse(setting.value));
+        await this.setSetting(setting.key, setting.value);
       }
+    }
+
+    if (data.users) {
+        for (const user of data.users) {
+            const existingUser = await this.getUser(user.username);
+            if (!existingUser) {
+              await this.createUser(user.username, user);
+            } else {
+              await this.createUser(user.username, { ...existingUser, ...user });
+            }
+        }
+    }
+    if (data.journalEntries) {
+        for (const entry of data.journalEntries) {
+            await this.createJournalEntry(entry);
+        }
     }
   }
 
   async clearAllData(): Promise<void> {
-    const stores = ['portfolios', 'accounts', 'trades', 'settings', 'users'];
+    const stores = ['portfolios', 'accounts', 'trades', 'settings', 'users', 'journal_entries'];
     for (const storeName of stores) {
       const store = await this.getStore(storeName, 'readwrite');
       await new Promise<void>((resolve, reject) => {
@@ -362,405 +495,126 @@ class IndexedDBStorage {
       });
     }
   }
-}
-
-// Mobile Platform: SQLite Implementation
-class SQLiteStorage {
-  private sqlite: SQLiteConnection;
-  private db: SQLiteDBConnection | null = null;
-  private readonly DB_NAME = 'quantum_risk_coach.db';
-  private readonly DB_SECRET_KEY = 'qlarity-256bit-secret';
-
-  async init(): Promise<void> {
-    if (this.db) return;
-
-    this.sqlite = new SQLiteConnection(CapacitorSQLite);
-    this.db = await this.sqlite.createConnection(
-      this.DB_NAME, 
-      false, 
-      'encryption', 
-      this.DB_SECRET_KEY, 
-      1
-    );
-    await this.db.open();
-    await this._applySchema();
-  }
-
-  private async _applySchema(): Promise<void> {
-    if (!this.db) throw new Error('DB not initialized');
-
-    const statements = `
-      CREATE TABLE IF NOT EXISTS portfolios (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        color TEXT NOT NULL,
-        icon TEXT,
-        createdAt TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS accounts (
-        id TEXT PRIMARY KEY,
-        portfolioId TEXT NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        broker TEXT,
-        balance REAL DEFAULT 0,
-        currency TEXT DEFAULT 'USD',
-        createdAt TEXT NOT NULL,
-        FOREIGN KEY (portfolioId) REFERENCES portfolios(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS trades (
-        id TEXT PRIMARY KEY,
-        accountId TEXT NOT NULL,
-        symbol TEXT NOT NULL,
-        side TEXT NOT NULL,
-        amount REAL NOT NULL,
-        price REAL NOT NULL,
-        fee REAL DEFAULT 0,
-        profit REAL,
-        status TEXT NOT NULL,
-        entryDate TEXT NOT NULL,
-        exitDate TEXT,
-        riskReward REAL,
-        FOREIGN KEY (accountId) REFERENCES accounts(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        preferences TEXT,
-        createdAt TEXT NOT NULL
-      );
-    `;
-
-    await this.db.execute(statements);
-  }
-
-  // Implement all the same methods as IndexedDBStorage but using SQLite
-  async createPortfolio(portfolio: Portfolio): Promise<void> {
-    await this.init();
-    try {
-      await this.db!.execute(`
-        INSERT INTO portfolios (id, name, color, icon, createdAt) 
-        VALUES (?, ?, ?, ?, ?)
-      `, [portfolio.id, portfolio.name, portfolio.color, portfolio.icon, portfolio.createdAt]);
-    } catch (error: any) {
-      // If portfolio already exists, ignore the error
-      if (error.message && error.message.includes('UNIQUE constraint failed')) {
-        return;
-      }
-      throw error;
-    }
-  }
-
-  async getPortfolios(): Promise<Portfolio[]> {
-    await this.init();
-    const result = await this.db!.query('SELECT * FROM portfolios ORDER BY createdAt ASC');
-    return result.values as Portfolio[];
-  }
-
-  async updatePortfolio(portfolio: Portfolio): Promise<void> {
-    await this.init();
-    await this.db!.execute(`
-      UPDATE portfolios SET name = ?, color = ?, icon = ? WHERE id = ?
-    `, [portfolio.name, portfolio.color, portfolio.icon, portfolio.id]);
-  }
-
-  async deletePortfolio(id: string): Promise<void> {
-    await this.init();
-    await this.db!.execute('DELETE FROM portfolios WHERE id = ?', [id]);
-  }
-
-  async createAccount(account: Account): Promise<void> {
-    await this.init();
-    await this.db!.execute(`
-      INSERT INTO accounts (id, portfolioId, name, type, broker, balance, currency, createdAt) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [account.id, account.portfolioId, account.name, account.type, account.broker, account.balance, account.currency, account.createdAt]);
-  }
-
-  async getAccounts(portfolioId: string): Promise<Account[]> {
-    await this.init();
-    const result = await this.db!.query('SELECT * FROM accounts WHERE portfolioId = ?', [portfolioId]);
-    return result.values as Account[];
-  }
-
-  async updateAccount(account: Account): Promise<void> {
-    await this.init();
-    await this.db!.execute(`
-      UPDATE accounts SET name = ?, type = ?, broker = ?, balance = ?, currency = ? WHERE id = ?
-    `, [account.name, account.type, account.broker, account.balance, account.currency, account.id]);
-  }
-
-  async createTrade(trade: Trade): Promise<void> {
-    await this.init();
-    await this.db!.execute(`
-      INSERT INTO trades (id, accountId, symbol, side, amount, price, fee, profit, status, entryDate, exitDate, riskReward) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [trade.id, trade.accountId, trade.symbol, trade.side, trade.amount, trade.price, trade.fee, trade.profit, trade.status, trade.entryDate, trade.exitDate, trade.riskReward]);
-  }
-
-  async getTrades(accountId: string): Promise<Trade[]> {
-    await this.init();
-    const result = await this.db!.query('SELECT * FROM trades WHERE accountId = ? ORDER BY entryDate DESC', [accountId]);
-    return result.values as Trade[];
-  }
-
-  async updateTrade(trade: Trade): Promise<void> {
-    await this.init();
-    await this.db!.execute(`
-      UPDATE trades SET symbol = ?, side = ?, amount = ?, price = ?, fee = ?, profit = ?, status = ?, entryDate = ?, exitDate = ?, riskReward = ? WHERE id = ?
-    `, [trade.symbol, trade.side, trade.amount, trade.price, trade.fee, trade.profit, trade.status, trade.entryDate, trade.exitDate, trade.riskReward, trade.id]);
-  }
-
-  async bulkInsertTrades(trades: Trade[]): Promise<void> {
-    await this.init();
-    for (const trade of trades) {
-      await this.createTrade(trade);
-    }
-  }
-
-  async setSetting(key: string, value: any): Promise<void> {
-    await this.init();
-    await this.db!.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, JSON.stringify(value)]);
-  }
-
-  async getSetting(key: string): Promise<any> {
-    await this.init();
-    const result = await this.db!.query('SELECT value FROM settings WHERE key = ?', [key]);
-    if (result.values && result.values.length > 0) {
-      return JSON.parse(result.values[0].value);
-    }
-    return null;
-  }
-
-  async createUser(username: string, userData: any): Promise<void> {
-    await this.init();
-    await this.db!.execute('INSERT OR REPLACE INTO users (username, preferences, createdAt) VALUES (?, ?, ?)', 
-      [username, JSON.stringify(userData), new Date().toISOString()]);
-  }
-
-  async getUser(username: string): Promise<any> {
-    await this.init();
-    const result = await this.db!.query('SELECT * FROM users WHERE username = ?', [username]);
-    if (result.values && result.values.length > 0) {
-      const user = result.values[0];
-      return { ...user, preferences: JSON.parse(user.preferences) };
-    }
-    return null;
-  }
-
-  async getAllUsers(): Promise<any[]> {
-    await this.init();
-    const result = await this.db!.query('SELECT * FROM users');
-    return (result.values || []).map(user => ({
-      ...user,
-      preferences: JSON.parse(user.preferences)
-    }));
-  }
-
-  async exportData(): Promise<any> {
-    await this.init();
-    const portfolios = await this.getPortfolios();
-    const accounts = await this.db!.query('SELECT * FROM accounts').then(r => r.values || []);
-    const trades = await this.db!.query('SELECT * FROM trades').then(r => r.values || []);
-    const settings = await this.db!.query('SELECT * FROM settings').then(r => r.values || []);
-
-    return {
-      portfolios,
-      accounts,
-      trades,
-      settings,
-      exportDate: new Date().toISOString(),
-      version: '1.0'
-    };
-  }
-
-  async importData(data: any): Promise<void> {
-    await this.init();
-    await this.clearAllData();
-
-    if (data.portfolios) {
-      for (const portfolio of data.portfolios) {
-        await this.createPortfolio(portfolio);
-      }
-    }
-
-    if (data.accounts) {
-      for (const account of data.accounts) {
-        await this.createAccount(account);
-      }
-    }
-
-    if (data.trades) {
-      await this.bulkInsertTrades(data.trades);
-    }
-
-    if (data.settings) {
-      for (const setting of data.settings) {
-        await this.setSetting(setting.key, JSON.parse(setting.value));
-      }
-    }
-  }
-
-  async clearAllData(): Promise<void> {
-    await this.init();
-    await this.db!.execute('DELETE FROM trades');
-    await this.db!.execute('DELETE FROM accounts');
-    await this.db!.execute('DELETE FROM portfolios');
-    await this.db!.execute('DELETE FROM settings');
-    await this.db!.execute('DELETE FROM users');
-  }
-}
-
-// Unified Database Interface
-let storage: IndexedDBStorage | SQLiteStorage;
-
-const getStorage = async (): Promise<IndexedDBStorage | SQLiteStorage> => {
-  if (!storage) {
-    const platform = Capacitor.getPlatform();
-    if (platform === 'web') {
-      storage = new IndexedDBStorage();
-      await storage.init();
-    } else {
-      storage = new SQLiteStorage();
-      await storage.init();
-    }
-  }
-  return storage;
-};
-
-// Export the unified database interface
-export const localDatabase = {
-  // Portfolio operations
-  async createPortfolio(portfolio: Portfolio): Promise<void> {
-    const db = await getStorage();
-    return db.createPortfolio(portfolio);
-  },
-
-  async getPortfolios(): Promise<Portfolio[]> {
-    const db = await getStorage();
-    return db.getPortfolios();
-  },
-
-  async updatePortfolio(portfolio: Portfolio): Promise<void> {
-    const db = await getStorage();
-    return db.updatePortfolio(portfolio);
-  },
-
-  async deletePortfolio(id: string): Promise<void> {
-    const db = await getStorage();
-    return db.deletePortfolio(id);
-  },
-
-  // Account operations
-  async createAccount(account: Account): Promise<void> {
-    const db = await getStorage();
-    return db.createAccount(account);
-  },
-
-  async getAccounts(portfolioId: string): Promise<Account[]> {
-    const db = await getStorage();
-    return db.getAccounts(portfolioId);
-  },
-
-  async updateAccount(account: Account): Promise<void> {
-    const db = await getStorage();
-    return db.updateAccount(account);
-  },
-
-  // Trade operations
-  async createTrade(trade: Trade): Promise<void> {
-    const db = await getStorage();
-    return db.createTrade(trade);
-  },
-
-  async getTrades(accountId: string): Promise<Trade[]> {
-    const db = await getStorage();
-    return db.getTrades(accountId);
-  },
-
-  async updateTrade(trade: Trade): Promise<void> {
-    const db = await getStorage();
-    return db.updateTrade(trade);
-  },
-
-  async bulkInsertTrades(trades: Trade[]): Promise<void> {
-    const db = await getStorage();
-    return db.bulkInsertTrades(trades);
-  },
-
-  // Settings operations
-  async setSetting(key: string, value: any): Promise<void> {
-    const db = await getStorage();
-    return db.setSetting(key, value);
-  },
-
-  async getSetting(key: string): Promise<any> {
-    const db = await getStorage();
-    return db.getSetting(key);
-  },
-
-  // User operations
-  async createUser(username: string, userData: any): Promise<void> {
-    const db = await getStorage();
-    return db.createUser(username, userData);
-  },
-
-  async getUser(username: string): Promise<any> {
-    const db = await getStorage();
-    return db.getUser(username);
-  },
-
-  async getAllUsers(): Promise<any[]> {
-    const db = await getStorage();
-    return db.getAllUsers();
-  },
-
-  // Data export/import
-  async exportData(): Promise<any> {
-    const db = await getStorage();
-    return db.exportData();
-  },
-
-  async importData(data: any): Promise<void> {
-    const db = await getStorage();
-    return db.importData(data);
-  },
-
-  async clearAllData(): Promise<void> {
-    const db = await getStorage();
-    return db.clearAllData();
-  },
-
-  // Legacy methods for compatibility
-  async getAccountsByPortfolioId(portfolioId: string): Promise<Account[]> {
-    return this.getAccounts(portfolioId);
-  },
 
   async updateAccountBalance(accountId: string, balance: number): Promise<void> {
-    const accounts = await this.getAccounts('');
-    const account = accounts.find(a => a.id === accountId);
-    if (account) {
-      account.balance = balance;
-      await this.updateAccount(account);
+    const store = await this.getStore('accounts', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.get(accountId);
+      request.onsuccess = () => {
+        const account = request.result as Account;
+        if (account) {
+          const updatedAccount = { ...account, balance };
+          const putRequest = store.put(updatedAccount);
+          putRequest.onsuccess = () => resolve();
+          putRequest.onerror = () => reject(putRequest.error);
+        } else {
+          reject(new Error('Account not found'));
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAccountBalance(accountId: string): Promise<number> {
+    const store = await this.getStore('accounts');
+    return new Promise((resolve, reject) => {
+      const request = store.get(accountId);
+      request.onsuccess = () => {
+        if (request.result) {
+          resolve(request.result.balance);
+        } else {
+          resolve(0);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async clearOldData(): Promise<void> {
+    try {
+      const db = await this.ensureDatabase();
+      const tx = db.transaction(['trades', 'journal_entries'], 'readwrite');
+      
+      const tradesStore = tx.objectStore('trades');
+      const journalStore = tx.objectStore('journal_entries');
+
+      const twoYearsAgo = new Date();
+      twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+      tradesStore.openCursor().onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          const trade = cursor.value;
+          if (trade.entryTime && new Date(trade.entryTime) < twoYearsAgo) {
+            cursor.delete();
+          }
+          cursor.continue();
+        }
+      };
+
+      journalStore.openCursor().onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          const entry = cursor.value;
+          if (entry.date && new Date(entry.date) < twoYearsAgo) {
+            cursor.delete();
+          }
+          cursor.continue();
+        }
+      };
+
+    } catch (error) {
+      console.error('Failed to clear old data:', error);
+    }
+  }
+}
+
+// Storage utilities that work in both browser and Capacitor (moved from UserContext)
+export const storage = {
+  async set(key: string, value: any) {
+    if (typeof window !== 'undefined') {
+      try {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.set({ key, value: JSON.stringify(value) });
+      } catch {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
     }
   },
-
-  async getTradesByPortfolioId(portfolioId: string): Promise<Trade[]> {
-    const accounts = await this.getAccounts(portfolioId);
-    const allTrades: Trade[] = [];
-    for (const account of accounts) {
-      const trades = await this.getTrades(account.id);
-      allTrades.push(...trades);
+  
+  async get(key: string) {
+    if (typeof window !== 'undefined') {
+      try {
+        const { Preferences } = await import('@capacitor/preferences');
+        const { value } = await Preferences.get({ key });
+        return value ? JSON.parse(value) : null;
+      } catch {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : null;
+      }
     }
-    return allTrades;
+    return null;
+  },
+  
+  async remove(key: string) {
+    if (typeof window !== 'undefined') {
+      try {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.remove({ key });
+      } catch {
+        localStorage.removeItem(key);
+      }
+    }
+  },
+  
+  async clear() {
+    if (typeof window !== 'undefined') {
+      try {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.clear();
+      } catch {
+        localStorage.clear();
+      }
+    }
   }
-};
-
-export default localDatabase; 
+}; 

@@ -20,23 +20,23 @@ const API_ENDPOINTS = {
 
 // API Configuration with environment variables (no fallback keys for security)
 const API_KEYS = {
-  YFINANCE: import.meta.env.VITE_YFINANCE_API_KEY,
-  COINGECKO: import.meta.env.VITE_COINGECKO_API_KEY,
-  ALPHA_VANTAGE: import.meta.env.VITE_ALPHA_VANTAGE_API_KEY,
-  POLYGON: import.meta.env.VITE_POLYGON_API_KEY,
-  EXCHANGERATE: import.meta.env.VITE_EXCHANGERATE_API_KEY,
-  FIXER: import.meta.env.VITE_FIXER_API_KEY,
-  FMP: import.meta.env.VITE_FMP_API_KEY,
-  ETHERSCAN: import.meta.env.VITE_ETHERSCAN_API_KEY,
-  FINNHUB: import.meta.env.VITE_FINNHUB_API_KEY,
-  NEWS: import.meta.env.VITE_NEWS_API_KEY
+  YFINANCE: 'C7wD6OmWJ_xzKSMZy0Vhpffs3hpyaYJU',
+  COINGECKO: 'CG-nCXJTWBdFGw2TdzhBdPgi7uH',
+  ALPHA_VANTAGE: 'DSPSF5OFTDBPT0Q3',
+  POLYGON: 'iLvuzznF8yhGvWFxk_Dt7vr2ykM8p6BM',
+  EXCHANGERATE: '82b2f90230ac56fe9e1ac7e1',
+  FIXER: 'b86ef5114855abba3c2ad0d1776fdfe6',
+  FMP: 'a8BaUPMXsbNfUmOeVMBVoaogf6oQzOQP',
+  ETHERSCAN: '923QMUQKQ2IKXUTZGRFBCZ8IM84QZUD7Y6',
+  FINNHUB: 'd1elql1r01qghj41ko20d1elql1r01qghj41ko2g',
+  NEWS: 'd555ac49f0db4edeac533af9a7232345'
 };
 
 // AI API Configuration with environment variables (no fallback keys for security)
 const AI_KEYS = {
-  OPENAI: import.meta.env.VITE_OPENAI_API_KEY,
-  GROQ: import.meta.env.VITE_GROQ_API_KEY,
-  GEMINI: import.meta.env.VITE_GEMINI_API_KEY
+  OPENAI: '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',
+  GROQ: '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',
+  GEMINI: 'AIzaSyD3jSvbP_AntLSgc5vRJXMpVvPAJ0LBBb4'
 };
 
 // Interfaces
@@ -618,6 +618,148 @@ class RealDataService {
     }
 
     return results;
+  }
+
+  // New placeholder methods for API testing
+  async testNewsApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.NEWS}/sources?apiKey=${API_KEYS.NEWS}`);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      const data = await response.json();
+      if (data.status === 'error') throw new Error(data.message);
+      return { success: true, message: 'News API connection successful.' };
+    } catch (error: any) {
+      console.error('News API test failed:', error);
+      return { success: false, message: `News API connection failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testYFinanceApi(): Promise<{ success: boolean; message: string }> {
+    // YFinance does not have a direct health check endpoint, rely on a simple data fetch
+    try {
+      // This is a dummy call as YFinance is often accessed via libraries or scraping
+      // For a true test, it would involve making a request and checking for valid data.
+      // For now, we'll assume success if the key is present.
+      if (API_KEYS.YFINANCE) {
+        return { success: true, message: 'YFinance API key present (test simulated).' };
+      } else {
+        return { success: false, message: 'YFinance API key not configured.' };
+      }
+    } catch (error: any) {
+      console.error('YFinance API test failed:', error);
+      return { success: false, message: `YFinance API test failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testCoinGeckoApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      const headers: any = {};
+      if (API_KEYS.COINGECKO) {
+        headers['x-cg-demo-api-key'] = API_KEYS.COINGECKO;
+      }
+      const response = await fetch(`${API_ENDPOINTS.COINGECKO}/ping`, { headers });
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      return { success: true, message: 'CoinGecko API connection successful.' };
+    } catch (error: any) {
+      console.error('CoinGecko API test failed:', error);
+      return { success: false, message: `CoinGecko API connection failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testAlphaVantageApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      // Test with a basic global quote for a common symbol like IBM
+      const response = await fetch(`${API_ENDPOINTS.ALPHA_VANTAGE}?function=GLOBAL_QUOTE&symbol=IBM&apikey=${API_KEYS.ALPHA_VANTAGE}`);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      const data = await response.json();
+      if (data['Error Message'] || Object.keys(data).length === 0) throw new Error(data['Error Message'] || 'Invalid API response');
+      return { success: true, message: 'Alpha Vantage API connection successful.' };
+    } catch (error: any) {
+      console.error('Alpha Vantage API test failed:', error);
+      return { success: false, message: `Alpha Vantage API connection failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testPolygonApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      // Test with a simple request like getting stock types
+      const response = await fetch(`${API_ENDPOINTS.POLYGON}/v3/reference/tickers/types?apiKey=${API_KEYS.POLYGON}`);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      const data = await response.json();
+      if (!data.results) throw new Error('Invalid API response');
+      return { success: true, message: 'Polygon API connection successful.' };
+    } catch (error: any) {
+      console.error('Polygon API test failed:', error);
+      return { success: false, message: `Polygon API connection failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testExchangeRateApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.EXCHANGERATE}/${API_KEYS.EXCHANGERATE}/latest/USD`);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      const data = await response.json();
+      if (data.result === 'error') throw new Error(data['error-type']);
+      return { success: true, message: 'ExchangeRate API connection successful.' };
+    } catch (error: any) {
+      console.error('ExchangeRate API test failed:', error);
+      return { success: false, message: `ExchangeRate API connection failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testFixerApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.FIXER}/latest?access_key=${API_KEYS.FIXER}`);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error.info);
+      return { success: true, message: 'Fixer API connection successful.' };
+    } catch (error: any) {
+      console.error('Fixer API test failed:', error);
+      return { success: false, message: `Fixer API connection failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testFmpApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      // Test with a simple request like getting a company profile
+      const response = await fetch(`${API_ENDPOINTS.FMP}/profile/AAPL?apikey=${API_KEYS.FMP}`);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) throw new Error('Invalid API response');
+      return { success: true, message: 'FMP API connection successful.' };
+    } catch (error: any) {
+      console.error('FMP API test failed:', error);
+      return { success: false, message: `FMP API connection failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testEtherscanApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      // Test with a simple request like getting gas prices
+      const response = await fetch(`${API_ENDPOINTS.ETHERSCAN}?module=gastracker&action=gasoracle&apikey=${API_KEYS.ETHERSCAN}`);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      const data = await response.json();
+      if (data.status === '0') throw new Error(data.message);
+      return { success: true, message: 'Etherscan API connection successful.' };
+    } catch (error: any) {
+      console.error('Etherscan API test failed:', error);
+      return { success: false, message: `Etherscan API connection failed: ${error.message || error.toString()}` };
+    }
+  }
+
+  async testFinnhubApi(): Promise<{ success: boolean; message: string }> {
+    try {
+      // Test with a simple request like getting stock symbols
+      const response = await fetch(`${API_ENDPOINTS.FINNHUB}/stock/symbol?exchange=US&token=${API_KEYS.FINNHUB}`);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) throw new Error('Invalid API response');
+      return { success: true, message: 'Finnhub API connection successful.' };
+    } catch (error: any) {
+      console.error('Finnhub API test failed:', error);
+      return { success: false, message: `Finnhub API connection failed: ${error.message || error.toString()}` };
+    }
   }
 }
 

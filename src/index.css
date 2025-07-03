@@ -415,8 +415,8 @@
   select:focus-visible,
   textarea:focus-visible,
   [role="button"]:focus-visible {
-    outline: 2px solid #3B82F6;
-    outline-offset: 2px;
+    outline: none;
+    outline-offset: 0px;
   }
   
   /* Mobile-specific animations */
@@ -633,12 +633,22 @@
     touch-action: manipulation;
   }
 
-  .scrollbar-hide {
+    .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-
+  
   .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Horizontal scroll for mobile navigation */
+  .nav-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .nav-scroll::-webkit-scrollbar {
     display: none;
   }
 
@@ -734,8 +744,8 @@
   textarea:focus-visible,
   [role="button"]:focus-visible,
   [tabindex]:not([tabindex="-1"]):focus-visible {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
+    outline: none;
+    outline-offset: 0px;
   }
 
   /* Prevent blue highlight on touch in iOS */

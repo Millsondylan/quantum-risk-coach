@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTrades, CombinedTrade } from '@/hooks/useTrades';
+import { useTrades } from '@/hooks/useTrades';
 import { useUser } from '@/contexts/UserContext';
 import { realDataService } from '@/lib/realDataService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,8 @@ import { format } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import Header from '@/components/Header';
 import { usePortfolios } from '@/contexts/PortfolioContext';
+import { Trade } from '@/lib/localDatabase';
+import crypto from 'crypto';
 
 interface JournalProps {
   defaultTab?: string;
@@ -23,7 +25,7 @@ interface JournalProps {
 const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
   const { user } = useUser();
   const { selectedAccountId, accounts } = usePortfolios();
-  const { trades, isLoading, addTrade, updateTrade, deleteTrade, getTradeStats } = useTrades(selectedAccountId || '');
+  const { trades, loading, error, addTrade, updateTrade, deleteTrade, getTradeStats } = useTrades(selectedAccountId || '');
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'closed'>('all');
@@ -126,23 +128,40 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
       return;
     }
 
-    const tradeData = {
+    const tradeData: Trade = {
+      id: crypto.randomUUID(),
       accountId: selectedAccountId,
       symbol: newTrade.symbol,
+      type: newTrade.side === 'buy' ? 'long' : 'short',
       side: newTrade.side,
       amount: newTrade.amount,
+      quantity: newTrade.amount,
       price: newTrade.price,
+      entryPrice: newTrade.price,
+      exitPrice: undefined,
       fee: newTrade.fee,
-      profit: newTrade.profit > 0 ? newTrade.profit : undefined,
+      profit: newTrade.profit > 0 ? newTrade.profit : 0,
+      profitLoss: newTrade.profit > 0 ? newTrade.profit : 0,
+      status: (newTrade.profit !== undefined && newTrade.profit !== 0) ? 'closed' : 'open',
       entryDate: newTrade.entryDate,
+      entryTime: newTrade.entryDate,
       exitDate: newTrade.exitDate || undefined,
-      status: (newTrade.profit !== undefined && newTrade.profit !== 0) ? 'closed' as const : 'open' as const,
-      notes: newTrade.notes,
+      exitTime: newTrade.exitDate || undefined,
+      riskReward: undefined,
+      riskRewardRatio: undefined,
+      strategy: newTrade.strategy || undefined,
       tags: newTrade.tags,
-      strategy: newTrade.strategy,
+      notes: newTrade.notes || undefined,
+      exitReason: undefined,
+      takeProfit: undefined,
+      stopLoss: undefined,
+      confidence: undefined,
+      confidenceRating: undefined,
+      emotion: 'calm',
+      mood: 'neutral'
     };
 
-    await addTrade(tradeData as any);
+    await addTrade(tradeData);
     
     // Reset form
     setNewTrade({
@@ -162,23 +181,41 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
     });
   };
 
-  const handleUpdateTrade = async (id: string, updates: any) => {
+  const handleUpdateTrade = async (id: string, updates: Partial<Trade>) => {
     // Map legacy fields back to DB fields if present
-    const dbUpdates: Partial<CombinedTrade> = {
-      symbol: updates.symbol,
-      side: updates.type || updates.side,
-      amount: updates.quantity || updates.amount,
-      price: updates.entryPrice || updates.price,
-      profit: updates.profitLoss || updates.profit,
-      status: updates.status,
-      entryDate: updates.entryDate,
-      exitDate: updates.exitDate,
+    const dbUpdates: Trade = {
+      id, // Ensure id is always present
+      accountId: selectedAccountId || '', // Add accountId
+      symbol: updates.symbol || '',
+      type: updates.type || (updates.side === 'buy' ? 'long' : 'short'),
+      side: updates.side || (updates.type === 'long' ? 'buy' : 'sell'),
+      amount: updates.quantity || updates.amount || 0,
+      quantity: updates.quantity || updates.amount || 0,
+      price: updates.entryPrice || updates.price || 0,
+      entryPrice: updates.entryPrice || updates.price || 0,
+      exitPrice: updates.exitPrice || 0,
+      fee: updates.fee || 0,
+      profit: updates.profitLoss || updates.profit || 0,
+      profitLoss: updates.profitLoss || updates.profit || 0,
+      status: updates.status || 'open',
+      entryDate: updates.entryDate || new Date().toISOString(),
+      entryTime: updates.entryDate || new Date().toISOString(),
+      exitDate: updates.exitDate || undefined,
+      exitTime: updates.exitDate || undefined,
       riskReward: updates.riskReward,
-      fee: updates.commission || updates.fee,
-      stopLoss: updates.stopLoss,
+      riskRewardRatio: updates.riskReward,
+      strategy: updates.strategy,
+      tags: updates.tags || [],
+      notes: updates.notes,
+      exitReason: updates.exitReason,
       takeProfit: updates.takeProfit,
+      stopLoss: updates.stopLoss,
+      confidence: updates.confidence,
+      confidenceRating: updates.confidence,
+      emotion: updates.emotion || 'calm',
+      mood: updates.mood || 'neutral'
     };
-    await updateTrade(id, dbUpdates);
+    await updateTrade(dbUpdates);
   };
 
   const handleDeleteTrade = async (id: string) => {
@@ -196,7 +233,7 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
     }));
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0B0D]">
         <Header />

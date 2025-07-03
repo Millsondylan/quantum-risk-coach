@@ -370,15 +370,18 @@ test.describe('Accurate Functionality Tests', () => {
     // Wait for page to load
     await page.waitForLoadState('networkidle');
     
-    // Find all buttons
-    const buttons = page.locator('button');
+    // Find all enabled buttons (skip disabled ones)
+    const buttons = page.locator('button:not([disabled])');
     const count = await buttons.count();
     
     if (count > 0) {
-      // Click first button
+      // Click first enabled button
       await buttons.first().click();
       
       // Should not cause page to crash
+      await expect(page.locator('body')).toBeVisible();
+    } else {
+      // If no enabled buttons, just verify page loads
       await expect(page.locator('body')).toBeVisible();
     }
   });
@@ -553,13 +556,21 @@ test.describe('Accurate Functionality Tests', () => {
     // Try to submit empty form
     const submitButton = page.locator('button[type="submit"]');
     if (await submitButton.count() > 0) {
-      await submitButton.first().click();
+      // Check if button is enabled
+      const isDisabled = await submitButton.first().isDisabled();
       
-      // Should show validation errors
-      const errors = page.locator('.error, [class*="error"], [data-testid*="error"]');
-      
-      if (await errors.count() > 0) {
-        await expect(errors.first()).toBeVisible();
+      if (!isDisabled) {
+        await submitButton.first().click();
+        
+        // Should show validation errors or toast notification
+        const errors = page.locator('.error, [class*="error"], [data-testid*="error"], [data-sonner-toast], .sonner-toast');
+        
+        if (await errors.count() > 0) {
+          await expect(errors.first()).toBeVisible();
+        }
+      } else {
+        // Button is disabled due to validation, which is expected behavior
+        await expect(submitButton.first()).toBeDisabled();
       }
     }
   });

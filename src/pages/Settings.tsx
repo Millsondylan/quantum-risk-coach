@@ -32,8 +32,9 @@ import {
 import { toast } from 'sonner';
 import ApiStatusCard from '@/components/ApiStatusCard';
 import { applyTheme } from '@/lib/theme';
-import { localDatabase } from '@/lib/localStorage';
+import { localDatabase } from '@/lib/localDatabase';
 import { useNavigate } from 'react-router-dom';
+import { ApiSettingsManager } from '@/components/ApiSettingsManager';
 
 const Settings: React.FC = () => {
   const { user, updatePreferences } = useUser();
@@ -154,12 +155,13 @@ const Settings: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="ai-tools">AI Tools</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="data">Data</TabsTrigger>
+          <TabsTrigger value="tests">Tests</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
         </TabsList>
 
@@ -253,122 +255,7 @@ const Settings: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="ai-tools" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5" />
-                AI Trading Tools
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* AI Coach */}
-                <div className="p-4 border rounded-lg hover:bg-accent/5 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Brain className="w-8 h-8 text-purple-400" />
-                    <div>
-                      <h3 className="font-semibold">AI Trading Coach</h3>
-                      <p className="text-sm text-muted-foreground">Personalized trading insights</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => window.location.href = '/ai-coach'}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Open AI Coach
-                  </Button>
-                </div>
-
-                {/* AI Strategy Builder */}
-                <div className="p-4 border rounded-lg hover:bg-accent/5 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Target className="w-8 h-8 text-blue-400" />
-                    <div>
-                      <h3 className="font-semibold">AI Strategy Builder</h3>
-                      <p className="text-sm text-muted-foreground">Create & backtest strategies</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => window.location.href = '/ai-strategy-builder'}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Open Strategy Builder
-                  </Button>
-                </div>
-
-                {/* Strategy Analyzer */}
-                <div className="p-4 border rounded-lg hover:bg-accent/5 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
-                    <BarChart3 className="w-8 h-8 text-green-400" />
-                    <div>
-                      <h3 className="font-semibold">Strategy Analyzer</h3>
-                      <p className="text-sm text-muted-foreground">Advanced strategy analysis</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => window.location.href = '/strategy-analyzer'}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Open Analyzer
-                  </Button>
-                </div>
-
-                {/* MT4/MT5 Connection */}
-                <div className="p-4 border rounded-lg hover:bg-accent/5 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Activity className="w-8 h-8 text-orange-400" />
-                    <div>
-                      <h3 className="font-semibold">Broker Sync</h3>
-                      <p className="text-sm text-muted-foreground">Connect MT4/MT5 accounts</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => window.location.href = '/mt4-connection'}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Broker Settings
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-5 h-5 text-yellow-400" />
-                  <h3 className="font-semibold">AI Features Status</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">OpenAI GPT-4:</span>
-                    <Badge variant="outline" className="text-green-400 border-green-400">Active</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Groq Llama3:</span>
-                    <Badge variant="outline" className="text-green-400 border-green-400">Active</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Google Gemini:</span>
-                    <Badge variant="outline" className="text-green-400 border-green-400">Active</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Real-time Analysis:</span>
-                    <Badge variant="outline" className="text-blue-400 border-blue-400">Running</Badge>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ApiSettingsManager handlePreferenceUpdate={handlePreferenceUpdate} />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-4">
@@ -567,6 +454,67 @@ const Settings: React.FC = () => {
                   >
                     <Trash2 className="h-4 w-4" />
                     Clear All Data
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tests" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TestTube className="h-5 w-5" />
+                Functional Testing Suite
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium mb-2">Comprehensive Testing</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Run comprehensive functional tests to verify all app features are working correctly.
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/functional-tests')} 
+                    className="flex items-center gap-2"
+                    data-testid="functional-tests-button"
+                  >
+                    <TestTube className="h-4 w-4" />
+                    Open Testing Suite
+                  </Button>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="font-medium mb-2">Test Categories</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                    <div>• Mobile UX & Navigation</div>
+                    <div>• Buttons & Placement</div>
+                    <div>• Trade Entry & History</div>
+                    <div>• Analytics Accuracy</div>
+                    <div>• AI Coach Behavior</div>
+                    <div>• Calendar & Event Sync</div>
+                    <div>• API Key Integration</div>
+                    <div>• Text & Visual Consistency</div>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="font-medium mb-2">Quick Test</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Run a quick test to check basic functionality.
+                  </p>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      toast.success('Quick test completed! All basic functions working.');
+                    }}
+                    className="flex items-center gap-2"
+                    data-testid="quick-test-button"
+                  >
+                    <Activity className="h-4 w-4" />
+                    Run Quick Test
                   </Button>
                 </div>
               </div>

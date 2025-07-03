@@ -19,10 +19,21 @@ import {
   Calendar,
   Globe,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  ArrowDownUp,
+  Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { realDataService } from '@/lib/realDataService';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NewsItem {
   id?: string;
@@ -33,7 +44,7 @@ interface NewsItem {
   source: string;
   publishedAt: string;
   category?: string;
-  sentiment?: string;
+  sentiment?: 'positive' | 'negative' | 'neutral';
   relatedSymbols?: string[];
   url: string;
   imageUrl?: string;
@@ -52,11 +63,14 @@ interface TradeConnection {
 const News: React.FC = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [userTrades, setUserTrades] = useState<TradeConnection[]>([]); // You can connect this to real trades if needed
+  const [userTrades, setUserTrades] = useState<TradeConnection[]>([]);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [filteredNews, setFilteredNews] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sentimentFilter, setSentimentFilter] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all');
+  const [sortBy, setSortBy] = useState<'publishedAt' | 'relevance'>('publishedAt');
+  const [sourceFilter, setSourceFilter] = useState<'all' | string>('all');
 
   useEffect(() => {
     setIsLoading(true);
@@ -92,8 +106,27 @@ const News: React.FC = () => {
       filtered = filtered.filter(item => item.category === activeTab);
     }
 
+    // Filter by sentiment
+    if (sentimentFilter !== 'all') {
+      filtered = filtered.filter(item => item.sentiment === sentimentFilter);
+    }
+
+    // Filter by source
+    if (sourceFilter !== 'all') {
+      filtered = filtered.filter(item => item.source === sourceFilter);
+    }
+
+    // Sort news items
+    filtered.sort((a, b) => {
+      if (sortBy === 'publishedAt') {
+        return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+      }
+      // For 'relevance', we'll just use a dummy sort for now or rely on API's default
+      return 0; 
+    });
+
     setFilteredNews(filtered);
-  }, [newsItems, searchQuery, activeTab]);
+  }, [newsItems, searchQuery, activeTab, sentimentFilter, sortBy, sourceFilter]);
 
   const getSentimentColor = (sentiment: string | undefined) => {
     switch (sentiment) {
@@ -210,6 +243,71 @@ const News: React.FC = () => {
             <TabsTrigger value="commodities">Commodities</TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* Advanced Filters */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-white font-medium text-sm">Filters:</h3>
+          <div className="flex gap-2">
+            {/* Sentiment Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Sentiment ({sentimentFilter === 'all' ? 'All' : sentimentFilter})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-48">
+                <DropdownMenuLabel>Filter by Sentiment</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={sentimentFilter} onValueChange={(value: 'all' | 'positive' | 'negative' | 'neutral') => setSentimentFilter(value)}>
+                  <DropdownMenuRadioItem value="all">All Sentiments</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="positive">Positive</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="neutral">Neutral</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="negative">Negative</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Source Filter (Dummy for now) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Globe className="w-4 h-4 mr-2" />
+                  Source ({sourceFilter === 'all' ? 'All' : sourceFilter})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-48">
+                <DropdownMenuLabel>Filter by Source</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={sourceFilter} onValueChange={setSourceFilter}>
+                  <DropdownMenuRadioItem value="all">All Sources</DropdownMenuRadioItem>
+                  {/* Replace with dynamic sources from your API */}
+                  <DropdownMenuRadioItem value="Reuters">Reuters</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Bloomberg">Bloomberg</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Investing.com">Investing.com</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Sort By */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <ArrowDownUp className="w-4 h-4 mr-2" />
+                  Sort By ({sortBy === 'publishedAt' ? 'Date' : 'Relevance'})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-48">
+                <DropdownMenuLabel>Sort News By</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={sortBy} onValueChange={(value: 'publishedAt' | 'relevance') => setSortBy(value)}>
+                  <DropdownMenuRadioItem value="publishedAt">Published Date</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="relevance">Relevance (Coming Soon)</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </div>
 
       {/* Trade Impact Summary (optional, can be connected to real trades) */}

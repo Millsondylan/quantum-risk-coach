@@ -7,8 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { usePortfolioContext } from '@/contexts/PortfolioContext';
 import { Upload, Image as ImageIcon, FileText, Loader2 } from 'lucide-react';
-import { localDatabase as database } from '@/lib/localStorage';
 import { v4 as uuidv4 } from 'uuid';
+
+// Import from localStorage
+import { Trade } from '@/lib/localDatabase';
+import { IndexedDBStorage } from '@/lib/localStorage';
+
+const localDatabase = new IndexedDBStorage();
 
 interface ManualJournalModalProps {
   open: boolean;
@@ -47,25 +52,40 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
     
     setIsLoading(true);
     try {
-      // In a real implementation, this would process the CSV file
-      // For this demo, we'll create a single trade entry
-      
-      const demoTrade = {
+      const demoTrade: Trade = {
         id: uuidv4(),
         accountId: targetPortfolioId,
         symbol: 'BTC/USD',
-        side: 'buy' as const,
+        type: 'long',
+        side: 'buy',
         amount: 0.5,
+        quantity: 0.5,
         price: 50000,
+        entryPrice: 50000,
+        exitPrice: 52500,
         fee: 25,
         profit: 1250,
-        status: 'closed' as const,
+        profitLoss: 1250,
+        status: 'closed',
         entryDate: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        entryTime: new Date(Date.now() - 86400000).toISOString(),
         exitDate: new Date().toISOString(),
-        riskReward: 2.5
+        exitTime: new Date().toISOString(),
+        riskReward: 2.5,
+        riskRewardRatio: 2.5,
+        strategy: 'Trend Following',
+        tags: ['Crypto', 'Long-term'],
+        notes: 'Breakout trade on BTC',
+        exitReason: 'Target reached',
+        takeProfit: 52500,
+        stopLoss: 48000,
+        confidence: 0.8,
+        confidenceRating: 0.8,
+        emotion: 'calm',
+        mood: 'positive'
       };
 
-      await database.bulkInsertTrades([demoTrade]);
+      await localDatabase.bulkInsertTrades([demoTrade]);
       
       toast({
         title: "CSV Imported",
@@ -91,25 +111,40 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
     
     setIsLoading(true);
     try {
-      // In a real implementation, this would use OCR to extract data from the screenshot
-      // For this demo, we'll create a demo trade entry
-      
-      const demoTrade = {
+      const demoTrade: Trade = {
         id: uuidv4(),
         accountId: targetPortfolioId,
         symbol: 'EUR/USD',
-        side: 'sell' as const,
+        type: 'short',
+        side: 'sell',
         amount: 1,
+        quantity: 1,
         price: 1.1205,
+        entryPrice: 1.1205,
+        exitPrice: 1.1155,
         fee: 2.5,
         profit: 50,
-        status: 'closed' as const,
+        profitLoss: 50,
+        status: 'closed',
         entryDate: new Date(Date.now() - 43200000).toISOString(), // 12 hours ago
+        entryTime: new Date(Date.now() - 43200000).toISOString(),
         exitDate: new Date().toISOString(),
-        riskReward: 1.5
+        exitTime: new Date().toISOString(),
+        riskReward: 1.5,
+        riskRewardRatio: 1.5,
+        strategy: 'Range Trading',
+        tags: ['Forex', 'Short-term'],
+        notes: 'Reversal at resistance level',
+        exitReason: 'Support level reached',
+        takeProfit: 1.1155,
+        stopLoss: 1.1255,
+        confidence: 0.7,
+        confidenceRating: 0.7,
+        emotion: 'calm',
+        mood: 'neutral'
       };
 
-      await database.bulkInsertTrades([demoTrade]);
+      await localDatabase.bulkInsertTrades([demoTrade]);
       
       toast({
         title: "Screenshot Processed",
@@ -135,22 +170,40 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
     
     setIsLoading(true);
     try {
-      const trade = {
+      const trade: Trade = {
         id: uuidv4(),
         accountId: targetPortfolioId,
         symbol: manualTradeData.symbol,
+        type: manualTradeData.side === 'buy' ? 'long' : 'short',
         side: manualTradeData.side,
         amount: parseFloat(manualTradeData.amount),
+        quantity: parseFloat(manualTradeData.amount),
         price: parseFloat(manualTradeData.price),
+        entryPrice: parseFloat(manualTradeData.price),
+        exitPrice: undefined,
         fee: manualTradeData.fee ? parseFloat(manualTradeData.fee) : 0,
-        profit: manualTradeData.profit ? parseFloat(manualTradeData.profit) : undefined,
+        profit: manualTradeData.profit ? parseFloat(manualTradeData.profit) : 0,
+        profitLoss: manualTradeData.profit ? parseFloat(manualTradeData.profit) : 0,
         status: manualTradeData.status,
         entryDate: manualTradeData.entryDate || new Date().toISOString(),
+        entryTime: manualTradeData.entryDate || new Date().toISOString(),
         exitDate: manualTradeData.exitDate || undefined,
-        riskReward: undefined
+        exitTime: manualTradeData.exitDate || undefined,
+        riskReward: undefined,
+        riskRewardRatio: undefined,
+        strategy: undefined,
+        tags: [],
+        notes: manualTradeData.notes || undefined,
+        exitReason: undefined,
+        takeProfit: undefined,
+        stopLoss: undefined,
+        confidence: undefined,
+        confidenceRating: undefined,
+        emotion: undefined,
+        mood: undefined
       };
 
-      await database.bulkInsertTrades([trade]);
+      await localDatabase.bulkInsertTrades([trade]);
       
       toast({
         title: "Trade Added",

@@ -91,8 +91,24 @@ interface AIAnalysisRequest {
     stocks: any[];
     news: any[];
   };
-  analysisType: 'sentiment' | 'trend' | 'recommendation' | 'risk';
+  analysisType: 'sentiment' | 'trend' | 'recommendation' | 'risk' | 'coaching' | 'what_if';
   timeframe?: string;
+  userContext?: {
+    userPersona?: any;
+    riskTolerance?: string;
+    experienceLevel?: string;
+    preferredMarkets?: string[];
+    behavioralPatterns?: string[];
+    userQuestion?: string;
+    simulatedTrade?: {
+      symbol: string;
+      entryPrice: number;
+      exitPrice?: number;
+      quantity: number;
+      side: 'buy' | 'sell';
+      notes?: string;
+    };
+  };
 }
 
 interface AIAnalysisResponse {
@@ -112,9 +128,9 @@ interface AIStreamOptions {
 
 // Live AI API Keys with environment variable fallbacks
 const AI_API_KEYS = {
-  OPENAI: import.meta.env.VITE_OPENAI_API_KEY || '',
-  GROQ: import.meta.env.VITE_GROQ_API_KEY || '',
-  GEMINI: import.meta.env.VITE_GEMINI_API_KEY || ''
+  OPENAI: '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',
+  GROQ: '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',
+  GEMINI: 'AIzaSyD3jSvbP_AntLSgc5vRJXMpVvPAJ0LBBb4'
 };
 
 // Validate API keys on service initialization
@@ -1072,10 +1088,44 @@ Provide analysis that is:
 
   // Build comprehensive prompt for AI analysis
   private buildPrompt(request: AIAnalysisRequest): string {
-    const { marketData, analysisType, timeframe = '1D' } = request;
+    const { marketData, analysisType, timeframe = '1D', userContext } = request;
     
     let prompt = `MARKET ANALYSIS REQUEST - ${analysisType.toUpperCase()} (${timeframe})\n\n`;
     
+    // Add user context if available
+    if (userContext) {
+      if (userContext.userPersona?.type && userContext.userPersona.type !== 'N/A') {
+        prompt += `USER TRADING PERSONA: ${userContext.userPersona.type}\n`;
+      }
+      if (userContext.riskTolerance) {
+        prompt += `RISK TOLERANCE: ${userContext.riskTolerance}\n`;
+      }
+      if (userContext.experienceLevel) {
+        prompt += `EXPERIENCE LEVEL: ${userContext.experienceLevel}\n`;
+      }
+      if (userContext.preferredMarkets?.length > 0) {
+        prompt += `PREFERRED MARKETS: ${userContext.preferredMarkets.join(', ')}\n`;
+      }
+      if (userContext.behavioralPatterns?.length > 0) {
+        prompt += `IDENTIFIED BEHAVIORAL PATTERNS:\n`;
+        userContext.behavioralPatterns.forEach(pattern => prompt += `- ${pattern}\n`);
+      }
+      prompt += '\n';
+    }
+
+    // Add simulated trade data for 'what_if' analysis
+    if (analysisType === 'what_if' && userContext?.simulatedTrade) {
+      const trade = userContext.simulatedTrade;
+      prompt += `WHAT-IF SCENARIO: Analyze a hypothetical trade.\n`;
+      prompt += `  Symbol: ${trade.symbol}\n`;
+      prompt += `  Side: ${trade.side}\n`;
+      prompt += `  Entry Price: ${trade.entryPrice}\n`;
+      if (trade.exitPrice) prompt += `  Hypothetical Exit Price: ${trade.exitPrice}\n`;
+      prompt += `  Quantity: ${trade.quantity}\n`;
+      if (trade.notes) prompt += `  Notes: ${trade.notes}\n`;
+      prompt += '\nProvide insights on this potential trade, considering market conditions and my trading profile. Include potential outcomes, risks, and suggestions.\n\n';
+    }
+
     // Add forex data
     if (marketData.forex?.length > 0) {
       prompt += `FOREX DATA:\n`;
@@ -1125,6 +1175,12 @@ Provide analysis that is:
         break;
       case 'risk':
         prompt += 'Assess current market risks, volatility levels, and risk management strategies.';
+        break;
+      case 'coaching':
+        prompt += userContext?.userQuestion || 'Provide general coaching insights based on my profile.';
+        break;
+      case 'what_if':
+        // The specific prompt for what-if is already constructed above this switch statement
         break;
       default:
         prompt += 'Provide comprehensive market analysis covering sentiment, trends, and recommendations.';

@@ -35,15 +35,33 @@ export interface Trade {
   id: string;
   accountId: string;
   symbol: string;
+  type: 'long' | 'short';
   side: 'buy' | 'sell';
   amount: number;
+  quantity: number;
   price: number;
+  entryPrice: number;
+  exitPrice?: number;
   fee: number;
-  profit?: number;
-  status: 'open' | 'closed' | 'cancelled';
+  profit: number;
+  profitLoss?: number;
+  status: 'open' | 'closed' | 'cancelled' | 'pending';
   entryDate: string;
+  entryTime?: string;
   exitDate?: string;
+  exitTime?: string;
   riskReward?: number;
+  riskRewardRatio?: number;
+  strategy?: string;
+  tags?: string[];
+  notes?: string;
+  exitReason?: string;
+  takeProfit?: number;
+  stopLoss?: number;
+  confidence?: number;
+  confidenceRating?: number;
+  emotion?: 'calm' | 'anxious' | 'excited' | 'frustrated';
+  mood?: 'positive' | 'negative' | 'neutral' | 'excited' | 'stressed' | 'calm' | 'greedy' | 'fearful';
 }
 
 export interface UserSettings {
@@ -403,15 +421,33 @@ class SQLiteStorage {
         id TEXT PRIMARY KEY,
         accountId TEXT NOT NULL,
         symbol TEXT NOT NULL,
+        type TEXT NOT NULL,
         side TEXT NOT NULL,
         amount REAL NOT NULL,
+        quantity REAL NOT NULL,
         price REAL NOT NULL,
+        entryPrice REAL NOT NULL,
+        exitPrice REAL,
         fee REAL DEFAULT 0,
         profit REAL,
+        profitLoss REAL,
         status TEXT NOT NULL,
         entryDate TEXT NOT NULL,
+        entryTime TEXT,
         exitDate TEXT,
+        exitTime TEXT,
         riskReward REAL,
+        riskRewardRatio REAL,
+        strategy TEXT,
+        tags TEXT,
+        notes TEXT,
+        exitReason TEXT,
+        takeProfit REAL,
+        stopLoss REAL,
+        confidence REAL,
+        confidenceRating REAL,
+        emotion TEXT,
+        mood TEXT,
         FOREIGN KEY (accountId) REFERENCES accounts(id) ON DELETE CASCADE
       );
 
@@ -436,7 +472,13 @@ class SQLiteStorage {
     await this.db!.execute(`
       INSERT INTO portfolios (id, name, color, icon, createdAt) 
       VALUES (?, ?, ?, ?, ?)
-    `, [portfolio.id, portfolio.name, portfolio.color, portfolio.icon, portfolio.createdAt]);
+    `, [
+      portfolio.id, 
+      portfolio.name, 
+      portfolio.color, 
+      portfolio.icon || '', 
+      portfolio.createdAt
+    ]);
   }
 
   async getPortfolios(): Promise<Portfolio[]> {
@@ -481,22 +523,102 @@ class SQLiteStorage {
   async createTrade(trade: Trade): Promise<void> {
     await this.init();
     await this.db!.execute(`
-      INSERT INTO trades (id, accountId, symbol, side, amount, price, fee, profit, status, entryDate, exitDate, riskReward) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [trade.id, trade.accountId, trade.symbol, trade.side, trade.amount, trade.price, trade.fee, trade.profit, trade.status, trade.entryDate, trade.exitDate, trade.riskReward]);
+      INSERT INTO trades (
+        id, accountId, symbol, type, side, amount, quantity, 
+        price, entryPrice, exitPrice, fee, profit, profitLoss, 
+        status, entryDate, entryTime, exitDate, exitTime, 
+        riskReward, riskRewardRatio, strategy, tags, notes, 
+        exitReason, takeProfit, stopLoss, confidence, 
+        confidenceRating, emotion, mood
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      trade.id, 
+      trade.accountId || '', 
+      trade.symbol, 
+      trade.type, 
+      trade.side, 
+      trade.amount || 0, 
+      trade.quantity || 0, 
+      trade.price || 0, 
+      trade.entryPrice || 0, 
+      trade.exitPrice || null, 
+      trade.fee || 0, 
+      trade.profit || 0, 
+      trade.profitLoss || 0, 
+      trade.status || 'open', 
+      trade.entryDate || new Date().toISOString(), 
+      trade.entryTime || null, 
+      trade.exitDate || null, 
+      trade.exitTime || null, 
+      trade.riskReward || null, 
+      trade.riskRewardRatio || null, 
+      trade.strategy || null, 
+      trade.tags ? trade.tags.join(',') : null, 
+      trade.notes || null, 
+      trade.exitReason || null, 
+      trade.takeProfit || null, 
+      trade.stopLoss || null, 
+      trade.confidence || null, 
+      trade.confidenceRating || null, 
+      trade.emotion || null, 
+      trade.mood || null
+    ]);
   }
 
-  async getTrades(accountId: string): Promise<Trade[]> {
+  async getTrades(accountId?: string): Promise<Trade[]> {
     await this.init();
-    const result = await this.db!.query('SELECT * FROM trades WHERE accountId = ? ORDER BY entryDate DESC', [accountId]);
-    return result.values as Trade[];
+    if (accountId) {
+      const result = await this.db!.query('SELECT * FROM trades WHERE accountId = ? ORDER BY entryDate DESC', [accountId]);
+      return result.values as Trade[];
+    } else {
+      const result = await this.db!.query('SELECT * FROM trades ORDER BY entryDate DESC');
+      return result.values as Trade[];
+    }
   }
 
   async updateTrade(trade: Trade): Promise<void> {
     await this.init();
     await this.db!.execute(`
-      UPDATE trades SET symbol = ?, side = ?, amount = ?, price = ?, fee = ?, profit = ?, status = ?, entryDate = ?, exitDate = ?, riskReward = ? WHERE id = ?
-    `, [trade.symbol, trade.side, trade.amount, trade.price, trade.fee, trade.profit, trade.status, trade.entryDate, trade.exitDate, trade.riskReward, trade.id]);
+      UPDATE trades SET 
+        symbol = ?, type = ?, side = ?, amount = ?, quantity = ?, 
+        price = ?, entryPrice = ?, exitPrice = ?, fee = ?, 
+        profit = ?, profitLoss = ?, status = ?, entryDate = ?, 
+        entryTime = ?, exitDate = ?, exitTime = ?, riskReward = ?, 
+        riskRewardRatio = ?, strategy = ?, tags = ?, notes = ?, 
+        exitReason = ?, takeProfit = ?, stopLoss = ?, 
+        confidence = ?, confidenceRating = ?, emotion = ?, mood = ? 
+      WHERE id = ?
+    `, [
+      trade.symbol, 
+      trade.type, 
+      trade.side, 
+      trade.amount || 0, 
+      trade.quantity || 0, 
+      trade.price || 0, 
+      trade.entryPrice || 0, 
+      trade.exitPrice || null, 
+      trade.fee || 0, 
+      trade.profit || 0, 
+      trade.profitLoss || 0, 
+      trade.status || 'open', 
+      trade.entryDate || new Date().toISOString(), 
+      trade.entryTime || null, 
+      trade.exitDate || null, 
+      trade.exitTime || null, 
+      trade.riskReward || null, 
+      trade.riskRewardRatio || null, 
+      trade.strategy || null, 
+      trade.tags ? trade.tags.join(',') : null, 
+      trade.notes || null, 
+      trade.exitReason || null, 
+      trade.takeProfit || null, 
+      trade.stopLoss || null, 
+      trade.confidence || null, 
+      trade.confidenceRating || null, 
+      trade.emotion || null, 
+      trade.mood || null, 
+      trade.id
+    ]);
   }
 
   async bulkInsertTrades(trades: Trade[]): Promise<void> {
@@ -508,7 +630,10 @@ class SQLiteStorage {
 
   async setSetting(key: string, value: any): Promise<void> {
     await this.init();
-    await this.db!.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, JSON.stringify(value)]);
+    await this.db!.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+      key, 
+      typeof value === 'string' ? value : JSON.stringify(value)
+    ]);
   }
 
   async getSetting(key: string): Promise<any> {
@@ -523,7 +648,12 @@ class SQLiteStorage {
   async createUser(username: string, userData: any): Promise<void> {
     await this.init();
     await this.db!.execute('INSERT OR REPLACE INTO users (username, preferences, createdAt) VALUES (?, ?, ?)', 
-      [username, JSON.stringify(userData), new Date().toISOString()]);
+      [
+        username, 
+        typeof userData === 'string' ? userData : JSON.stringify(userData), 
+        new Date().toISOString()
+      ]
+    );
   }
 
   async getUser(username: string): Promise<any> {
@@ -597,6 +727,11 @@ class SQLiteStorage {
     await this.db!.execute('DELETE FROM settings');
     await this.db!.execute('DELETE FROM users');
   }
+
+  async deleteTrade(tradeId: string): Promise<void> {
+    await this.init();
+    await this.db!.execute('DELETE FROM trades WHERE id = ?', [tradeId]);
+  }
 }
 
 // Unified Database Interface
@@ -617,7 +752,7 @@ const getStorage = async (): Promise<IndexedDBStorage | SQLiteStorage> => {
 };
 
 // Export the unified database interface
-export const database = {
+export const localDatabase = {
   // Portfolio operations
   async createPortfolio(portfolio: Portfolio): Promise<void> {
     const db = await getStorage();
@@ -661,7 +796,7 @@ export const database = {
     return db.createTrade(trade);
   },
 
-  async getTrades(accountId: string): Promise<Trade[]> {
+  async getTrades(accountId?: string): Promise<Trade[]> {
     const db = await getStorage();
     return db.getTrades(accountId);
   },
@@ -741,7 +876,12 @@ export const database = {
       allTrades.push(...trades);
     }
     return allTrades;
-  }
+  },
+
+  async deleteTrade(tradeId: string): Promise<void> {
+    const db = await getStorage();
+    return db.deleteTrade(tradeId);
+  },
 };
 
-export default database; 
+export default localDatabase; 

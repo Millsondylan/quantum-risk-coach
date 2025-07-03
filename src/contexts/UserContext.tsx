@@ -1,54 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { applyTheme } from '@/lib/theme';
-import { localDatabase } from '@/lib/localStorage';
-
-// Define notification preferences type locally
-interface NotificationPreferences {
-  priceAlerts: boolean;
-  newsAlerts: boolean;
-  aiInsights: boolean;
-  tradeSignals: boolean;
-  economicEvents: boolean;
-  portfolioAlerts: boolean;
-  riskWarnings: boolean;
-  pushNotifications: boolean;
-  telegram: boolean;
-  soundEnabled: boolean;
-  marketUpdates: boolean;
-  tradeAlerts: boolean;
-  marketSentiment: boolean;
-  quietHours: {
-    enabled: boolean;
-    start: string;
-    end: string;
-  };
-  weekends: boolean;
-  minimumImpact: string;
-  frequency: string;
-  personalizedSymbols: string[];
-  tradingStyle: string;
-  riskTolerance: string;
-  experience: string;
-}
-
-export interface UserPreferences {
-  tradingStyle: 'scalping' | 'day-trading' | 'swing-trading' | 'position-trading';
-  riskTolerance: 'conservative' | 'moderate' | 'aggressive';
-  preferredMarkets: string[];
-  experienceLevel: 'beginner' | 'intermediate' | 'advanced';
-  notifications: NotificationPreferences;
-  theme: 'light' | 'dark' | 'auto';
-  language: string;
-}
-
-interface UserData {
-  id: string;
-  name: string;
-  preferences: UserPreferences;
-  onboardingCompleted: boolean;
-  createdAt: string;
-  lastActive: string;
-}
+import { realDataService } from '@/lib/realDataService';
+import type { UserPreferences, UserData, TradingGoal, NotificationPreferences } from '@/types/user';
+import { getDefaultPreferences } from '@/types/user';
+import { logger } from '@/lib/logger';
 
 interface UserContextType {
   user: UserData | null;
@@ -128,187 +83,177 @@ const storage = {
   }
 };
 
-const getDefaultPreferences = (): UserPreferences => ({
-  tradingStyle: 'day-trading',
-  riskTolerance: 'moderate',
-  preferredMarkets: [],
-  experienceLevel: 'beginner',
-  notifications: {
-    priceAlerts: true,
-    newsAlerts: true,
-    aiInsights: true,
-    tradeSignals: true,
-    economicEvents: true,
-    portfolioAlerts: true,
-    riskWarnings: true,
-    pushNotifications: true,
-    telegram: false,
-    soundEnabled: true,
-    marketUpdates: true,
-    tradeAlerts: true,
-    marketSentiment: true,
-    quietHours: {
-      enabled: false,
-      start: '22:00',
-      end: '08:00'
-    },
-    weekends: true,
-    minimumImpact: 'medium',
-    frequency: 'instant',
-    personalizedSymbols: [],
-    tradingStyle: 'day',
-    riskTolerance: 'moderate',
-    experience: 'intermediate'
-  },
-  theme: 'auto',
-  language: 'en',
-});
-
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load user data on mount
+  // Modified useEffect to handle initialization more gracefully with timeout
   useEffect(() => {
     const loadUserData = async () => {
+      logger.log('Loading user data...');
       try {
-        const userData = await storage.get('user');
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Storage timeout')), 5000)
+        );
+        
+        const userDataPromise = storage.get('user');
+        const userData = await Promise.race([userDataPromise, timeoutPromise]) as UserData | null;
+        
+        logger.log('User data loaded:', userData);
+        
         if (userData) {
           setUser(userData);
           applyTheme(userData.preferences?.theme || 'auto');
+        } else {
+          // No user data found - don't create a default user
+          // This will cause the app to redirect to auth page
+          logger.log('No user data found, will redirect to auth');
         }
       } catch (error) {
         console.error('Error loading user data:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
+        
+        // Don't create a fallback user - let the app redirect to auth
+        logger.log('Error loading user data, will redirect to auth');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadUserData();
+  }, []); // Empty dependency array means this effect runs once on mount
+
+  const updatePreferences = useCallback(async (newPreferences: Partial<UserPreferences>) => {
+    logger.log('Updating preferences...', newPreferences);
+    setUser(prevUser => {
+      if (!prevUser) return null;
+      const updatedUser = {
+        ...prevUser,
+        preferences: {
+          ...prevUser.preferences,
+          ...newPreferences,
+        },
+      };
+      // Use setTimeout to avoid blocking UI
+      setTimeout(() => storage.set('user', updatedUser), 0);
+      applyTheme(updatedUser.preferences.theme);
+      logger.log('Preferences updated and saved.', updatedUser);
+      return updatedUser;
+    });
   }, []);
 
-  const updatePreferences = async (newPreferences: Partial<UserPreferences>) => {
-    if (!user) return;
-
-    const updatedUser = {
-      ...user,
-      preferences: { ...user.preferences, ...newPreferences },
-      lastActive: new Date().toISOString(),
-    };
-
-    // Update in local database
-    await localDatabase.createUser(user.name, {
-      id: updatedUser.id,
-      preferences: updatedUser.preferences,
-      onboardingCompleted: updatedUser.onboardingCompleted,
-      createdAt: updatedUser.createdAt,
-      lastActive: updatedUser.lastActive,
+  const completeOnboarding = useCallback(async (preferences: UserPreferences) => {
+    logger.log('Completing onboarding...', preferences);
+    setUser(prevUser => {
+      if (!prevUser) return null;
+      const updatedUser = {
+        ...prevUser,
+        preferences: {
+          ...prevUser.preferences,
+          ...preferences,
+        },
+        onboardingCompleted: true,
+      };
+      // Use setTimeout to avoid blocking UI
+      setTimeout(() => storage.set('user', updatedUser), 0);
+      logger.log('Onboarding completed and user saved.', updatedUser);
+      return updatedUser;
     });
+  }, []);
 
-    // Update in local storage
-    await storage.set('user', updatedUser);
-    setUser(updatedUser);
-    if (newPreferences.theme) {
-      applyTheme(newPreferences.theme as any);
-    }
-  };
+  const updateLastActive = useCallback(async () => {
+    setUser(prevUser => {
+      if (!prevUser) return null;
+      const updatedUser = {
+        ...prevUser,
+        lastActive: new Date().toISOString(),
+      };
+      // Use setTimeout to avoid blocking UI
+      setTimeout(() => storage.set('user', updatedUser), 0);
+      return updatedUser;
+    });
+  }, []);
 
-  const completeOnboarding = async (preferences: UserPreferences) => {
-    let baseUser = user;
-    // If user doesn't exist yet (edge-case), create one first
-    if (!baseUser) {
-      baseUser = {
+  const clearUser = useCallback(async () => {
+    setUser(null);
+    // Use setTimeout to avoid blocking UI
+    setTimeout(() => storage.remove('user'), 0);
+    logger.log('User data cleared.');
+  }, []);
+
+  const createUser = useCallback(async (name: string) => {
+    try {
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('User creation timeout')), 10000)
+      );
+      
+      const newUser: UserData = {
         id: `user_${Date.now()}`,
-        name: 'Trader',
+        name,
         preferences: getDefaultPreferences(),
         onboardingCompleted: false,
         createdAt: new Date().toISOString(),
         lastActive: new Date().toISOString(),
       };
-    }
-
-    const newUser: UserData = {
-      ...baseUser,
-      preferences,
-      onboardingCompleted: true,
-      lastActive: new Date().toISOString(),
-    };
-
-    // Update in local database
-    await localDatabase.createUser(newUser.name, {
-      id: newUser.id,
-      preferences: newUser.preferences,
-      onboardingCompleted: newUser.onboardingCompleted,
-      createdAt: newUser.createdAt,
-      lastActive: newUser.lastActive,
-    });
-
-    // Update in local storage
-    await storage.set('user', newUser);
-    setUser(newUser);
-    applyTheme(preferences.theme || 'auto');
-  };
-
-  const updateLastActive = async () => {
-    if (!user) return;
-
-    const updatedUser = {
-      ...user,
-      lastActive: new Date().toISOString(),
-    };
-
-    await storage.set('user', updatedUser);
-    setUser(updatedUser);
-  };
-
-  const clearUser = async () => {
-    await storage.remove('user');
-    setUser(null);
-  };
-
-  const createUser = async (name: string) => {
-    // Check if user already exists in local database
-    const existingUser = await localDatabase.getUser(name);
-    
-    if (existingUser) {
-      // User exists, load their data
-      const userData: UserData = {
-        id: existingUser.id || `user_${Date.now()}`,
-        name: existingUser.username,
-        preferences: existingUser.preferences || getDefaultPreferences(),
-        onboardingCompleted: existingUser.onboardingCompleted || false,
-        createdAt: existingUser.createdAt,
-        lastActive: new Date().toISOString(),
-      };
       
-      await storage.set('user', userData);
-      setUser(userData);
-      return;
+      setUser(newUser);
+      
+      // Use Promise.race to add timeout to storage operation
+      await Promise.race([
+        storage.set('user', newUser),
+        timeoutPromise
+      ]);
+      
+      applyTheme(newUser.preferences.theme);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw new Error('Failed to create user. Please try again.');
     }
+  }, []);
 
-    // Create new user in local database
-    const newUser: UserData = {
-      id: `user_${Date.now()}`,
-      name,
-      preferences: getDefaultPreferences(),
-      onboardingCompleted: false,
-      createdAt: new Date().toISOString(),
-      lastActive: new Date().toISOString(),
-    };
-
-    // Save to local database
-    await localDatabase.createUser(name, {
-      id: newUser.id,
-      preferences: newUser.preferences,
-      onboardingCompleted: newUser.onboardingCompleted,
-      createdAt: newUser.createdAt,
-      lastActive: newUser.lastActive,
-    });
-
-    // Also save to local storage for immediate access
-    await storage.set('user', newUser);
-    setUser(newUser);
-  };
+  // If there's an error and we're not loading, show error state
+  if (error && !isLoading) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: '#1a1a1a',
+        color: 'white',
+        padding: '20px',
+        zIndex: 10000,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <h1>🚨 Error Loading User Data</h1>
+        <p>Something went wrong while loading your data:</p>
+        <pre style={{ background: '#333', padding: '10px', borderRadius: '5px', overflow: 'auto' }}>
+          {error}
+        </pre>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{
+            background: '#3B82F6',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '5px',
+            marginTop: '20px',
+            cursor: 'pointer'
+          }}
+        >
+          Reload App
+        </button>
+      </div>
+    );
+  }
 
   const value: UserContextType = {
     user,
@@ -317,8 +262,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updatePreferences,
     completeOnboarding,
     updateLastActive,
-    clearUser,
+    clearUser
   };
 
-  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
+  return (
+    <UserContext.Provider value={value}>
+      {children}
+    </UserContext.Provider>
+  );
 }; 

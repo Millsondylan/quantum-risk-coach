@@ -1,98 +1,76 @@
-import { useState, useEffect, useCallback } from 'react';
-import { localDatabase as database, Trade as DBTrade } from '@/lib/localStorage';
+import { useState, useEffect } from 'react';
+import { localDatabase } from '@/lib/localDatabase';
+import { Trade } from '@/lib/localDatabase';
 import { toast } from 'sonner';
-import { v4 as uuid } from 'uuid';
 
-export interface LegacyTradeFields {
-  type?: 'buy' | 'sell'; // alias for side
-  entryPrice?: number;   // alias for price
-  exitPrice?: number;
-  quantity?: number;     // alias for amount
-  profitLoss?: number;   // alias for profit
-  profitLossPercent?: number;
-  stopLoss?: number;
-  takeProfit?: number;
-}
+export const useTrades = (accountId?: string) => {
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-export type CombinedTrade = DBTrade & LegacyTradeFields;
-
-export type TradeInput = Omit<CombinedTrade, 'id'>;
-
-export const useTrades = (accountId: string) => {
-  const [trades, setTrades] = useState<CombinedTrade[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadTrades = useCallback(async () => {
+  const fetchTrades = async () => {
     try {
-      setIsLoading(true);
-      const data = await database.getTrades(accountId);
-      const mapped = data.map((t) => ({
-        ...t,
-        type: t.side,
-        entryPrice: t.price,
-        quantity: t.amount,
-        profitLoss: t.profit,
-        stopLoss: (t as any).stopLoss,
-        takeProfit: (t as any).takeProfit,
-      })) as CombinedTrade[];
-      setTrades(mapped);
-    } catch (err: any) {
-      console.error('Failed to load trades', err);
-      setError(err.message);
+      setLoading(true);
+      const fetchedTrades = await localDatabase.getTrades(accountId);
+      setTrades(fetchedTrades);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch trades'));
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [accountId]);
+  };
 
-  useEffect(() => {
-    if (accountId) {
-      loadTrades();
-    }
-  }, [accountId, loadTrades]);
-
-  const addTrade = useCallback(async (trade: TradeInput) => {
+  const addTrade = async (trade: Trade) => {
     try {
-      const newTrade: DBTrade = {
-        id: uuid(),
+      // Ensure the trade has an ID if not provided
+      const tradeToAdd = {
         ...trade,
+        id: trade.id || crypto.randomUUID(),
+        // Set default values for optional fields
+        type: trade.type || (trade.side === 'buy' ? 'long' : 'short'),
+        status: trade.status || 'open',
+        entryDate: trade.entryDate || new Date().toISOString(),
+        entryTime: trade.entryTime || new Date().toISOString(),
+        profit: trade.profit || 0,
+        quantity: trade.quantity || trade.amount || 0
       };
-      await database.bulkInsertTrades([newTrade]);
-      setTrades((prev) => [{ ...newTrade, type: newTrade.side, entryPrice: newTrade.price, quantity: newTrade.amount, profitLoss: newTrade.profit, stopLoss: (trade as any).stopLoss, takeProfit: (trade as any).takeProfit }, ...prev]);
-      toast.success('Trade added');
-    } catch (err: any) {
-      toast.error('Failed to add trade');
-      console.error(err);
-    }
-  }, [accountId]);
 
-  const updateTrade = useCallback(async (id: string, updates: Partial<DBTrade>) => {
+      await localDatabase.createTrade(tradeToAdd);
+      await fetchTrades();
+      toast.success('Trade added');
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to add trade'));
+      toast.error('Failed to add trade');
+    }
+  };
+
+  const updateTrade = async (trade: Trade) => {
     try {
-      const updated = trades.find((t) => t.id === id);
-      if (!updated) return;
-      const merged: DBTrade = { ...updated, ...updates } as DBTrade;
-      await database.bulkInsertTrades([merged]); // upsert
-      setTrades((prev) => prev.map((t) => (t.id === id ? merged : t)));
+      await localDatabase.updateTrade(trade);
+      await fetchTrades();
       toast.success('Trade updated');
     } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to update trade'));
       toast.error('Update failed');
     }
-  }, [trades]);
+  };
 
-  const deleteTrade = useCallback(async (id: string) => {
+  const deleteTrade = async (tradeId: string) => {
     try {
-      // SQLite: delete
-      await database.init();
-      const db = (await database.init());
-      await db.run('DELETE FROM trades WHERE id = ?', [id]);
-      setTrades((prev) => prev.filter((t) => t.id !== id));
+      await localDatabase.deleteTrade(tradeId);
+      await fetchTrades();
       toast.success('Trade removed');
     } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to delete trade'));
       toast.error('Delete failed');
     }
-  }, []);
+  };
 
-  const getTradeStats = useCallback(() => {
+  useEffect(() => {
+    fetchTrades();
+  }, [accountId]);
+
+  const getTradeStats = () => {
     const closed = trades.filter((t) => t.status === 'closed');
     const wins = closed.filter((t) => (t.profit ?? 0) > 0);
     const losses = closed.filter((t) => (t.profit ?? 0) < 0);
@@ -121,16 +99,16 @@ export const useTrades = (accountId: string) => {
       largestWin,
       largestLoss,
     };
-  }, [trades]);
+  };
 
   return {
     trades,
-    isLoading,
+    loading,
     error,
     addTrade,
     updateTrade,
     deleteTrade,
+    fetchTrades,
     getTradeStats,
-    refreshTrades: loadTrades,
   };
 };

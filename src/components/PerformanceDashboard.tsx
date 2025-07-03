@@ -4,14 +4,20 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { useTheme } from 'next-themes';
 import { Badge } from '@/components/ui/badge';
 import { usePortfolioContext } from '@/contexts/PortfolioContext';
-import { localDatabase as database, Trade } from '@/lib/localStorage';
+import { Trade as LocalTrade } from '@/lib/localStorage';
+import { Trade as DatabaseTrade } from '@/lib/localDatabase';
+import { localDatabase } from '@/lib/localDatabase';
 import { tradeAnalyticsService } from '@/lib/tradeAnalyticsService';
+import { advancedAnalyticsService, AdvancedTradeAnalytics } from '@/lib/advancedAnalytics';
+import { Trade } from '@/lib/localDatabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export const PerformanceDashboard: React.FC = () => {
   const { theme } = useTheme();
   const { currentPortfolio } = usePortfolioContext();
   const [tradeData, setTradeData] = React.useState<Trade[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [advancedAnalytics, setAdvancedAnalytics] = React.useState<AdvancedTradeAnalytics | null>(null);
   
   React.useEffect(() => {
     const fetchTrades = async () => {
@@ -22,11 +28,131 @@ export const PerformanceDashboard: React.FC = () => {
           const portfolioTrades: Trade[] = [];
           
           for (const account of currentPortfolio.accounts) {
-            const accountTrades = await database.getTrades(account.id);
-            portfolioTrades.push(...accountTrades);
+            const accountTrades = await localDatabase.getTrades(account.id);
+            
+            // Convert trades to the standardized Trade type
+            const convertedTrades: Trade[] = accountTrades.map(trade => {
+              // Ensure all required fields are present and typed correctly
+              const baseTrade: Trade = {
+                id: trade.id || uuidv4(),
+                accountId: trade.accountId || '',
+                symbol: trade.symbol || '',
+                type: 'long',
+                side: 'buy',
+                amount: 0,
+                quantity: 0,
+                price: 0,
+                entryPrice: 0,
+                exitPrice: 0,
+                fee: 0,
+                profit: 0,
+                profitLoss: 0,
+                status: 'closed',
+                entryDate: new Date().toISOString(),
+                entryTime: new Date().toISOString(),
+                exitDate: new Date().toISOString(),
+                exitTime: new Date().toISOString(),
+                riskReward: undefined,
+                riskRewardRatio: undefined,
+                strategy: undefined,
+                tags: [],
+                notes: undefined,
+                exitReason: undefined,
+                takeProfit: undefined,
+                stopLoss: undefined,
+                confidence: undefined,
+                confidenceRating: undefined,
+                emotion: 'calm',
+                mood: 'neutral'
+              };
+
+              // Check if it's a LocalTrade or DatabaseTrade
+              if ('entryPrice' in trade) {
+                // LocalTrade type
+                return {
+                  ...baseTrade,
+                  id: trade.id,
+                  accountId: trade.accountId || '',
+                  symbol: trade.symbol,
+                  type: trade.type || 'long',
+                  side: trade.side || 'buy',
+                  amount: trade.quantity || 0,
+                  quantity: trade.quantity || 0,
+                  price: trade.entryPrice || 0,
+                  entryPrice: trade.entryPrice || 0,
+                  exitPrice: trade.exitPrice || 0,
+                  fee: 0, // Not present in original trade
+                  profit: trade.profit || 0,
+                  profitLoss: trade.profit || 0,
+                  status: 'closed', // Default status
+                  entryDate: trade.entryTime || new Date().toISOString(),
+                  entryTime: trade.entryTime || new Date().toISOString(),
+                  exitDate: trade.exitTime || new Date().toISOString(),
+                  exitTime: trade.exitTime || new Date().toISOString(),
+                  riskReward: trade.riskRewardRatio,
+                  riskRewardRatio: trade.riskRewardRatio,
+                  strategy: trade.strategy,
+                  tags: trade.tags || [],
+                  notes: trade.notes,
+                  exitReason: trade.exitReason,
+                  takeProfit: trade.takeProfit,
+                  stopLoss: trade.stopLoss,
+                  confidence: trade.confidence,
+                  confidenceRating: trade.confidence,
+                  emotion: trade.emotion || 'calm',
+                  mood: 'neutral' // Default mood
+                };
+              } else {
+                // DatabaseTrade type
+                const databaseTrade = trade as any;
+                return {
+                  ...baseTrade,
+                  id: databaseTrade.id,
+                  accountId: databaseTrade.accountId || '',
+                  symbol: databaseTrade.symbol,
+                  type: databaseTrade.side === 'buy' ? 'long' : 'short',
+                  side: databaseTrade.side,
+                  amount: databaseTrade.amount || 0,
+                  quantity: databaseTrade.amount || 0,
+                  price: databaseTrade.price || 0,
+                  entryPrice: databaseTrade.price || 0,
+                  exitPrice: databaseTrade.price || 0,
+                  fee: databaseTrade.fee || 0,
+                  profit: databaseTrade.profit || 0,
+                  profitLoss: databaseTrade.profit || 0,
+                  status: databaseTrade.status || 'closed',
+                  entryDate: databaseTrade.entryDate || new Date().toISOString(),
+                  entryTime: databaseTrade.entryDate || new Date().toISOString(),
+                  exitDate: databaseTrade.exitDate || new Date().toISOString(),
+                  exitTime: databaseTrade.exitDate || new Date().toISOString(),
+                  riskReward: databaseTrade.riskReward,
+                  riskRewardRatio: databaseTrade.riskReward,
+                  strategy: undefined,
+                  tags: [],
+                  notes: undefined,
+                  exitReason: undefined,
+                  takeProfit: undefined,
+                  stopLoss: undefined,
+                  confidence: databaseTrade.confidenceRating,
+                  confidenceRating: databaseTrade.confidenceRating,
+                  emotion: databaseTrade.mood === 'calm' ? 'calm' : 
+                           databaseTrade.mood === 'stressed' ? 'anxious' : 
+                           databaseTrade.mood === 'excited' ? 'excited' : 
+                           databaseTrade.mood === 'fearful' ? 'anxious' : 
+                           'calm',
+                  mood: databaseTrade.mood || 'neutral'
+                };
+              }
+            });
+            
+            portfolioTrades.push(...convertedTrades);
           }
           
           setTradeData(portfolioTrades);
+          
+          // Calculate advanced analytics
+          const advancedAnalytics = advancedAnalyticsService.calculateAdvancedAnalytics(portfolioTrades);
+          setAdvancedAnalytics(advancedAnalytics);
         } catch (err) {
           console.error('Failed to fetch trades:', err);
         } finally {
@@ -361,6 +487,152 @@ export const PerformanceDashboard: React.FC = () => {
                 ))}
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Profit Factor */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Profit Factor</CardTitle>
+          <CardDescription>Gross profit divided by gross loss</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-3xl font-bold">{advancedAnalytics?.profitFactor.toFixed(2)}</span>
+            <Badge 
+              variant={advancedAnalytics && advancedAnalytics.profitFactor >= 1 ? "default" : "destructive"}
+              className={advancedAnalytics && advancedAnalytics.profitFactor >= 1 ? "bg-green-500" : ""}
+            >
+              {advancedAnalytics && advancedAnalytics.profitFactor >= 2 
+                ? "Excellent" 
+                : advancedAnalytics && advancedAnalytics.profitFactor >= 1 
+                ? "Good" 
+                : "Needs Improvement"}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Expected Value */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Expected Value</CardTitle>
+          <CardDescription>Average profit per trade</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-3xl font-bold">${advancedAnalytics?.expectedValue.toFixed(2)}</span>
+            <Badge 
+              variant={advancedAnalytics && advancedAnalytics.expectedValue >= 0 ? "default" : "destructive"}
+              className={advancedAnalytics && advancedAnalytics.expectedValue >= 0 ? "bg-green-500" : ""}
+            >
+              {advancedAnalytics && advancedAnalytics.expectedValue >= 0 ? "Positive" : "Negative"}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Behavioral Patterns */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Behavioral Patterns</CardTitle>
+          <CardDescription>Trading behavior insights</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>Early Exits</span>
+              <span className="font-medium">
+                {advancedAnalytics?.behavioralPatterns.earlyExits}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Overtrading</span>
+              <span className="font-medium">
+                {advancedAnalytics?.behavioralPatterns.overtrading}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Revenge Trades</span>
+              <span className="font-medium">
+                {advancedAnalytics?.behavioralPatterns.revengeTrades}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Monthly Performance */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Monthly Performance</CardTitle>
+          <CardDescription>Profit by month</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={advancedAnalytics?.monthlyPerformance}>
+              <XAxis dataKey="month" stroke={colors.text} fontSize={12} />
+              <YAxis stroke={colors.text} fontSize={12} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar 
+                dataKey="profit" 
+                radius={[4, 4, 0, 0]} 
+                fill={colors.accent}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Strategy Breakdown */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Strategy Performance</CardTitle>
+          <CardDescription>Win rates by trading strategy</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {advancedAnalytics?.strategyBreakdown.map((strategy, index) => (
+              <div key={index} className="flex justify-between items-center">
+                <span>{strategy.strategy}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground">
+                    {strategy.winRate.toFixed(1)}% Win Rate
+                  </span>
+                  <Badge 
+                    variant={strategy.winRate >= 50 ? "default" : "destructive"}
+                    className={strategy.winRate >= 50 ? "bg-green-500" : ""}
+                  >
+                    {strategy.winRate >= 60 ? "Excellent" : 
+                     strategy.winRate >= 50 ? "Good" : "Needs Work"}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Trade Confidence Score */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Trade Confidence</CardTitle>
+          <CardDescription>Recent trading performance score</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-3xl font-bold">{advancedAnalytics?.tradeConfidenceScore.toFixed(0)}</span>
+            <Badge 
+              variant={advancedAnalytics && advancedAnalytics.tradeConfidenceScore >= 70 ? "default" : "destructive"}
+              className={advancedAnalytics && advancedAnalytics.tradeConfidenceScore >= 70 ? "bg-green-500" : ""}
+            >
+              {advancedAnalytics && advancedAnalytics.tradeConfidenceScore >= 80 
+                ? "Excellent" 
+                : advancedAnalytics && advancedAnalytics.tradeConfidenceScore >= 70 
+                ? "Good" 
+                : "Needs Improvement"}
+            </Badge>
           </div>
         </CardContent>
       </Card>

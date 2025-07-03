@@ -21,17 +21,37 @@ import {
   Eye,
   DollarSign,
   Flame,
-  Award
+  Award,
+  Play,
+  Flag
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { AIStreamService } from '@/lib/aiStreamService';
 import { realDataService } from '@/lib/realDataService';
+import { tradeAnalyticsService } from '@/lib/tradeAnalyticsService';
 import { toast } from 'sonner';
+import { useUser } from '@/contexts/UserContext';
+import { localDatabase } from '@/lib/localDatabase';
+import type { TradingGoal } from '@/types/user';
+import { v4 as uuidv4 } from 'uuid';
+import { Analytics } from '@/lib/tradeAnalyticsService';
+import { Trade } from '@/lib/localDatabase';
 
 interface AIInsight {
   id: string;
@@ -70,6 +90,25 @@ const AICoachCard = () => {
   const [chatHistory, setChatHistory] = useState<CoachingSession[]>([]);
   const [streamingResponse, setStreamingResponse] = useState('');
   const [apiStatus, setApiStatus] = useState({ openai: false, groq: false, gemini: false });
+  const [isWhatIfModalOpen, setIsWhatIfModalOpen] = useState(false);
+  const [whatIfScenario, setWhatIfScenario] = useState({
+    symbol: '',
+    entryPrice: '',
+    exitPrice: '',
+    quantity: '',
+    side: 'buy' as 'buy' | 'sell',
+    notes: '',
+  });
+  const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+  const [newChallenge, setNewChallenge] = useState<Partial<TradingGoal>>({
+    name: '',
+    type: 'profit',
+    targetValue: 0,
+    endDate: '',
+  });
+  const [analyticsMetrics, setAnalyticsMetrics] = useState<Analytics | null>(null);
+  
+  const { user, updatePreferences } = useUser();
   
   // Legacy compatibility variables for automated verification
   const [healthStatus, setHealthStatus] = useState(apiStatus); // 'healthStatus' alias expected by tests
@@ -148,7 +187,7 @@ const AICoachCard = () => {
   }, [aiService]);
 
   const generateRealInsights = async () => {
-    if (loading) return;
+    if (loading || !user) return;
     
     setLoading(true);
     try {
@@ -165,10 +204,26 @@ const AICoachCard = () => {
         news: []
       };
 
-      // Get AI analysis
+      // Get behavioral patterns from analytics service
+      const allTrades = await localDatabase.getTrades();
+      const analyticsData = tradeAnalyticsService.calculateAnalytics(allTrades);
+      const behavioralPatterns = analyticsData.behavioralPatterns;
+      setAnalyticsMetrics(analyticsData);
+
+      // Prepare AI context with user persona and behavioral patterns
+      const aiContext = {
+        userPersona: user.preferences?.tradingPersona || { type: 'day-trader', quizResults: {}, determinedAt: '' },
+        riskTolerance: user.preferences?.riskTolerance,
+        experienceLevel: user.preferences?.experienceLevel,
+        preferredMarkets: user.preferences?.preferredMarkets,
+        behavioralPatterns: behavioralPatterns,
+      };
+
+      // Get AI analysis with enhanced context
       const analysis = await aiService.getMarketAnalysis({
         marketData,
-        analysisType: 'recommendation'
+        analysisType: 'recommendation',
+        userContext: aiContext
       });
 
       if (analysis) {
@@ -185,11 +240,9 @@ const AICoachCard = () => {
           aiProvider: 'openai'
         };
 
-        // Keep only the latest insight to avoid overwhelming the user
         setCurrentInsight(newInsight);
-        setInsights([newInsight]); // For backward compatibility
+        setInsights([newInsight]);
 
-        // Push notification (if user allowed)
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           new Notification('AI Coach Insight', {
             body: newInsight.title,
@@ -197,7 +250,6 @@ const AICoachCard = () => {
           });
         }
 
-        // Show toast notification
         toast.info('New AI insight available!', {
           description: newInsight.title
         });
@@ -210,27 +262,36 @@ const AICoachCard = () => {
   };
 
   const handleAskAI = async () => {
-    if (!userQuestion.trim() || loading) return;
+    if (!userQuestion.trim() || loading || !user) return;
 
     setLoading(true);
     setChatMode(true);
     
     try {
-      const tradingData = {
-        recentTrades: [],
-        performance: {},
-        question: userQuestion,
-        context: 'trading_assistance'
+      // Get behavioral patterns for current context
+      const allTrades = await localDatabase.getTrades();
+      const analyticsData = tradeAnalyticsService.calculateAnalytics(allTrades);
+      const behavioralPatterns = analyticsData.behavioralPatterns;
+      setAnalyticsMetrics(analyticsData);
+
+      const aiContext = {
+        userPersona: user.preferences?.tradingPersona || { type: 'day-trader', quizResults: {}, determinedAt: '' },
+        riskTolerance: user.preferences?.riskTolerance,
+        experienceLevel: user.preferences?.experienceLevel,
+        preferredMarkets: user.preferences?.preferredMarkets,
+        behavioralPatterns: behavioralPatterns,
+        userQuestion: userQuestion
       };
 
       let response = '';
       setStreamingResponse('');
 
-      // Stream the response
+      // Stream the response with enhanced context
       await aiService.streamMarketAnalysis(
         {
           marketData: { forex: [], crypto: [], stocks: [], news: [] },
-          analysisType: 'recommendation'
+          analysisType: 'coaching',
+          userContext: aiContext
         },
         (chunk) => {
           response += chunk;
@@ -267,6 +328,121 @@ const AICoachCard = () => {
       setUserQuestion('');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSimulateTrade = async () => {
+    if (!whatIfScenario.symbol || !whatIfScenario.entryPrice || !whatIfScenario.quantity || loading || !user) {
+      toast.error('Please fill all required fields for the what-if scenario.');
+      return;
+    }
+
+    setLoading(true);
+    setIsWhatIfModalOpen(false);
+    
+    try {
+      const allTrades = await localDatabase.getTrades();
+      const analyticsData = tradeAnalyticsService.calculateAnalytics(allTrades);
+      const behavioralPatterns = analyticsData.behavioralPatterns;
+      setAnalyticsMetrics(analyticsData);
+
+      const aiContext = {
+        userPersona: user.preferences?.tradingPersona || { type: 'day-trader', quizResults: {}, determinedAt: '' },
+        riskTolerance: user.preferences?.riskTolerance,
+        experienceLevel: user.preferences?.experienceLevel,
+        preferredMarkets: user.preferences?.preferredMarkets,
+        behavioralPatterns: behavioralPatterns,
+        simulatedTrade: {
+          symbol: whatIfScenario.symbol,
+          entryPrice: parseFloat(whatIfScenario.entryPrice),
+          exitPrice: whatIfScenario.exitPrice ? parseFloat(whatIfScenario.exitPrice) : undefined,
+          quantity: parseFloat(whatIfScenario.quantity),
+          side: whatIfScenario.side,
+          notes: whatIfScenario.notes || undefined,
+        }
+      };
+
+      let response = '';
+      setStreamingResponse('');
+
+      await aiService.streamMarketAnalysis(
+        {
+          marketData: { forex: [], crypto: [], stocks: [], news: [] },
+          analysisType: 'what_if',
+          userContext: aiContext
+        },
+        (chunk) => {
+          response += chunk;
+          setStreamingResponse(response);
+        }
+      );
+
+      const session: CoachingSession = {
+        id: Date.now().toString(),
+        question: `What if I ${whatIfScenario.side} ${whatIfScenario.quantity} of ${whatIfScenario.symbol} at ${whatIfScenario.entryPrice}?`,
+        response: response || 'I analyzed your scenario and can provide insights.',
+        timestamp: new Date().toLocaleTimeString(),
+        confidence: 85,
+      };
+
+      setChatHistory(prev => [session, ...prev]);
+      setWhatIfScenario({
+        symbol: '',
+        entryPrice: '',
+        exitPrice: '',
+        quantity: '',
+        side: 'buy',
+        notes: '',
+      });
+      setStreamingResponse('');
+    } catch (error) {
+      console.error('What-if scenario failed:', error);
+      toast.error('Failed to simulate scenario. Please try again.');
+      const errorSession: CoachingSession = {
+        id: Date.now().toString(),
+        question: `What if I ${whatIfScenario.side} ${whatIfScenario.quantity} of ${whatIfScenario.symbol} at ${whatIfScenario.entryPrice}?`,
+        response: 'I\'m currently unable to simulate this scenario. Please check your API configuration or try again later.',
+        timestamp: new Date().toLocaleTimeString(),
+        confidence: 0
+      };
+      setChatHistory(prev => [errorSession, ...prev]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddChallenge = async () => {
+    if (!newChallenge.name || !newChallenge.targetValue || !newChallenge.endDate || !user) {
+      toast.error('Please fill all required fields for the new challenge.');
+      return;
+    }
+
+    const challengeToAdd: TradingGoal = {
+      id: uuidv4(),
+      name: newChallenge.name,
+      type: newChallenge.type || 'profit',
+      targetValue: newChallenge.targetValue,
+      currentValue: 0, // Will be updated by analytics
+      startDate: new Date().toISOString().slice(0, 10),
+      endDate: newChallenge.endDate,
+      isCompleted: false,
+      progress: 0,
+    };
+
+    const updatedGoals = [...(user.preferences?.tradingGoals || []), challengeToAdd];
+    try {
+      await updatePreferences({ tradingGoals: updatedGoals });
+      toast.success('New challenge added!');
+      setIsChallengeModalOpen(false);
+      setNewChallenge({
+        name: '',
+        type: 'profit',
+        targetValue: 0,
+        endDate: '',
+      });
+    } catch (error) {
+      console.error('Failed to add challenge:', error);
+      toast.error('Failed to add challenge. Please try again.');
     }
   };
 
@@ -444,10 +620,210 @@ const AICoachCard = () => {
                 </div>
               )}
             </div>
+
+            {user?.preferences?.aiCoaching && (
+              <div className="p-4 bg-purple-900/20 border border-purple-700/30 rounded-lg space-y-2">
+                <h5 className="font-semibold text-purple-300 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4" />
+                  Behavioral Insights
+                </h5>
+                {user.preferences?.tradingPersona?.type && (
+                  <p className="text-sm text-slate-400">
+                    Your current trading persona: 
+                    <Badge variant="secondary" className="ml-1 bg-purple-500/20 text-purple-300">
+                      {user.preferences.tradingPersona.type}
+                    </Badge>
+                  </p>
+                )}
+                {analyticsMetrics?.behavioralPatterns && analyticsMetrics.behavioralPatterns.length > 0 ? (
+                  <ul className="text-sm text-slate-400 list-disc list-inside space-y-1">
+                    {analyticsMetrics.behavioralPatterns.map((pattern: string, index: number) => (
+                      <li key={index}>{pattern}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-400">No significant behavioral patterns detected yet. Keep trading for more insights!</p>
+                )}
+              </div>
+            )}
           </>
         ) : (
           <>
             {/* AI Chat Interface */}
+            <div className="flex items-center justify-between mb-4">
+              <h5 className="font-semibold text-white flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Chat with AI Coach
+              </h5>
+              <div className="flex gap-2">
+                <Dialog open={isWhatIfModalOpen} onOpenChange={setIsWhatIfModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Play className="w-4 h-4 mr-2" />
+                      What-if Scenario
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Simulate What-if Scenario</DialogTitle>
+                      <DialogDescription>
+                        Enter details for a hypothetical trade to get AI insights.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="symbol" className="text-right">Symbol</Label>
+                        <Input 
+                          id="symbol" 
+                          value={whatIfScenario.symbol} 
+                          onChange={e => setWhatIfScenario({ ...whatIfScenario, symbol: e.target.value })}
+                          className="col-span-3"
+                          placeholder="EURUSD, AAPL, BTC"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="side" className="text-right">Side</Label>
+                        <Select
+                          value={whatIfScenario.side}
+                          onValueChange={(value: 'buy' | 'sell') => setWhatIfScenario({ ...whatIfScenario, side: value })}
+                        >
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="buy">Buy</SelectItem>
+                            <SelectItem value="sell">Sell</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="entryPrice" className="text-right">Entry Price</Label>
+                        <Input 
+                          id="entryPrice" 
+                          type="number" 
+                          step="0.0001" 
+                          value={whatIfScenario.entryPrice} 
+                          onChange={e => setWhatIfScenario({ ...whatIfScenario, entryPrice: e.target.value })}
+                          className="col-span-3"
+                          placeholder="1.0750"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="exitPrice" className="text-right">Exit Price (Optional)</Label>
+                        <Input 
+                          id="exitPrice" 
+                          type="number" 
+                          step="0.0001" 
+                          value={whatIfScenario.exitPrice} 
+                          onChange={e => setWhatIfScenario({ ...whatIfScenario, exitPrice: e.target.value })}
+                          className="col-span-3"
+                          placeholder="1.0800"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="quantity" className="text-right">Quantity</Label>
+                        <Input 
+                          id="quantity" 
+                          type="number" 
+                          step="0.01" 
+                          value={whatIfScenario.quantity} 
+                          onChange={e => setWhatIfScenario({ ...whatIfScenario, quantity: e.target.value })}
+                          className="col-span-3"
+                          placeholder="100000"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="notes" className="text-right">Notes (Optional)</Label>
+                        <Textarea 
+                          id="notes" 
+                          value={whatIfScenario.notes} 
+                          onChange={e => setWhatIfScenario({ ...whatIfScenario, notes: e.target.value })}
+                          className="col-span-3 resize-none"
+                          placeholder="Brief notes about this scenario"
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                    <Button onClick={handleSimulateTrade} disabled={loading}>
+                      <Play className="w-4 h-4 mr-2" />
+                      Get Scenario Insights
+                    </Button>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={isChallengeModalOpen} onOpenChange={setIsChallengeModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Flag className="w-4 h-4 mr-2" />
+                      Set a Challenge
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Set a New Trading Challenge</DialogTitle>
+                      <DialogDescription>
+                        Define a new goal to challenge yourself.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="challenge-name" className="text-right">Challenge Name</Label>
+                        <Input 
+                          id="challenge-name" 
+                          value={newChallenge.name} 
+                          onChange={e => setNewChallenge({ ...newChallenge, name: e.target.value })}
+                          className="col-span-3"
+                          placeholder="e.g., Improve Win Rate"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="challenge-type" className="text-right">Type</Label>
+                        <Select
+                          value={newChallenge.type}
+                          onValueChange={(value: TradingGoal['type']) => setNewChallenge({ ...newChallenge, type: value })}
+                        >
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="profit">Total Profit</SelectItem>
+                            <SelectItem value="win_rate">Win Rate (%)</SelectItem>
+                            <SelectItem value="risk_reward">Avg Risk/Reward Ratio</SelectItem>
+                            <SelectItem value="trade_count">Total Trades</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="challenge-target" className="text-right">Target Value</Label>
+                        <Input 
+                          id="challenge-target" 
+                          type="number" 
+                          step="0.01" 
+                          value={newChallenge.targetValue || ''} 
+                          onChange={e => setNewChallenge({ ...newChallenge, targetValue: parseFloat(e.target.value) })}
+                          className="col-span-3"
+                          placeholder="e.g., 500 (profit), 70 (win rate)"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="challenge-endDate" className="text-right">End Date</Label>
+                        <Input 
+                          id="challenge-endDate" 
+                          type="date" 
+                          value={newChallenge.endDate} 
+                          onChange={e => setNewChallenge({ ...newChallenge, endDate: e.target.value })}
+                          className="col-span-3"
+                        />
+                      </div>
+                    </div>
+                    <Button onClick={handleAddChallenge} disabled={loading}>
+                      <Flag className="w-4 h-4 mr-2" />
+                      Create Challenge
+                    </Button>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <Textarea
@@ -498,20 +874,23 @@ const AICoachCard = () => {
                             {session.confidence}% Confidence
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-300 mb-2">{session.response}</p>
-                        
-                        {session.followUp && (
-                          <div className="space-y-1">
-                            <p className="text-xs text-gray-400">Follow-up suggestions:</p>
-                            {session.followUp.map((followUp, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setUserQuestion(followUp)}
-                                className="block text-xs text-blue-400 hover:text-blue-300 underline"
-                              >
-                                {followUp}
-                              </button>
-                            ))}
+                        <p className="text-sm text-gray-300">{session.response}</p>
+                        {session.followUp && session.followUp.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-700/50">
+                            <p className="text-xs text-gray-500 mb-1">Follow-up questions:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {session.followUp.map((qa, i) => (
+                                <Button 
+                                  key={i} 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-xs h-auto py-1"
+                                  onClick={() => setUserQuestion(qa)}
+                                >
+                                  {qa}
+                                </Button>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -519,14 +898,6 @@ const AICoachCard = () => {
                   </div>
                 ))}
               </div>
-
-              {chatHistory.length === 0 && !streamingResponse && (
-                <div className="text-center py-8">
-                  <MessageSquare className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-400 mb-2">Start a conversation</h3>
-                  <p className="text-gray-500">Ask your AI coach about trading strategies, market analysis, or risk management.</p>
-                </div>
-              )}
             </div>
           </>
         )}

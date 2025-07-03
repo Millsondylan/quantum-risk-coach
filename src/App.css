@@ -72,6 +72,30 @@
   --transition-fast: 150ms ease-in-out;
   --transition-normal: 250ms ease-in-out;
   --transition-slow: 350ms ease-in-out;
+
+  /* Typography Scale */
+  --font-scale-xs: 0.75rem;     /* 12px */
+  --font-scale-sm: 0.875rem;    /* 14px */
+  --font-scale-base: 1rem;      /* 16px */
+  --font-scale-md: 1.125rem;    /* 18px */
+  --font-scale-lg: 1.25rem;     /* 20px */
+  --font-scale-xl: 1.5rem;      /* 24px */
+  --font-scale-2xl: 2rem;       /* 32px */
+
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Typography Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-success: #10b981;
+  --text-warning: #f59e0b;
+  --text-error: #ef4444;
 }
 
 /* Global Styles */
@@ -316,7 +340,7 @@ body {
 }
 
 /* Buttons */
-.btn {
+.btn, .btn-primary, .btn-secondary, .btn-outline, .btn-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -330,6 +354,8 @@ body {
   cursor: pointer;
   transition: all var(--transition-normal);
   white-space: nowrap;
+  -webkit-tap-highlight-color: transparent; /* For iOS Safari */
+  outline: none; /* Remove outline on focus */
 }
 
 .btn-primary {
@@ -343,6 +369,11 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+.btn-primary:focus {
+  outline: none; /* Ensure outline is removed on focus */
+  box-shadow: none; /* Remove any potential box-shadow on focus if it exists */
+}
+
 .btn-secondary {
   background: var(--bg-elevated);
   color: var(--text-primary);
@@ -352,6 +383,11 @@ body {
 .btn-secondary:hover {
   border-color: var(--accent-primary);
   background: var(--bg-card);
+}
+
+.btn-secondary:focus {
+  outline: none; /* Ensure outline is removed on focus */
+  box-shadow: none; /* Remove any potential box-shadow on focus if it exists */
 }
 
 .btn-outline {
@@ -365,6 +401,11 @@ body {
   color: var(--text-inverse);
 }
 
+.btn-outline:focus {
+  outline: none; /* Ensure outline is removed on focus */
+  box-shadow: none; /* Remove any potential box-shadow on focus if it exists */
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);
@@ -373,6 +414,11 @@ body {
 .btn-ghost:hover {
   background: var(--bg-elevated);
   color: var(--text-primary);
+}
+
+.btn-ghost:focus {
+  outline: none; /* Ensure outline is removed on focus */
+  box-shadow: none; /* Remove any potential box-shadow on focus if it exists */
 }
 
 .btn-sm {
@@ -653,12 +699,43 @@ body {
 .text-left { text-align: left; }
 .text-right { text-align: right; }
 
-.text-xs { font-size: 0.75rem; }
-.text-sm { font-size: 0.875rem; }
-.text-base { font-size: 1rem; }
-.text-lg { font-size: 1.125rem; }
-.text-xl { font-size: 1.25rem; }
-.text-2xl { font-size: 1.5rem; }
+.text-xs { 
+  font-size: var(--font-scale-xs); 
+  font-weight: var(--font-weight-light);
+  color: var(--text-muted);
+}
+
+.text-sm { 
+  font-size: var(--font-scale-sm); 
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+}
+
+.text-base { 
+  font-size: var(--font-scale-base); 
+  font-weight: var(--font-weight-regular);
+  color: var(--text-primary);
+}
+
+.text-md { 
+  font-size: var(--font-scale-md); 
+  font-weight: var(--font-weight-medium);
+}
+
+.text-lg { 
+  font-size: var(--font-scale-lg); 
+  font-weight: var(--font-weight-semibold);
+}
+
+.text-xl { 
+  font-size: var(--font-scale-xl); 
+  font-weight: var(--font-weight-bold);
+}
+
+.text-2xl { 
+  font-size: var(--font-scale-2xl); 
+  font-weight: var(--font-weight-bold);
+}
 
 .font-light { font-weight: 300; }
 .font-normal { font-weight: 400; }
@@ -669,10 +746,9 @@ body {
 .text-primary { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
 .text-tertiary { color: var(--text-tertiary); }
-.text-muted { color: var(--text-muted); }
-.text-success { color: var(--accent-success); }
-.text-warning { color: var(--accent-warning); }
-.text-error { color: var(--accent-error); }
+.text-success { color: var(--text-success); }
+.text-warning { color: var(--text-warning); }
+.text-error { color: var(--text-error); }
 
 .bg-primary { background-color: var(--bg-primary); }
 .bg-secondary { background-color: var(--bg-secondary); }
@@ -735,4 +811,13 @@ body {
 .gpu-accelerated {
   transform: translateZ(0);
   will-change: transform;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  :root {
+    --font-scale-base: 0.875rem;
+    --font-scale-md: 1rem;
+    --font-scale-lg: 1.125rem;
+  }
 }

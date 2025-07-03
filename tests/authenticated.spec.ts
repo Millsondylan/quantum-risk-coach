@@ -6,12 +6,10 @@ test.describe('Authenticated App Tests', () => {
   test('auth page loads and has form elements', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
-    // Check for auth form elements
+    // Check for auth form elements - only signup exists
     await expect(page.locator('[data-testid="signup-username-input"]')).toBeVisible();
-    // Click on signin tab to make username input visible
-    await page.click('[data-testid="signin-tab"]');
-    await expect(page.locator('[data-testid="signin-username-input"]')).toBeVisible();
-    await expect(page.locator('[data-testid="signin-tab"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signup-form"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signup-submit-button"]')).toBeVisible();
   });
 
   test('auth form accepts input', async ({ page }) => {
@@ -19,59 +17,51 @@ test.describe('Authenticated App Tests', () => {
     
     await page.fill('[data-testid="signup-username-input"]', 'testuser');
     await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue('testuser');
-    
-    // Click on signin tab and test username input
-    await page.click('[data-testid="signin-tab"]');
-    await page.fill('[data-testid="signin-username-input"]', 'existinguser');
-    await expect(page.locator('[data-testid="signin-username-input"]')).toHaveValue('existinguser');
   });
 
-  test('auth tabs work', async ({ page }) => {
+  test('auth form works correctly', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
-    // Click Sign Up tab
-    await page.click('[data-testid="signup-tab"]');
+    // Verify signup form is visible and functional
     await expect(page.locator('[data-testid="signup-content"]')).toBeVisible();
-    
-    // Click Sign In tab
-    await page.click('[data-testid="signin-tab"]');
-    await expect(page.locator('[data-testid="signin-content"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signup-username-input"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signup-submit-button"]')).toBeVisible();
   });
 
   test('protected routes redirect to auth', async ({ page }) => {
     await page.goto(`${BASE}/`);
     // Should show auth page
-    await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
+    await expect(page.locator('[data-testid="auth-card"]')).toBeVisible();
   });
 
   test('journal route redirects to auth', async ({ page }) => {
     await page.goto(`${BASE}/journal`);
     // Should show auth page
-    await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
+    await expect(page.locator('[data-testid="auth-card"]')).toBeVisible();
   });
 
   test('trade builder redirects to auth', async ({ page }) => {
     await page.goto(`${BASE}/trade-builder`);
     // Should show auth page
-    await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
+    await expect(page.locator('[data-testid="auth-card"]')).toBeVisible();
   });
 
   test('settings redirects to auth', async ({ page }) => {
     await page.goto(`${BASE}/settings`);
     // Should show auth page
-    await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
+    await expect(page.locator('[data-testid="auth-card"]')).toBeVisible();
   });
 
   test('performance calendar redirects to auth', async ({ page }) => {
     await page.goto(`${BASE}/performance-calendar`);
     // Should show auth page
-    await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
+    await expect(page.locator('[data-testid="auth-card"]')).toBeVisible();
   });
 
   test('strategy analyzer redirects to auth', async ({ page }) => {
     await page.goto(`${BASE}/strategy-analyzer`);
     // Should show auth page
-    await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
+    await expect(page.locator('[data-testid="auth-card"]')).toBeVisible();
   });
 
   test('404 page works', async ({ page }) => {
@@ -112,17 +102,17 @@ test.describe('Authenticated App Tests', () => {
   test('form validation works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
-    // Test empty form submission on sign-in tab
-    await page.click('[data-testid="signin-tab"]');
-    await page.click('[data-testid="signin-submit-button"]');
-    // Wait for toast notification to appear
-    await expect(page.locator('[data-sonner-toast], .sonner-toast, [data-testid="toast"]')).toBeVisible({ timeout: 10000 });
-
-    // Test empty form submission on sign-up tab
-    await page.click('[data-testid="signup-tab"]');
-    await page.click('[data-testid="signup-submit-button"]');
-    // Wait for toast notification to appear
-    await expect(page.locator('[data-sonner-toast], .sonner-toast, [data-testid="toast"]')).toBeVisible({ timeout: 10000 });
+    // Test empty form submission - button should be disabled
+    const submitButton = page.locator('[data-testid="signup-submit-button"]');
+    await expect(submitButton).toBeDisabled();
+    
+    // Enter some text to enable the button
+    await page.fill('[data-testid="signup-username-input"]', 'test');
+    await expect(submitButton).toBeEnabled();
+    
+    // Clear the input to trigger validation
+    await page.fill('[data-testid="signup-username-input"]', '');
+    await expect(submitButton).toBeDisabled();
   });
 
   test('input types work correctly', async ({ page }) => {
@@ -131,11 +121,6 @@ test.describe('Authenticated App Tests', () => {
     // Test username input type for signup
     const signupUsernameInput = page.locator('[data-testid="signup-username-input"]');
     await expect(signupUsernameInput).toHaveAttribute('type', 'text');
-    
-    // Test username input type for signin
-    await page.click('[data-testid="signin-tab"]'); // Ensure on signin tab
-    const signinUsernameInput = page.locator('[data-testid="signin-username-input"]');
-    await expect(signinUsernameInput).toHaveAttribute('type', 'text');
   });
 
   test('accessibility features work', async ({ page }) => {
@@ -169,8 +154,8 @@ test.describe('Authenticated App Tests', () => {
     await page.goto(`${BASE}/auth`);
     await page.waitForTimeout(2000);
     
-    console.log('Console errors on auth page:', errors);
     // Don't fail on network errors as they might be expected
+    // Only log for debugging purposes
   });
 
   test('no page errors on auth page', async ({ page }) => {
@@ -182,7 +167,6 @@ test.describe('Authenticated App Tests', () => {
     await page.goto(`${BASE}/auth`);
     await page.waitForTimeout(2000);
     
-    console.log('Page errors on auth page:', errors);
     expect(errors.length).toBe(0);
   });
 }); 
