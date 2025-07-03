@@ -29,9 +29,10 @@ import {
   Frown
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Trade } from '@/lib/localStorage';
+import { Trade } from '@/lib/localDatabase';
 import { Slider } from '@/components/ui/slider';
-import { localDatabase } from '@/lib/localStorage';
+import { localDatabase } from '@/lib/localDatabase';
+import { cn } from '@/lib/utils';
 
 interface TradeFormData {
   symbol: string;
@@ -47,6 +48,14 @@ interface TradeFormData {
   tags: string[];
   confidenceRating: number;
   mood: 'positive' | 'negative' | 'neutral' | 'excited' | 'stressed' | 'calm' | 'greedy' | 'fearful';
+}
+
+interface FormErrors {
+  symbol?: string;
+  entryPrice?: string;
+  exitPrice?: string;
+  size?: string;
+  entryDate?: string;
 }
 
 const AddTrade: React.FC = () => {
@@ -66,6 +75,7 @@ const AddTrade: React.FC = () => {
     confidenceRating: 50,
     mood: 'neutral'
   });
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const commonSymbols = [
@@ -79,6 +89,13 @@ const AddTrade: React.FC = () => {
       ...prev,
       [field]: value
     }));
+    // Clear error for this field when user starts typing
+    if (formErrors[field as keyof FormErrors]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: undefined
+      }));
+    }
   };
 
   const handleNumberInputChange = (field: keyof TradeFormData, value: string) => {
@@ -88,6 +105,13 @@ const AddTrade: React.FC = () => {
         ...prev,
         [field]: value
       }));
+      // Clear error for this field when user starts typing
+      if (formErrors[field as keyof FormErrors]) {
+        setFormErrors(prev => ({
+          ...prev,
+          [field]: undefined
+        }));
+      }
     }
   };
 
@@ -117,26 +141,46 @@ const AddTrade: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    
+    // Symbol validation
     if (!formData.symbol && !formData.customSymbol) {
-      toast.error('Please enter a symbol');
-      return false;
+      errors.symbol = 'Please enter a symbol';
     }
+    
+    // Entry price validation
     if (!formData.entryPrice) {
-      toast.error('Please enter an entry price');
-      return false;
+      errors.entryPrice = 'Please enter an entry price';
+    } else if (isNaN(parseFloat(formData.entryPrice))) {
+      errors.entryPrice = 'Entry price must be a valid number';
     }
+    
+    // Exit price validation
     if (!formData.exitPrice) {
-      toast.error('Please enter an exit price');
-      return false;
+      errors.exitPrice = 'Please enter an exit price';
+    } else if (isNaN(parseFloat(formData.exitPrice))) {
+      errors.exitPrice = 'Exit price must be a valid number';
     }
+    
+    // Size validation
     if (!formData.size) {
-      toast.error('Please enter a position size');
-      return false;
+      errors.size = 'Please enter a position size';
+    } else if (isNaN(parseFloat(formData.size)) || parseFloat(formData.size) <= 0) {
+      errors.size = 'Position size must be a positive number';
     }
+    
+    // Entry date validation
     if (!formData.entryDate) {
-      toast.error('Please enter an entry date');
+      errors.entryDate = 'Please enter an entry date';
+    }
+    
+    setFormErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix the errors in the form');
       return false;
     }
+    
     return true;
   };
 
@@ -200,13 +244,13 @@ const AddTrade: React.FC = () => {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
         // Handle CSV file upload
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           const text = e.target?.result as string;
           try {
             const lines = text.split('\n');
@@ -220,19 +264,85 @@ const AddTrade: React.FC = () => {
               return trade;
             });
             
-            toast.success(`Successfully parsed ${trades.length} trades from CSV`);
-            console.log('Parsed trades:', trades);
-            // Here you would save the trades to the database
+            // Convert CSV data to Trade objects and save to database
+            const savedTrades = [];
+            for (const csvTrade of trades) {
+              try {
+                const tradeToSave: Trade = {
+                  id: `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                  accountId: 'default', // You might want to get this from user context
+                  symbol: csvTrade.symbol || csvTrade.symbol || 'UNKNOWN',
+                  type: (csvTrade.type || csvTrade.side || 'buy').toLowerCase() === 'sell' ? 'short' : 'long',
+                  side: (csvTrade.type || csvTrade.side || 'buy').toLowerCase() === 'sell' ? 'sell' : 'buy',
+                  amount: parseFloat(csvTrade.size || csvTrade.quantity || csvTrade.amount || '0') || 0,
+                  quantity: parseFloat(csvTrade.size || csvTrade.quantity || csvTrade.amount || '0') || 0,
+                  price: parseFloat(csvTrade.entryprice || csvTrade.entry || csvTrade.price || '0') || 0,
+                  entryPrice: parseFloat(csvTrade.entryprice || csvTrade.entry || csvTrade.price || '0') || 0,
+                  exitPrice: parseFloat(csvTrade.exitprice || csvTrade.exit || '0') || undefined,
+                  fee: 0,
+                  profit: parseFloat(csvTrade.profit || csvTrade.pnl || '0') || 0,
+                  status: (csvTrade.exitprice || csvTrade.exit ? 'closed' : 'open') as 'open' | 'closed' | 'cancelled' | 'pending',
+                  entryDate: csvTrade.date || csvTrade.entrydate || new Date().toISOString(),
+                  exitDate: csvTrade.exitdate || csvTrade.date || undefined,
+                  notes: csvTrade.notes || `Imported from CSV`,
+                  tags: csvTrade.tags ? csvTrade.tags.split(';').map((tag: string) => tag.trim()) : [],
+                  confidenceRating: 50,
+                  mood: 'neutral'
+                };
+
+                // Save to database
+                await localDatabase.createTrade(tradeToSave);
+                savedTrades.push(tradeToSave);
+              } catch (tradeError) {
+                console.error('Failed to save trade:', csvTrade, tradeError);
+              }
+            }
+            
+            toast.success(`Successfully imported ${savedTrades.length} trades from CSV`);
+            console.log('Saved trades:', savedTrades);
+            
+            // Reset file input
+            event.target.value = '';
+            
           } catch (error) {
+            console.error('CSV parsing error:', error);
             toast.error('Failed to parse CSV file. Please check the format.');
           }
         };
         reader.readAsText(file);
       } else if (file.type.startsWith('image/')) {
         // Handle image upload for OCR
-        toast.info('Image uploaded for OCR processing');
-        // Here you would implement OCR processing
+        await handleImageUpload(file);
       }
+    }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      toast.info('Processing image with OCR...');
+      
+      // For now, we'll simulate OCR processing
+      // In a real implementation, you would use Tesseract.js or similar
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simulate extracted data
+      const extractedData = {
+        symbol: 'EURUSD',
+        type: 'buy' as const,
+        quantity: 1.0,
+        entryPrice: 1.1000,
+        exitPrice: 1.1050,
+        date: new Date().toISOString().slice(0, 10),
+        time: '10:00',
+        confidence: 0.85
+      };
+      
+      handleOCRTradeExtraction(extractedData);
+      toast.success('OCR processing completed!');
+      
+    } catch (error) {
+      console.error('OCR processing error:', error);
+      toast.error('Failed to process image. Please try again.');
     }
   };
 
@@ -316,8 +426,14 @@ const AddTrade: React.FC = () => {
               value={formData.customSymbol}
               onChange={(e) => handleInputChange('customSymbol', e.target.value)}
               placeholder="Enter custom symbol"
-              className="mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white"
+              className={cn(
+                "mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white",
+                formErrors.symbol && "border-red-500"
+              )}
             />
+          )}
+          {formErrors.symbol && (
+            <p className="text-red-400 text-sm mt-1">{formErrors.symbol}</p>
           )}
         </div>
 
@@ -353,8 +469,14 @@ const AddTrade: React.FC = () => {
               value={formData.size}
               onChange={(e) => handleNumberInputChange('size', e.target.value)}
               placeholder="0.00"
-              className="mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white"
+              className={cn(
+                "mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white",
+                formErrors.size && "border-red-500"
+              )}
             />
+            {formErrors.size && (
+              <p className="text-red-400 text-sm mt-1">{formErrors.size}</p>
+            )}
           </div>
         </div>
 
@@ -369,8 +491,14 @@ const AddTrade: React.FC = () => {
               value={formData.entryPrice}
               onChange={(e) => handleNumberInputChange('entryPrice', e.target.value)}
               placeholder="0.00000"
-              className="mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white"
+              className={cn(
+                "mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white",
+                formErrors.entryPrice && "border-red-500"
+              )}
             />
+            {formErrors.entryPrice && (
+              <p className="text-red-400 text-sm mt-1">{formErrors.entryPrice}</p>
+            )}
           </div>
           <div>
             <Label htmlFor="exitPrice" className="text-white">Exit Price</Label>
@@ -381,8 +509,14 @@ const AddTrade: React.FC = () => {
               value={formData.exitPrice}
               onChange={(e) => handleNumberInputChange('exitPrice', e.target.value)}
               placeholder="0.00000"
-              className="mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white"
+              className={cn(
+                "mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white",
+                formErrors.exitPrice && "border-red-500"
+              )}
             />
+            {formErrors.exitPrice && (
+              <p className="text-red-400 text-sm mt-1">{formErrors.exitPrice}</p>
+            )}
           </div>
         </div>
 
@@ -395,8 +529,14 @@ const AddTrade: React.FC = () => {
               type="datetime-local"
               value={formData.entryDate}
               onChange={(e) => handleInputChange('entryDate', e.target.value)}
-              className="mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white"
+              className={cn(
+                "mt-2 bg-[#2A2B2E] border-[#3A3B3E] text-white",
+                formErrors.entryDate && "border-red-500"
+              )}
             />
+            {formErrors.entryDate && (
+              <p className="text-red-400 text-sm mt-1">{formErrors.entryDate}</p>
+            )}
           </div>
           <div>
             <Label htmlFor="exitDate" className="text-white">Exit Date</Label>

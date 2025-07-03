@@ -14,6 +14,7 @@ dotenv.config();
 const mt4Routes = require('./routes/mt4');
 const mt5Routes = require('./routes/mt5');
 const healthRoutes = require('./routes/health');
+const aiRoutes = require('./routes/ai');
 
 // Create Express app
 const app = express();
@@ -96,6 +97,7 @@ app.get('/health', (req, res) => {
 app.use('/api/mt4', mt4Routes);
 app.use('/api/mt5', mt5Routes);
 app.use('/api/health', healthRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -128,6 +130,7 @@ app.listen(PORT, () => {
   logger.info(`Health check available at http://localhost:${PORT}/health`);
   logger.info(`MT4 API available at http://localhost:${PORT}/api/mt4`);
   logger.info(`MT5 API available at http://localhost:${PORT}/api/mt5`);
+  logger.info(`AI Coach API available at http://localhost:${PORT}/api/ai`);
 });
 
 // Graceful shutdown

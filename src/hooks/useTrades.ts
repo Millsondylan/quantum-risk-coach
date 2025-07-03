@@ -88,6 +88,31 @@ export const useTrades = (accountId?: string) => {
     const largestWin = Math.max(0, ...closed.map(trade => trade.profit || 0));
     const largestLoss = Math.min(0, ...closed.map(trade => trade.profit || 0));
 
+    // Calculate profit factor
+    const totalWins = wins.reduce((sum, trade) => sum + (trade.profit || 0), 0);
+    const totalLosses = Math.abs(losses.reduce((sum, trade) => sum + (trade.profit || 0), 0));
+    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? 10 : 0;
+
+    // Calculate max drawdown (simplified)
+    let maxDrawdown = 0;
+    let peak = 0;
+    let runningTotal = 0;
+    
+    closed.forEach(trade => {
+      runningTotal += trade.profit || 0;
+      if (runningTotal > peak) {
+        peak = runningTotal;
+      }
+      const drawdown = peak - runningTotal;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
+    });
+
+    // Calculate average win and loss
+    const averageWin = wins.length > 0 ? totalWins / wins.length : 0;
+    const averageLoss = losses.length > 0 ? totalLosses / losses.length : 0;
+
     return {
       totalProfitLoss,
       totalTrades,
@@ -98,6 +123,10 @@ export const useTrades = (accountId?: string) => {
       averageProfitLoss,
       largestWin,
       largestLoss,
+      profitFactor,
+      maxDrawdown,
+      averageWin,
+      averageLoss,
     };
   };
 

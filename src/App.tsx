@@ -2,9 +2,8 @@ import React, { Suspense, lazy, useMemo } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useUser } from './contexts/UserContext';
-import { useIsMobile } from './hooks/use-mobile';
 import Onboarding from './components/Onboarding';
-import MobileTopNav from './components/MobileTopNav';
+import MobileNav from './components/MobileNav';
 import DebugInfo from './components/DebugInfo';
 import { logger } from './lib/logger';
 
@@ -90,13 +89,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 // Layout wrapper for protected routes with optimized touch handling
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isMobile = useIsMobile();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative flex flex-col">
-      {isMobile && <MobileTopNav />}
+      <MobileNav />
       <nav style={{ display: 'none' }} data-testid="nav"></nav>
-      <main className="flex-1 relative z-10 overflow-y-auto pt-24 pb-24" data-testid="main-content">
+      <main className="flex-1 relative z-10 overflow-y-auto pt-20 pb-24" data-testid="main-content">
         <div className="container mx-auto px-4 max-w-7xl">
           {children}
         </div>

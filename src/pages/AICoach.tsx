@@ -30,14 +30,9 @@ import {
 import { useTrades } from '@/hooks/useTrades';
 import { useUser } from '@/contexts/UserContext';
 import { toast } from 'sonner';
+import { aiService, type CoachingInsight as AICoachingInsight, type TradingGoal, type ChatMessage } from '@/lib/aiService';
 
-interface CoachingInsight {
-  id: string;
-  type: 'strength' | 'improvement' | 'warning' | 'tip';
-  title: string;
-  description: string;
-  impact: 'high' | 'medium' | 'low';
-  actionItems: string[];
+interface CoachingInsight extends AICoachingInsight {
   icon: React.ReactNode;
 }
 
@@ -46,11 +41,12 @@ const AICoach = () => {
   const { getTradeStats } = useTrades();
   const stats = getTradeStats();
   
-  // Calculate additional metrics
-  const maxDrawdown = Math.abs(stats.largestLoss || 0);
-  const profitFactor = stats.largestWin > 0 && stats.largestLoss > 0 ? stats.largestWin / Math.abs(stats.largestLoss) : 1;
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(false);
+  const [coachingInsights, setCoachingInsights] = useState<CoachingInsight[]>([]);
+  const [tradingGoals, setTradingGoals] = useState<TradingGoal[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [aiStatus, setAiStatus] = useState<{ status: string; features: string[] } | null>(null);
 
   // Enhanced coaching metrics with more detailed analysis
   const coachingMetrics = [
@@ -63,24 +59,24 @@ const AICoach = () => {
       trend: stats.winRate >= 60 ? 'up' : 'down',
       description: stats.winRate >= 60 ? 'Excellent performance' : 'Room for improvement'
     },
-          {
-        title: 'Risk Management',
-        value: `${maxDrawdown.toFixed(1)}%`,
-        label: 'Max Drawdown',
-        icon: <Shield className="w-5 h-5" />,
-        color: maxDrawdown <= 10 ? 'text-green-400' : maxDrawdown <= 20 ? 'text-yellow-400' : 'text-red-400',
-        trend: maxDrawdown <= 10 ? 'up' : 'down',
-        description: maxDrawdown <= 10 ? 'Well controlled risk' : 'Consider reducing position sizes'
-      },
-          {
-        title: 'Profit Factor',
-        value: profitFactor.toFixed(2),
-        label: 'Risk/Reward',
-        icon: <Target className="w-5 h-5" />,
-        color: profitFactor >= 1.5 ? 'text-green-400' : profitFactor >= 1 ? 'text-yellow-400' : 'text-red-400',
-        trend: profitFactor >= 1.5 ? 'up' : 'down',
-        description: profitFactor >= 1.5 ? 'Strong risk/reward ratio' : 'Focus on better entries/exits'
-      },
+    {
+      title: 'Risk Management',
+      value: `${Math.abs(stats.maxDrawdown).toFixed(1)}%`,
+      label: 'Max Drawdown',
+      icon: <Shield className="w-5 h-5" />,
+      color: Math.abs(stats.maxDrawdown) <= 10 ? 'text-green-400' : Math.abs(stats.maxDrawdown) <= 20 ? 'text-yellow-400' : 'text-red-400',
+      trend: Math.abs(stats.maxDrawdown) <= 10 ? 'up' : 'down',
+      description: Math.abs(stats.maxDrawdown) <= 10 ? 'Well controlled risk' : 'Consider reducing position sizes'
+    },
+    {
+      title: 'Profit Factor',
+      value: stats.profitFactor.toFixed(2),
+      label: 'Risk/Reward',
+      icon: <Target className="w-5 h-5" />,
+      color: stats.profitFactor >= 1.5 ? 'text-green-400' : stats.profitFactor >= 1 ? 'text-yellow-400' : 'text-red-400',
+      trend: stats.profitFactor >= 1.5 ? 'up' : 'down',
+      description: stats.profitFactor >= 1.5 ? 'Strong risk/reward ratio' : 'Focus on better entries/exits'
+    },
     {
       title: 'Experience Level',
       value: stats.totalTrades.toString(),
@@ -89,37 +85,6 @@ const AICoach = () => {
       color: 'text-blue-400',
       trend: stats.totalTrades >= 50 ? 'up' : 'neutral',
       description: stats.totalTrades >= 50 ? 'Experienced trader' : 'Building experience'
-    }
-  ];
-
-  // AI-generated coaching insights
-  const coachingInsights: CoachingInsight[] = [
-    {
-      id: '1',
-      type: 'strength',
-      title: 'Consistent Risk Management',
-      description: 'Your position sizing is well-controlled, showing disciplined risk management.',
-      impact: 'high',
-      actionItems: ['Continue current risk management approach', 'Document your risk rules'],
-      icon: <Shield className="w-4 h-4" />
-    },
-    {
-      id: '2',
-      type: 'improvement',
-      title: 'Trade Selection',
-      description: 'Focus on higher probability setups and avoid low-quality trades.',
-      impact: 'medium',
-      actionItems: ['Review entry criteria', 'Wait for better setups', 'Reduce FOMO trades'],
-      icon: <Target className="w-4 h-4" />
-    },
-    {
-      id: '3',
-      type: 'tip',
-      title: 'Market Timing',
-      description: 'Consider trading during higher volatility periods for better opportunities.',
-      impact: 'low',
-      actionItems: ['Monitor market sessions', 'Track volatility patterns'],
-      icon: <Clock className="w-4 h-4" />
     }
   ];
 
@@ -143,12 +108,69 @@ const AICoach = () => {
     }
   };
 
+  // Load AI insights and goals on component mount
+  useEffect(() => {
+    const loadAIData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get AI status
+        const status = await aiService.getStatus();
+        setAiStatus(status);
+        
+        // Format trading data for AI analysis
+        const tradingData = aiService.formatTradingData(stats);
+        
+        // Generate insights
+        const insights = await aiService.generateInsights(tradingData);
+        const insightsWithIcons = insights.map(insight => ({
+          ...insight,
+          icon: getInsightIcon(insight.type)
+        }));
+        setCoachingInsights(insightsWithIcons);
+        
+        // Generate goals
+        const goals = await aiService.generateGoals(tradingData);
+        setTradingGoals(goals);
+        
+      } catch (error) {
+        console.error('Error loading AI data:', error);
+        toast.error('Failed to load AI insights');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (stats.totalTrades > 0) {
+      loadAIData();
+    }
+  }, [stats]);
+
+  const getInsightIcon = (type: string) => {
+    switch (type) {
+      case 'strength': return <Shield className="w-4 h-4" />;
+      case 'improvement': return <Target className="w-4 h-4" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4" />;
+      case 'tip': return <Lightbulb className="w-4 h-4" />;
+      default: return <Lightbulb className="w-4 h-4" />;
+    }
+  };
+
   const handleAskQuestion = async () => {
     setIsLoading(true);
     try {
-      // Simulate AI response
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success('AI response generated! Check the chat below.');
+      const tradingData = aiService.formatTradingData(stats);
+      const response = await aiService.chat('How can I improve my trading performance?', tradingData);
+      
+      const newMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        message: 'How can I improve my trading performance?',
+        response,
+        timestamp: new Date().toISOString()
+      };
+      
+      setChatMessages(prev => [...prev, newMessage]);
+      toast.success('AI response generated!');
     } catch (error) {
       toast.error('Failed to get AI response');
     } finally {
@@ -322,39 +344,51 @@ const AICoach = () => {
 
           {/* Insights Tab */}
           <TabsContent value="insights" className="space-y-6">
-            <div className="grid grid-cols-1 gap-4">
-              {coachingInsights.map((insight) => (
-                <Card key={insight.id} className={`bg-[#1A1B1E]/50 border-[#2A2B2E] ${getInsightColor(insight.type)}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${getInsightIconColor(insight.type)}`}>
-                        {insight.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-medium text-white">{insight.title}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            {insight.impact} impact
-                          </Badge>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+                <span className="ml-3 text-slate-400">Generating AI insights...</span>
+              </div>
+            ) : coachingInsights.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {coachingInsights.map((insight) => (
+                  <Card key={insight.id} className={`bg-[#1A1B1E]/50 border-[#2A2B2E] ${getInsightColor(insight.type)}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${getInsightIconColor(insight.type)}`}>
+                          {insight.icon}
                         </div>
-                        <p className="text-slate-300 text-sm mb-3">{insight.description}</p>
-                        <div className="space-y-1">
-                          <p className="text-xs text-slate-400 font-medium">Action Items:</p>
-                          <ul className="text-xs text-slate-300 space-y-1">
-                            {insight.actionItems.map((item, index) => (
-                              <li key={index} className="flex items-center gap-2">
-                                <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-medium text-white">{insight.title}</h3>
+                            <Badge variant="outline" className="text-xs">
+                              {insight.impact} impact
+                            </Badge>
+                          </div>
+                          <p className="text-slate-300 text-sm mb-3">{insight.description}</p>
+                          <div className="space-y-1">
+                            <p className="text-xs text-slate-400 font-medium">Action Items:</p>
+                            <ul className="text-xs text-slate-300 space-y-1">
+                              {insight.actionItems.map((item, index) => (
+                                <li key={index} className="flex items-center gap-2">
+                                  <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Lightbulb className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+                <p className="text-slate-400">No insights available yet. Add some trades to get personalized AI coaching!</p>
+              </div>
+            )}
           </TabsContent>
 
           {/* AI Chat Tab */}
@@ -371,39 +405,137 @@ const AICoach = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                    <div className="flex items-start gap-3">
-                      <Brain className="w-5 h-5 text-blue-400 mt-1" />
-                      <div>
-                        <p className="text-white font-medium mb-1">AI Assistant</p>
-                        <p className="text-slate-300 text-sm">
-                          Hello! I'm your AI trading coach. I've analyzed your trading performance and I'm here to help you improve. 
-                          What would you like to discuss today?
-                        </p>
+                  {/* Chat Messages */}
+                  <div className="max-h-96 overflow-y-auto space-y-4">
+                    {chatMessages.length === 0 && (
+                      <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                        <div className="flex items-start gap-3">
+                          <Brain className="w-5 h-5 text-blue-400 mt-1" />
+                          <div>
+                            <p className="text-white font-medium mb-1">AI Assistant</p>
+                            <p className="text-slate-300 text-sm">
+                              Hello! I'm your AI trading coach. I've analyzed your trading performance and I'm here to help you improve. 
+                              What would you like to discuss today?
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                    
+                    {chatMessages.map((message) => (
+                      <div key={message.id} className="space-y-3">
+                        <div className="p-3 bg-slate-700/50 rounded-lg">
+                          <p className="text-white text-sm font-medium">You</p>
+                          <p className="text-slate-300 text-sm">{message.message}</p>
+                        </div>
+                        <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                          <div className="flex items-start gap-3">
+                            <Brain className="w-5 h-5 text-blue-400 mt-1" />
+                            <div>
+                              <p className="text-white font-medium mb-1">AI Assistant</p>
+                              <div className="text-slate-300 text-sm whitespace-pre-wrap">
+                                {message.response}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                   
+                  {/* Quick Questions */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Button variant="outline" className="justify-start text-left h-auto p-3">
+                    <Button 
+                      variant="outline" 
+                      className="justify-start text-left h-auto p-3"
+                      onClick={async () => {
+                        try {
+                          const tradingData = aiService.formatTradingData(stats);
+                          const response = await aiService.chat('How can I improve my win rate?', tradingData);
+                          const newMessage: ChatMessage = {
+                            id: crypto.randomUUID(),
+                            message: 'How can I improve my win rate?',
+                            response,
+                            timestamp: new Date().toISOString()
+                          };
+                          setChatMessages(prev => [...prev, newMessage]);
+                        } catch (error) {
+                          toast.error('Failed to get response');
+                        }
+                      }}
+                    >
                       <div>
                         <p className="font-medium text-white">How can I improve my win rate?</p>
                         <p className="text-xs text-slate-400">Get personalized advice</p>
                       </div>
                     </Button>
-                    <Button variant="outline" className="justify-start text-left h-auto p-3">
+                    <Button 
+                      variant="outline" 
+                      className="justify-start text-left h-auto p-3"
+                      onClick={async () => {
+                        try {
+                          const tradingData = aiService.formatTradingData(stats);
+                          const response = await aiService.chat('Review my recent trades', tradingData);
+                          const newMessage: ChatMessage = {
+                            id: crypto.randomUUID(),
+                            message: 'Review my recent trades',
+                            response,
+                            timestamp: new Date().toISOString()
+                          };
+                          setChatMessages(prev => [...prev, newMessage]);
+                        } catch (error) {
+                          toast.error('Failed to get response');
+                        }
+                      }}
+                    >
                       <div>
                         <p className="font-medium text-white">Review my recent trades</p>
                         <p className="text-xs text-slate-400">AI analysis of patterns</p>
                       </div>
                     </Button>
-                    <Button variant="outline" className="justify-start text-left h-auto p-3">
+                    <Button 
+                      variant="outline" 
+                      className="justify-start text-left h-auto p-3"
+                      onClick={async () => {
+                        try {
+                          const tradingData = aiService.formatTradingData(stats);
+                          const response = await aiService.chat('Risk management tips', tradingData);
+                          const newMessage: ChatMessage = {
+                            id: crypto.randomUUID(),
+                            message: 'Risk management tips',
+                            response,
+                            timestamp: new Date().toISOString()
+                          };
+                          setChatMessages(prev => [...prev, newMessage]);
+                        } catch (error) {
+                          toast.error('Failed to get response');
+                        }
+                      }}
+                    >
                       <div>
                         <p className="font-medium text-white">Risk management tips</p>
                         <p className="text-xs text-slate-400">Optimize position sizing</p>
                       </div>
                     </Button>
-                    <Button variant="outline" className="justify-start text-left h-auto p-3">
+                    <Button 
+                      variant="outline" 
+                      className="justify-start text-left h-auto p-3"
+                      onClick={async () => {
+                        try {
+                          const tradingData = aiService.formatTradingData(stats);
+                          const response = await aiService.chat('Psychology coaching', tradingData);
+                          const newMessage: ChatMessage = {
+                            id: crypto.randomUUID(),
+                            message: 'Psychology coaching',
+                            response,
+                            timestamp: new Date().toISOString()
+                          };
+                          setChatMessages(prev => [...prev, newMessage]);
+                        } catch (error) {
+                          toast.error('Failed to get response');
+                        }
+                      }}
+                    >
                       <div>
                         <p className="font-medium text-white">Psychology coaching</p>
                         <p className="text-xs text-slate-400">Mental game improvement</p>
@@ -417,71 +549,69 @@ const AICoach = () => {
 
           {/* Goals Tab */}
           <TabsContent value="goals" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <TargetIcon className="w-5 h-5 text-green-400" />
-                    Current Goals
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Win Rate Target</span>
-                      <span className="text-white">60%</span>
-                    </div>
-                    <Progress value={Math.min((stats.winRate / 60) * 100, 100)} className="h-2" />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Profit Factor Target</span>
-                      <span className="text-white">1.5</span>
-                    </div>
-                    <Progress value={Math.min((stats.profitFactor / 1.5) * 100, 100)} className="h-2" />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Max Drawdown Target</span>
-                      <span className="text-white">10%</span>
-                    </div>
-                    <Progress value={Math.max(100 - (Math.abs(stats.maxDrawdown) / 10) * 100, 0)} className="h-2" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-400" />
-                    Weekly Progress
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-white">Week 3</p>
-                      <p className="text-slate-400 text-sm">of 12-week improvement plan</p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="p-2 bg-green-500/10 rounded">
-                        <p className="text-green-400 font-medium">+2.3%</p>
-                        <p className="text-xs text-slate-400">Win Rate</p>
-                      </div>
-                      <div className="p-2 bg-blue-500/10 rounded">
-                        <p className="text-blue-400 font-medium">+0.2</p>
-                        <p className="text-xs text-slate-400">Profit Factor</p>
-                      </div>
-                      <div className="p-2 bg-purple-500/10 rounded">
-                        <p className="text-purple-400 font-medium">-1.5%</p>
-                        <p className="text-xs text-slate-400">Drawdown</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+                <span className="ml-3 text-slate-400">Generating trading goals...</span>
+              </div>
+            ) : tradingGoals.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="bg-[#1A1B1E]/50 border-[#2A2B2E]">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <TargetIcon className="w-5 h-5 text-green-400" />
+                      AI-Generated Goals
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {tradingGoals.map((goal, index) => {
+                      const currentValue = goal.metric === 'Win Rate' ? stats.winRate :
+                                         goal.metric === 'Profit Factor' ? stats.profitFactor :
+                                         goal.metric === 'Max Drawdown' ? Math.abs(stats.maxDrawdown) :
+                                         goal.metric === 'Total Trades' ? stats.totalTrades : 0;
+                      
+                      const progress = goal.metric === 'Max Drawdown' ? 
+                        Math.max(100 - (currentValue / goal.target) * 100, 0) :
+                        Math.min((currentValue / goal.target) * 100, 100);
+                      
+                      const getPriorityColor = (priority: string) => {
+                        switch (priority) {
+                          case 'critical': return 'text-red-400';
+                          case 'high': return 'text-orange-400';
+                          case 'medium': return 'text-yellow-400';
+                          case 'low': return 'text-green-400';
+                          default: return 'text-slate-400';
+                        }
+                      };
+                      
+                      return (
+                        <div key={index} className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">{goal.metric}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white">{currentValue.toFixed(1)}</span>
+                              <span className="text-slate-500">/</span>
+                              <span className="text-white">{goal.target}</span>
+                              <Badge variant="outline" className={`text-xs ${getPriorityColor(goal.priority)}`}>
+                                {goal.priority}
+                              </Badge>
+                            </div>
+                          </div>
+                                                     <Progress value={progress} className="h-2" />
+                           <p className="text-xs text-slate-500">Target: {goal.timeframe}</p>
+                         </div>
+                       );
+                     })}
+                   </CardContent>
+                 </Card>
+               </div>
+             ) : (
+               <div className="text-center py-8">
+                 <TargetIcon className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+                 <p className="text-slate-400">No goals available yet. Add some trades to get personalized AI goals!</p>
+               </div>
+             )}
+           </TabsContent>
         </Tabs>
       </div>
     </div>
