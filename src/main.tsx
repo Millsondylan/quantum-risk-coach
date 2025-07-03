@@ -6,7 +6,6 @@ import './index.css'
 import './lib/localUserUtils'
 import { performanceMonitor } from './lib/performanceMonitor'
 import { UserProvider } from './contexts/UserContext'
-import { Toaster } from 'sonner'
 import { pushNotificationService } from './lib/pushNotificationService'
 
 // Register service worker for caching and offline functionality
@@ -37,16 +36,6 @@ try {
       <BrowserRouter>
         <UserProvider>
           <App />
-          <Toaster 
-            position="bottom-right" 
-            toastOptions={{
-              style: {
-                background: '#1A1B1E',
-                color: '#FFFFFF',
-                border: '1px solid #2A2B2E'
-              }
-            }}
-          />
         </UserProvider>
       </BrowserRouter>
     </React.StrictMode>

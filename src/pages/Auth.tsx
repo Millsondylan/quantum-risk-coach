@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { User, Shield } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
+import { pushNotificationService } from '@/lib/pushNotificationService';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -24,13 +25,21 @@ const Auth = () => {
 
     // Username validation only
     if (!username.trim()) {
-      toast.error('Please enter your username');
+      toast.error('Please enter your username', { 
+        duration: 4000,
+        className: 'sonner-toast',
+        'data-testid': 'error-toast'
+      } as any);
       setIsLoading(false);
       return;
     }
 
     if (username.trim().length < 3) {
-      toast.error('Username must be at least 3 characters long');
+      toast.error('Username must be at least 3 characters long', { 
+        duration: 4000,
+        className: 'sonner-toast',
+        'data-testid': 'error-toast'
+      } as any);
       setIsLoading(false);
       return;
     }
@@ -45,11 +54,7 @@ const Auth = () => {
         riskTolerance: 'moderate' as const,
         preferredMarkets: ['Forex (FX)', 'Stocks'],
         experienceLevel: 'intermediate' as const,
-        notifications: {
-          tradeAlerts: true,
-          marketUpdates: true,
-          riskWarnings: true,
-        },
+        notifications: pushNotificationService.getPreferences(),
         theme: 'dark' as const,
         language: 'en',
       };
@@ -59,11 +64,19 @@ const Auth = () => {
       // Wait a moment for state to update before navigating
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      toast.success(`Welcome, ${username}! Account created successfully.`);
+      toast.success(`Welcome, ${username}! Account created successfully.`, { 
+        duration: 4000,
+        className: 'sonner-toast',
+        'data-testid': 'success-toast'
+      } as any);
       navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Create user error:', error);
-      toast.error('Failed to create account. Please try again.');
+      toast.error('Failed to create account. Please try again.', { 
+        duration: 4000,
+        className: 'sonner-toast',
+        'data-testid': 'error-toast'
+      } as any);
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +87,11 @@ const Auth = () => {
     setIsLoading(true);
 
     if (!username.trim()) {
-      toast.error('Please enter your username');
+      toast.error('Please enter your username', { 
+        duration: 4000,
+        className: 'sonner-toast',
+        'data-testid': 'error-toast'
+      } as any);
       setIsLoading(false);
       return;
     }
@@ -89,11 +106,7 @@ const Auth = () => {
         riskTolerance: 'moderate' as const,
         preferredMarkets: ['Forex (FX)', 'Stocks'],
         experienceLevel: 'intermediate' as const,
-        notifications: {
-          tradeAlerts: true,
-          marketUpdates: true,
-          riskWarnings: true,
-        },
+        notifications: pushNotificationService.getPreferences(),
         theme: 'dark' as const,
         language: 'en',
       };
@@ -103,11 +116,19 @@ const Auth = () => {
       // Wait for state update
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      toast.success('Welcome back!');
+      toast.success('Welcome back!', { 
+        duration: 4000,
+        className: 'sonner-toast',
+        'data-testid': 'success-toast'
+      } as any);
       navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Sign in error:', error);
-      toast.error('Sign in failed. Please try again.');
+      toast.error('Sign in failed. Please try again.', { 
+        duration: 4000,
+        className: 'sonner-toast',
+        'data-testid': 'error-toast'
+      } as any);
     } finally {
       setIsLoading(false);
     }

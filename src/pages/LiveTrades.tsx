@@ -219,10 +219,9 @@ const LiveTrades = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="positions">Live Positions</TabsTrigger>
             <TabsTrigger value="alerts">Price Alerts</TabsTrigger>
-            <TabsTrigger value="market">Market Watch</TabsTrigger>
           </TabsList>
 
           <TabsContent value="positions" className="space-y-4">
@@ -307,69 +306,13 @@ const LiveTrades = () => {
           </TabsContent>
 
           <TabsContent value="alerts" className="space-y-4">
-            {/* Add New Alert */}
-            <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="w-5 h-5" />
-                  Create Price Alert
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <Label>Symbol</Label>
-                    <Select value={newAlert.symbol} onValueChange={(value) => setNewAlert({...newAlert, symbol: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select symbol" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {['EUR/USD', 'GBP/USD', 'USD/JPY', 'BTC/USD', 'ETH/USD', 'XAU/USD'].map(symbol => (
-                          <SelectItem key={symbol} value={symbol}>{symbol}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Target Price</Label>
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      placeholder="Enter price"
-                      value={newAlert.targetPrice}
-                      onChange={(e) => setNewAlert({...newAlert, targetPrice: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label>Alert Type</Label>
-                    <Select value={newAlert.type} onValueChange={(value: 'above' | 'below') => setNewAlert({...newAlert, type: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="above">Above Target</SelectItem>
-                        <SelectItem value="below">Below Target</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button onClick={handleAddAlert} className="w-full">
-                      <Bell className="w-4 h-4 mr-2" />
-                      Create Alert
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Alerts List */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               {alerts.length === 0 ? (
                 <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
                   <CardContent className="p-8 text-center">
                     <Bell className="w-16 h-16 text-slate-500 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold mb-2">No Price Alerts</h3>
-                    <p className="text-slate-400">Create alerts to get notified when prices hit your targets</p>
+                    <p className="text-slate-400 mb-6">Set price alerts to get notified when your targets are hit</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -403,21 +346,6 @@ const LiveTrades = () => {
                   </Card>
                 ))
               )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="market" className="space-y-4">
-            <div className="grid gap-3">
-              <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-                <CardContent className="p-8 text-center">
-                  <Target className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Market Watch</h3>
-                  <p className="text-slate-400 mb-6">Connect to your broker to see live market prices</p>
-                  <Button onClick={() => window.location.href = '/settings'}>
-                    Configure Data Sources
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
         </Tabs>

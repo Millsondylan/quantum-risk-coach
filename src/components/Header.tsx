@@ -245,7 +245,7 @@ const Header: React.FC = () => {
         </div>
 
         {/* Navigation Links */}
-        <div className="hidden md:flex items-center space-x-6">
+        <div className="hidden md:flex items-center space-x-1 xl:space-x-2">
           <Link 
             to="/" 
             className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
@@ -254,6 +254,15 @@ const Header: React.FC = () => {
           >
             <Home className="w-4 h-4" />
             <span>Overview</span>
+          </Link>
+          <Link 
+            to="/ai-coach" 
+            className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
+            aria-label="Navigate to AI Coach"
+            data-testid="nav-ai-coach"
+          >
+            <Brain className="w-4 h-4" />
+            <span>AI Coach</span>
           </Link>
           <Link 
             to="/journal" 
@@ -281,15 +290,6 @@ const Header: React.FC = () => {
           >
             <BarChart3 className="w-4 h-4" />
             <span>Analytics</span>
-          </Link>
-          <Link 
-            to="/ai-coach" 
-            className="flex items-center space-x-2 text-slate-300 hover:text-blue-400 transition-colors"
-            aria-label="Navigate to AI Coach"
-            data-testid="nav-ai-coach"
-          >
-            <Brain className="w-4 h-4" />
-            <span>AI Coach</span>
           </Link>
           <Link 
             to="/settings" 

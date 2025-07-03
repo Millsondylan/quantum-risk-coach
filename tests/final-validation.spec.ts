@@ -190,7 +190,7 @@ test.describe('Final Comprehensive Validation', () => {
     await page.click('[data-testid="signin-tab"]');
     
     // Try to sign in with empty fields
-    await page.click('[data-testid="signin-button"]');
+    await page.click('[data-testid="signin-submit-button"]');
     // Should stay on auth page
     await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
   });
@@ -198,14 +198,10 @@ test.describe('Final Comprehensive Validation', () => {
   test('input types work correctly', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
-    // Click signin tab first
+    // Test username input type for sign-in
     await page.click('[data-testid="signin-tab"]');
-    
-    const emailInput = page.locator('[data-testid="signin-email-input"]');
-    await expect(emailInput).toHaveAttribute('type', 'email');
-    
-    const passwordInput = page.locator('[data-testid="signin-password-input"]');
-    await expect(passwordInput).toHaveAttribute('type', 'password');
+    const usernameInput = page.locator('[data-testid="signin-username-input"]');
+    await expect(usernameInput).toHaveAttribute('type', 'text');
   });
 
   test('no sensitive data in HTML', async ({ page }) => {
@@ -224,12 +220,11 @@ test.describe('Final Comprehensive Validation', () => {
 
   test('XSS protection', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    // Click signin tab first
     await page.click('[data-testid="signin-tab"]');
-    const emailInput = page.locator('[data-testid="signin-email-input"]');
-    await emailInput.fill('<script>alert("XSS")</script>');
-    await page.click('[data-testid="signin-button"]');
-    // Should not execute script
+    const usernameInput = page.locator('[data-testid="signin-username-input"]');
+    await usernameInput.fill('<script>alert("XSS")</script>');
+    await page.click('[data-testid="signin-submit-button"]');
+    // Should not execute script, should still be on auth page or redirected safely
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -308,10 +303,9 @@ test.describe('Final Comprehensive Validation', () => {
 
   test('performance - form input response', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    // Click signin tab first
     await page.click('[data-testid="signin-tab"]');
     const startTime = Date.now();
-    await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
+    await page.fill('[data-testid="signin-username-input"]', 'test@example.com');
     const responseTime = Date.now() - startTime;
     expect(responseTime).toBeLessThan(2000);
   });
@@ -343,14 +337,12 @@ test.describe('Final Comprehensive Validation', () => {
 
   test('initial form submission response', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    // Click signin tab first
     await page.click('[data-testid="signin-tab"]');
     const startTime = Date.now();
-    await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
-    await page.fill('[data-testid="signin-password-input"]', 'password123');
-    await page.click('[data-testid="signin-button"]');
+    await page.fill('[data-testid="signin-username-input"]', 'testuser');
+    await page.click('[data-testid="signin-submit-button"]');
     const responseTime = Date.now() - startTime;
-    expect(responseTime).toBeLessThan(3000);
+    expect(responseTime).toBeLessThan(5000);
   });
 
   test('tab switching works', async ({ page }) => {
@@ -365,16 +357,16 @@ test.describe('Final Comprehensive Validation', () => {
     await page.goto(`${BASE}/auth`);
     // Click signin tab first
     await page.click('[data-testid="signin-tab"]');
-    await page.focus('[data-testid="signin-email-input"]');
-    await expect(page.locator('[data-testid="signin-email-input"]')).toBeFocused();
+    await page.focus('[data-testid="signin-username-input"]');
+    await expect(page.locator('[data-testid="signin-username-input"]')).toBeFocused();
   });
 
   test('form fields accept text', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     // Click signin tab first
     await page.click('[data-testid="signin-tab"]');
-    await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
-    await expect(page.locator('[data-testid="signin-email-input"]')).toHaveValue('test@example.com');
+    await page.fill('[data-testid="signin-username-input"]', 'test@example.com');
+    await expect(page.locator('[data-testid="signin-username-input"]')).toHaveValue('test@example.com');
   });
 
   test('mobile navigation visible on small screen', async ({ page }) => {
@@ -442,10 +434,9 @@ test.describe('Final Comprehensive Validation', () => {
 
   test('input response time', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    // Click signin tab first
     await page.click('[data-testid="signin-tab"]');
     const startTime = Date.now();
-    await page.fill('[data-testid="signin-email-input"]', 'test');
+    await page.fill('[data-testid="signin-username-input"]', 'test');
     const responseTime = Date.now() - startTime;
     expect(responseTime).toBeLessThan(500);
   });

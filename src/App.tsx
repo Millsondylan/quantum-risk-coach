@@ -228,12 +228,16 @@ function App() {
       {/* Toast notifications */}
       <Toaster
         position="top-right"
+        expand={true}
+        richColors={true}
         toastOptions={{
+          duration: 4000,
           style: {
             background: '#1A1B1E',
             color: '#FFFFFF',
             border: '1px solid #2A2B2E',
           },
+          className: 'sonner-toast',
         }}
       />
     </div>

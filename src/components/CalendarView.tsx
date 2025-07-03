@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,52 +12,105 @@ import {
   DollarSign,
   Target
 } from 'lucide-react';
+import { useTrades } from '@/hooks/useTrades';
 
 const CalendarView = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<'calendar' | 'list'>('calendar');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const { trades } = useTrades();
 
-  // This component would display real calendar data based on user's past trades.
-  // Data for calendar days will be fetched from a real trade history service.
-  // const calendarData = { ... }; // Example: { '2024-01-15': { pnl: 450, trades: 3, type: 'profit' }, ... }
+  // Calculate real calendar data from trades
+  const calendarData = useMemo(() => {
+    const data: any = {};
+    
+    trades.forEach(trade => {
+      if (trade.entryDate) {
+        const date = new Date(trade.entryDate);
+        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        
+        if (!data[dateKey]) {
+          data[dateKey] = {
+            totalPnL: 0,
+            tradeCount: 0,
+            winCount: 0,
+            trades: []
+          };
+        }
+        
+        const pnl = trade.profitLoss || 0;
+        data[dateKey].totalPnL += pnl;
+        data[dateKey].tradeCount += 1;
+        if (pnl > 0) data[dateKey].winCount += 1;
+        data[dateKey].trades.push(trade);
+      }
+    });
+    
+    return data;
+  }, [trades]);
 
-  const calendarData = {}; // Placeholder until real data integration
+  const monthlyStats = useMemo(() => {
+    const stats = {
+      totalPnL: 0,
+      totalTrades: 0,
+      winRate: 0,
+      bestDay: { date: '', pnl: 0 },
+      worstDay: { date: '', pnl: 0 }
+    };
+    
+    Object.entries(calendarData).forEach(([date, data]: [string, any]) => {
+      const dateObj = new Date(date);
+      if (dateObj.getMonth() === currentMonth.getMonth() && 
+          dateObj.getFullYear() === currentMonth.getFullYear()) {
+        stats.totalPnL += data.totalPnL;
+        stats.totalTrades += data.tradeCount;
+        
+        if (data.totalPnL > stats.bestDay.pnl) {
+          stats.bestDay = { date, pnl: data.totalPnL };
+        }
+        if (data.totalPnL < stats.worstDay.pnl) {
+          stats.worstDay = { date, pnl: data.totalPnL };
+        }
+      }
+    });
+    
+    if (stats.totalTrades > 0) {
+      const wins = Object.entries(calendarData)
+        .filter(([date, data]: [string, any]) => {
+          const dateObj = new Date(date);
+          return dateObj.getMonth() === currentMonth.getMonth() && 
+                 dateObj.getFullYear() === currentMonth.getFullYear() &&
+                 data.totalPnL > 0;
+        }).length;
+      stats.winRate = (wins / Object.keys(calendarData).length) * 100;
+    }
+    
+    return stats;
+  }, [calendarData, currentMonth]);
 
   const getDayContent = (day: Date) => {
-    const dateString = day.toISOString().split('T')[0];
-    const data = (calendarData as any)[dateString]; // Type assertion for now
+    const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    const data = calendarData[dayKey];
     
-    if (!data) return null;
-
-    return (
-      <div className="text-center p-1">
-        <div className={`text-xs font-medium ${data.type === 'profit' ? 'text-green-400' : 'text-red-400'}`}>
-          ${data.pnl || 0}
+    if (data && data.totalPnL !== 0) {
+      return (
+        <div className={`text-xs ${data.totalPnL > 0 ? 'text-green-400' : 'text-red-400'}`}>
+          ${Math.abs(data.totalPnL).toFixed(0)}
         </div>
-        <div className="text-xs text-slate-400">
-          {data.trades || 0} trades
-        </div>
-      </div>
-    );
+      );
+    }
+    return null;
   };
 
-  const getDayClassName = (day: Date) => {
-    const dateString = day.toISOString().split('T')[0];
-    const data = (calendarData as any)[dateString]; // Type assertion for now
+  const getDayClass = (day: Date) => {
+    const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    const data = calendarData[dayKey];
     
     if (!data) return '';
     
-    return data.type === 'profit' 
+    return data.totalPnL > 0 
       ? 'bg-green-500/20 border-green-500/30' 
       : 'bg-red-500/20 border-red-500/30';
-  };
-
-  const monthlyStats = { // Placeholder for real monthly stats
-    totalPnL: 0,
-    totalTrades: 0,
-    winRate: 0,
-    bestDay: { date: '', pnl: 0 },
-    worstDay: { date: '', pnl: 0 }
   };
 
   return (
@@ -128,10 +181,10 @@ const CalendarView = () => {
                 />
               ) : (
                 <div className="space-y-3">
-                  {Object.entries(calendarData).map(([dateStr, data]) => (
+                  {Object.entries(calendarData).map(([dateStr, data]: [string, any]) => (
                     <div key={dateStr} className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
                       <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${data.type === 'profit' ? 'bg-green-400' : 'bg-red-400'}`} />
+                        <div className={`w-3 h-3 rounded-full ${data.totalPnL > 0 ? 'bg-green-400' : 'bg-red-400'}`} />
                         <div>
                           <p className="font-medium text-white">
                             {new Date(dateStr).toLocaleDateString('en-US', { 
@@ -140,15 +193,15 @@ const CalendarView = () => {
                               day: 'numeric' 
                             })}
                           </p>
-                          <p className="text-sm text-slate-400">{data.trades || 0} trades</p>
+                          <p className="text-sm text-slate-400">{data.tradeCount || 0} trades</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-semibold ${data.type === 'profit' ? 'text-green-400' : 'text-red-400'}`}>
-                          ${data.pnl || 0}
+                        <p className={`font-semibold ${data.totalPnL > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ${Math.abs(data.totalPnL).toFixed(2)}
                         </p>
                         <p className="text-sm text-slate-400">
-                          {data.type === 'profit' ? 'Profit' : 'Loss'}
+                          {data.totalPnL > 0 ? 'Profit' : 'Loss'}
                         </p>
                       </div>
                     </div>
@@ -227,23 +280,33 @@ const CalendarView = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-400">Profitable Days</span>
-                  <span className="text-green-400 font-medium">12</span>
+                  <span className="text-green-400 font-medium">
+                    {Object.values(calendarData).filter((data: any) => data.totalPnL > 0).length}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-400">Losing Days</span>
-                  <span className="text-red-400 font-medium">4</span>
+                  <span className="text-red-400 font-medium">
+                    {Object.values(calendarData).filter((data: any) => data.totalPnL < 0).length}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-400">Average Daily P&L</span>
-                  <span className="text-white font-medium">$202</span>
+                  <span className="text-white font-medium">
+                    ${(monthlyStats.totalPnL / (monthlyStats.totalTrades || 1)).toFixed(0)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-400">Largest Win</span>
-                  <span className="text-green-400 font-medium">$789</span>
+                  <span className="text-green-400 font-medium">
+                    ${Math.max(...trades.filter(t => (t.profitLoss || 0) > 0).map(t => t.profitLoss || 0), 0).toFixed(0)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-400">Largest Loss</span>
-                  <span className="text-red-400 font-medium">$234</span>
+                  <span className="text-red-400 font-medium">
+                    ${Math.abs(Math.min(...trades.filter(t => (t.profitLoss || 0) < 0).map(t => t.profitLoss || 0), 0)).toFixed(0)}
+                  </span>
                 </div>
               </div>
             </CardContent>

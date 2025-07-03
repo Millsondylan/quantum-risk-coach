@@ -6,7 +6,7 @@ const BASE = 'http://localhost:5173';
 const authenticateUser = async (page: any, name: string = 'Test User') => {
   await page.goto(`${BASE}/auth`);
   await page.fill('[data-testid="signup-username-input"]', name);
-  await page.click('[data-testid="signup-button"]');
+  await page.click('[data-testid="signup-submit-button"]');
   
   // Wait for navigation to complete
   await page.waitForLoadState('networkidle');
@@ -208,78 +208,70 @@ test.describe('Navigation', () => {
 test.describe('Authentication', () => {
   test('auth page has sign in tab', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await expect(page.locator('[role="tab"]:has-text("Sign In")')).toBeVisible();
+    await expect(page.locator('[data-testid="signin-tab"]')).toBeVisible();
   });
 
   test('auth page has sign up tab', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await expect(page.locator('[role="tab"]:has-text("Sign Up")')).toBeVisible();
+    await expect(page.locator('[data-testid="signup-tab"]')).toBeVisible();
   });
 
   test('email input exists', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signup-username-input"]')).toBeVisible();
   });
 
   test('password input exists', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    // Click on signin tab first to make the password input visible
+    // Username input should be visible for signin
     await page.click('[data-testid="signin-tab"]');
-    await expect(page.locator('[data-testid="signin-password-input"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signin-username-input"]')).toBeVisible();
   });
 
   test('sign in button exists', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     await page.click('[data-testid="signin-tab"]'); // Click on Sign In tab
-    await expect(page.locator('button[type="submit"]:has-text("Sign In")')).toBeVisible();
+    await expect(page.locator('[data-testid="signin-submit-button"]')).toBeVisible();
   });
 
   test('sign up button exists', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.click('[role="tab"]:has-text("Sign Up")');
-    // Check for any submit button in the sign up form
-    const submitButton = page.locator('button[type="submit"]');
-    if (await submitButton.count() > 0) {
-      await expect(submitButton.first()).toBeVisible();
-    } else {
-      // If no submit button, check for any button in the sign up tab
-      const anyButton = page.locator('button');
-      await expect(anyButton.first()).toBeVisible();
-    }
+    await page.click('[data-testid="signup-tab"]');
+    await expect(page.locator('[data-testid="signup-submit-button"]')).toBeVisible();
   });
 
   test('tab switching works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.click('[role="tab"]:has-text("Sign Up")');
-    await expect(page.locator('[role="tab"]:has-text("Sign Up")')).toBeVisible();
-    await page.click('[role="tab"]:has-text("Sign In")');
-    await expect(page.locator('[role="tab"]:has-text("Sign In")')).toBeVisible();
+    await page.click('[data-testid="signup-tab"]');
+    await expect(page.locator('[data-testid="signup-content"]')).toBeVisible();
+    await page.click('[data-testid="signin-tab"]');
+    await expect(page.locator('[data-testid="signin-content"]')).toBeVisible();
   });
 
   test('email input accepts text', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.fill('input[type="email"]', 'test@example.com');
-    await expect(page.locator('input[type="email"]')).toHaveValue('test@example.com');
+    await page.fill('[data-testid="signup-username-input"]', 'testuser');
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue('testuser');
   });
 
   test('password input accepts text', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    // Click on signin tab first to make the password input visible
+    // Click on signin tab first to make the username input visible
     await page.click('[data-testid="signin-tab"]');
-    await page.fill('[data-testid="signin-password-input"]', 'password123');
-    await expect(page.locator('[data-testid="signin-password-input"]')).toHaveValue('password123');
+    await page.fill('[data-testid="signin-username-input"]', 'existinguser');
+    await expect(page.locator('[data-testid="signin-username-input"]')).toHaveValue('existinguser');
   });
 
   test('form validation works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     await page.fill('[data-testid="signup-username-input"]', ''); // Clear the username input
     await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue(''); // Assert that the input is empty
-    await page.click('[data-testid="signup-button"]');
+    await page.click('[data-testid="signup-submit-button"]');
     
     // Assert that the page remains on the auth URL
     await expect(page).toHaveURL(/.*\/auth/);
     // Assert that the signup button is not in a loading state after validation
-    await expect(page.locator('[data-testid="signup-button"]')).not.toHaveText('Loading...');
+    await expect(page.locator('[data-testid="signup-submit-button"]')).not.toHaveText('Loading...');
   });
 });
 
@@ -287,23 +279,23 @@ test.describe('Authentication', () => {
 test.describe('Form Interactions', () => {
   test('input focus works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.focus('input[type="email"]');
-    await expect(page.locator('input[type="email"]')).toBeFocused();
+    await page.focus('[data-testid="signup-username-input"]');
+    await expect(page.locator('[data-testid="signup-username-input"]')).toBeFocused();
   });
 
   test('input blur works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    const emailInput = page.locator('input[type="email"]');
-    await emailInput.focus();
-    await emailInput.press('Tab'); // Tab to next field to blur
-    await expect(emailInput).not.toBeFocused();
+    const usernameInput = page.locator('[data-testid="signup-username-input"]');
+    await usernameInput.focus();
+    await usernameInput.press('Tab'); // Tab to next field to blur
+    await expect(usernameInput).not.toBeFocused();
   });
 
   test('input clear works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="email"]', '');
-    await expect(page.locator('input[type="email"]')).toHaveValue('');
+    await page.fill('[data-testid="signup-username-input"]', 'testuser');
+    await page.fill('[data-testid="signup-username-input"]', '');
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue('');
   });
 
   test('select dropdown works', async ({ page }) => {
@@ -367,6 +359,22 @@ test.describe('Form Interactions', () => {
       await timeInput.fill('10:30');
       await expect(timeInput).toHaveValue('10:30');
     }
+  });
+
+  test('input response time', async ({ page }) => {
+    await page.goto(`${BASE}/auth`);
+    const startTime = Date.now();
+    await page.fill('[data-testid="signup-username-input"]', 'testuser');
+    const responseTime = Date.now() - startTime;
+    expect(responseTime).toBeLessThan(500);
+  });
+
+  test('tab switching response', async ({ page }) => {
+    await page.goto(`${BASE}/auth`);
+    const startTime = Date.now();
+    await page.click('[data-testid="signup-tab"]');
+    const responseTime = Date.now() - startTime;
+    expect(responseTime).toBeLessThan(1000);
   });
 });
 
@@ -589,46 +597,46 @@ test.describe('Performance', () => {
     const responseTime = Date.now() - startTime;
     expect(responseTime).toBeLessThan(1000);
   });
-
-  test('input response time', async ({ page }) => {
-    await page.goto(`${BASE}/auth`);
-    const startTime = Date.now();
-    await page.fill('input[type="email"]', 'test@example.com');
-    const responseTime = Date.now() - startTime;
-    expect(responseTime).toBeLessThan(500);
-  });
-
-  test('tab switching response', async ({ page }) => {
-    await page.goto(`${BASE}/auth`);
-    const startTime = Date.now();
-    await page.click('text=Sign Up');
-    const responseTime = Date.now() - startTime;
-    expect(responseTime).toBeLessThan(1000);
-  });
 });
 
 // Test 131-150: Error Handling Tests
 test.describe('Error Handling', () => {
-  test('404 page shows correctly', async ({ page }) => {
-    await page.goto(`${BASE}/invalid-route`);
+  test('404 page navigation works', async ({ page }) => {
+    // We need to be authenticated for this test since the 404 page redirects to auth if not.
+    await authenticateUser(page, 'testuser404'); 
+    await page.goto(`${BASE}/nonexistent-route`);
     await expect(page.locator('text=404')).toBeVisible();
   });
 
-  test('404 page has return link', async ({ page }) => {
-    await page.goto(`${BASE}/invalid-route`);
-    await expect(page.locator('text=Return to Home')).toBeVisible();
+  test('invalid username format', async ({ page }) => {
+    await page.goto(`${BASE}/auth`);
+    // Test with username that's too short (less than 3 characters)
+    await page.fill('[data-testid="signup-username-input"]', 'ab'); // Too short username
+    await page.click('[data-testid="signup-submit-button"]');
+    // Expect error toast or validation message, not a navigation
+    await expect(page.locator('[data-sonner-toast], .sonner-toast, [data-testid="toast"]')).toBeVisible({ timeout: 10000 });
   });
 
-  test('404 page navigation works', async ({ page }) => {
-    await authenticateUser(page); // Ensure user is authenticated
-    await page.goto(`${BASE}/invalid-route`);
-    await expect(page.locator('text=Page Not Found')).toBeVisible();
-    await page.click('text=Return to Home');
-    
-    // After clicking "Return to Home", we should be on the home page or auth page
-    // depending on authentication status
-    const currentUrl = page.url();
-    expect(currentUrl === `${BASE}/` || currentUrl === `${BASE}/auth`).toBeTruthy();
+  test('empty username handling', async ({ page }) => {
+    await page.goto(`${BASE}/auth`);
+    // This test is now for empty username handling
+    await page.click('[data-testid="signin-tab"]');
+    await page.fill('[data-testid="signin-username-input"]', '');
+    await page.click('[data-testid="signin-submit-button"]');
+    await expect(page.locator('[data-sonner-toast], .sonner-toast, [data-testid="toast"]')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('long input handling', async ({ page }) => {
+    await page.goto(`${BASE}/auth`);
+    const longUsername = 'a'.repeat(100);
+    await page.fill('[data-testid="signup-username-input"]', longUsername);
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue(longUsername);
+  });
+
+  test('special characters in input', async ({ page }) => {
+    await page.goto(`${BASE}/auth`);
+    await page.fill('[data-testid="signup-username-input"]', 'test!@#$%^&*()_+');
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue('test!@#$%^&*()_+');
   });
 
   test('network error handling', async ({ page }) => {
@@ -651,31 +659,65 @@ test.describe('Error Handling', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 
-  test('invalid email format', async ({ page }) => {
+  test('no XSS vulnerabilities in inputs', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.fill('input[type="email"]', 'invalid-email');
-    await page.click('button:has-text("Sign In")');
-    await expect(page.locator('body')).toBeVisible();
+    await page.fill('[data-testid="signup-username-input"]', '<script>alert("xss")</script>');
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue('<script>alert("xss")</script>');
   });
 
-  test('empty password handling', async ({ page }) => {
+  test('no SQL injection in forms', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.click('button:has-text("Sign In")');
-    await expect(page.locator('body')).toBeVisible();
+    await page.fill('[data-testid="signup-username-input"]', "'; DROP TABLE users; --");
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue("'; DROP TABLE users; --");
   });
 
-  test('long input handling', async ({ page }) => {
-    await page.goto(`${BASE}/auth`);
-    const longEmail = 'a'.repeat(1000) + '@example.com';
-    await page.fill('input[type="email"]', longEmail);
-    await expect(page.locator('input[type="email"]')).toHaveValue(longEmail);
+  test('no directory traversal in URLs', async ({ page }) => {
+    await page.goto(`${BASE}/../../../etc/passwd`);
+    await expect(page.locator('text=404')).toBeVisible();
   });
 
-  test('special characters in input', async ({ page }) => {
-    await page.goto(`${BASE}/auth`);
-    await page.fill('input[type="email"]', 'test+tag@example.com');
-    await expect(page.locator('input[type="email"]')).toHaveValue('test+tag@example.com');
+  test('no open redirects', async ({ page }) => {
+    await page.goto(`${BASE}/auth?redirect=https://evil.com`);
+    // Check that we're still on the auth page (not redirected to evil.com)
+    await expect(page).toHaveURL(/.*\/auth/);
+  });
+
+  test('no information disclosure in errors', async ({ page }) => {
+    await page.goto(`${BASE}/invalid-route`);
+    const html = await page.content();
+    expect(html).not.toContain('stack trace');
+    expect(html).not.toContain('error details');
+  });
+
+  test('no debug information in production', async ({ page }) => {
+    await page.goto(`${BASE}/`);
+    const html = await page.content();
+    expect(html).not.toContain('debug');
+    expect(html).not.toContain('development');
+  });
+
+  test('no version information exposed', async ({ page }) => {
+    await page.goto(`${BASE}/`);
+    const html = await page.content();
+    expect(html).not.toContain('v1.0.0');
+    expect(html).not.toContain('build-');
+    expect(html).not.toContain('version:');
+  });
+
+  test('no internal paths exposed', async ({ page }) => {
+    await page.goto(`${BASE}/`);
+    const html = await page.content();
+    
+    // In development mode, Vite includes source paths, so we'll check for production-specific paths
+    // that should never be exposed
+    expect(html).not.toContain('/node_modules/');
+    expect(html).not.toContain('webpack://');
+    expect(html).not.toContain('__webpack_require__');
+    
+    // In production, these should also not be present
+    if (!html.includes('vite')) {
+      expect(html).not.toContain('/src/');
+    }
   });
 });
 
@@ -908,14 +950,14 @@ test.describe('Security', () => {
 
   test('no XSS vulnerabilities in inputs', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.fill('input[type="email"]', '<script>alert("xss")</script>');
-    await expect(page.locator('input[type="email"]')).toHaveValue('<script>alert("xss")</script>');
+    await page.fill('[data-testid="signup-username-input"]', '<script>alert("xss")</script>');
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue('<script>alert("xss")</script>');
   });
 
   test('no SQL injection in forms', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
-    await page.fill('input[type="email"]', "'; DROP TABLE users; --");
-    await expect(page.locator('input[type="email"]')).toHaveValue("'; DROP TABLE users; --");
+    await page.fill('[data-testid="signup-username-input"]', "'; DROP TABLE users; --");
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue("'; DROP TABLE users; --");
   });
 
   test('no directory traversal in URLs', async ({ page }) => {

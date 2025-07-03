@@ -128,7 +128,7 @@ test('basic app functionality test', async () => {
   if (inputCount > 0) {
     for (let i = 0; i < Math.min(inputCount, 3); i++) {
       const input = inputs.nth(i);
-      if (await input.isVisible()) {
+      if (await input.isVisible() && await input.getAttribute('data-testid') === 'signup-username-input') {
         const placeholder = await input.getAttribute('placeholder') || 'input';
         console.log(`  📝 Testing input: ${placeholder}`);
         await input.fill('test');
@@ -167,33 +167,33 @@ test('auth page functionality', async () => {
   await page.goto(`${BASE}/auth`, { waitUntil: 'domcontentloaded' });
   
   // Check if auth page loads
-  const authContent = page.locator('form, .auth-form, [role="main"]');
-  await expect(authContent.first()).toBeVisible();
+  const authContent = page.locator('[data-testid="auth-card"]');
+  await expect(authContent).toBeVisible();
   console.log('✅ Auth page loaded');
 
   // Test tabs
-  const tabs = page.locator('.tabs-trigger, [role="tab"]');
-  const tabCount = await tabs.count();
-  if (tabCount > 0) {
-    console.log(`Found ${tabCount} auth tabs`);
-    for (let i = 0; i < tabCount; i++) {
-      await tabs.nth(i).click();
-      await page.waitForTimeout(500);
-    }
+  const tabs = page.locator('[data-testid="auth-tabs"]');
+  const signUpTab = page.locator('[data-testid="signup-tab"]');
+  const signInTab = page.locator('[data-testid="signin-tab"]');
+
+  if (await signUpTab.isVisible()) {
+    console.log('Found Sign Up tab');
+    await signUpTab.click();
+    await page.waitForTimeout(500);
+  }
+
+  if (await signInTab.isVisible()) {
+    console.log('Found Sign In tab');
+    await signInTab.click();
+    await page.waitForTimeout(500);
   }
 
   // Test form inputs
-  const emailInput = page.locator('input[type="email"]');
-  const passwordInput = page.locator('input[type="password"]');
+  const usernameInput = page.locator('[data-testid="signin-username-input"]');
   
-  if (await emailInput.isVisible()) {
-    await emailInput.fill('test@example.com');
-    console.log('✅ Email input works');
-  }
-  
-  if (await passwordInput.first().isVisible()) {
-    await passwordInput.first().fill('testpassword');
-    console.log('✅ Password input works');
+  if (await usernameInput.isVisible()) {
+    await usernameInput.fill('testuser');
+    console.log('✅ Username input works');
   }
 
   await browser.close();

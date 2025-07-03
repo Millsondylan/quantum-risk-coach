@@ -41,16 +41,13 @@ test('critical functionality test', async () => {
   await page.goto(`${BASE}/`);
   await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
   
-  // Complete auth to see onboarding
+  // Complete auth to see onboarding (using username-only system)
   await page.click('[data-testid="signup-tab"]');
   await page.fill('[data-testid="signup-username-input"]', 'testuser');
-  await page.fill('[data-testid="signup-email-input"]', 'test@example.com');
-  await page.fill('[data-testid="signup-password-input"]', 'password123');
-  await page.fill('[data-testid="signup-confirm-password-input"]', 'password123');
-  await page.click('[data-testid="signup-button"]');
+  await page.click('[data-testid="signup-submit-button"]');
   
-  // Wait for onboarding to appear
-  await page.waitForTimeout(2000);
+  // Wait for navigation
+  await page.waitForTimeout(3000);
   
   // Complete onboarding quickly - check if it appears
   try {
@@ -96,10 +93,11 @@ test('critical functionality test', async () => {
     console.log('Onboarding not shown, continuing...');
   }
 
-  // Test auth form works
+  // Test auth form works with username-only system
   await page.goto(`${BASE}/auth`);
-  await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
-  await expect(page.locator('[data-testid="signin-email-input"]')).toHaveValue('test@example.com');
+  await page.click('[data-testid="signin-tab"]');
+  await page.fill('[data-testid="signin-username-input"]', 'testuser');
+  await expect(page.locator('[data-testid="signin-username-input"]')).toHaveValue('testuser');
 
   await browser.close();
 });

@@ -123,16 +123,31 @@ const MarketCoverageSentiment = () => {
     loadMarketData();
   }, []);
 
-  const getSentimentIcon = (sentiment: number) => {
-    if (sentiment >= 0.7) return <TrendingUp className="w-4 h-4" />;
-    if (sentiment >= 0.5) return <Activity className="w-4 h-4" />;
+  const getSentimentIcon = (sentiment: number | string) => {
+    const numSentiment = typeof sentiment === 'string' 
+      ? (sentiment === 'positive' ? 0.8 : sentiment === 'negative' ? 0.2 : 0.5)
+      : sentiment;
+    
+    if (numSentiment >= 0.7) return <TrendingUp className="w-4 h-4" />;
+    if (numSentiment >= 0.5) return <Activity className="w-4 h-4" />;
     return <TrendingDown className="w-4 h-4" />;
   };
 
-  const getSentimentColor = (sentiment: number) => {
-    if (sentiment >= 0.7) return 'text-green-400';
-    if (sentiment >= 0.5) return 'text-yellow-400';
+  const getSentimentColor = (sentiment: number | string) => {
+    const numSentiment = typeof sentiment === 'string' 
+      ? (sentiment === 'positive' ? 0.8 : sentiment === 'negative' ? 0.2 : 0.5)
+      : sentiment;
+    
+    if (numSentiment >= 0.7) return 'text-green-400';
+    if (numSentiment >= 0.5) return 'text-yellow-400';
     return 'text-red-400';
+  };
+
+  const getSentimentDisplay = (sentiment: string | number) => {
+    if (typeof sentiment === 'string') {
+      return sentiment.toUpperCase();
+    }
+    return `${(sentiment * 100).toFixed(0)}%`;
   };
 
   const getImpactColor = (impact: string) => {
@@ -231,7 +246,7 @@ const MarketCoverageSentiment = () => {
                       <div className="flex items-center space-x-2">
                         {getSentimentIcon(market.sentiment)}
                         <span className={`font-medium ${getSentimentColor(market.sentiment)}`}>
-                          {(market.sentiment * 100).toFixed(0)}%
+                          {getSentimentDisplay(market.sentiment)}
                         </span>
                       </div>
                     </div>
@@ -311,7 +326,7 @@ const MarketCoverageSentiment = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {newsItems.map(item => (
+                {filteredNews.map(item => (
                   <div key={item.id} className="p-4 bg-slate-800/30 rounded-lg">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -319,7 +334,12 @@ const MarketCoverageSentiment = () => {
                         <div className="flex items-center space-x-4 text-sm text-slate-400">
                           <span>{item.source}</span>
                           <span>•</span>
-                          <span>{item.time}</span>
+                          <span>{new Date(item.publishedAt).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}</span>
                           <span>•</span>
                           <span className={`font-medium ${getImpactColor(item.impact)}`}>
                             {item.impact.toUpperCase()} Impact
@@ -329,14 +349,14 @@ const MarketCoverageSentiment = () => {
                       <div className="flex items-center space-x-2">
                         {getSentimentIcon(item.sentiment)}
                         <span className={`text-sm font-medium ${getSentimentColor(item.sentiment)}`}>
-                          {(item.sentiment * 100).toFixed(0)}%
+                          {getSentimentDisplay(item.sentiment)}
                         </span>
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        {item.symbols.map(symbol => (
+                        {item.symbols && item.symbols.map(symbol => (
                           <Badge key={symbol} variant="outline" className="text-xs">
                             {symbol}
                           </Badge>
@@ -348,6 +368,11 @@ const MarketCoverageSentiment = () => {
                     </div>
                   </div>
                 ))}
+                {filteredNews.length === 0 && (
+                  <div className="text-center py-8 text-slate-400">
+                    No news items available. Make sure your News API key is configured.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -411,7 +436,7 @@ const MarketCoverageSentiment = () => {
                           ></div>
                         </div>
                         <span className={`text-sm font-medium ${getSentimentColor(market.sentiment)}`}>
-                          {(market.sentiment * 100).toFixed(0)}%
+                          {getSentimentDisplay(market.sentiment)}
                         </span>
                       </div>
                     </div>

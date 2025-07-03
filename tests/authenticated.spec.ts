@@ -7,35 +7,35 @@ test.describe('Authenticated App Tests', () => {
     await page.goto(`${BASE}/auth`);
     
     // Check for auth form elements
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    // Click on signin tab to make password input visible
+    await expect(page.locator('[data-testid="signup-username-input"]')).toBeVisible();
+    // Click on signin tab to make username input visible
     await page.click('[data-testid="signin-tab"]');
-    await expect(page.locator('[data-testid="signin-password-input"]')).toBeVisible();
-    await expect(page.locator('[role="tab"]:has-text("Sign In")')).toBeVisible();
+    await expect(page.locator('[data-testid="signin-username-input"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signin-tab"]')).toBeVisible();
   });
 
   test('auth form accepts input', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
-    await page.fill('input[type="email"]', 'test@example.com');
-    await expect(page.locator('input[type="email"]')).toHaveValue('test@example.com');
+    await page.fill('[data-testid="signup-username-input"]', 'testuser');
+    await expect(page.locator('[data-testid="signup-username-input"]')).toHaveValue('testuser');
     
-    // Click on signin tab and test password input
+    // Click on signin tab and test username input
     await page.click('[data-testid="signin-tab"]');
-    await page.fill('[data-testid="signin-password-input"]', 'password123');
-    await expect(page.locator('[data-testid="signin-password-input"]')).toHaveValue('password123');
+    await page.fill('[data-testid="signin-username-input"]', 'existinguser');
+    await expect(page.locator('[data-testid="signin-username-input"]')).toHaveValue('existinguser');
   });
 
   test('auth tabs work', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
     // Click Sign Up tab
-    await page.click('[role="tab"]:has-text("Sign Up")');
-    await expect(page.locator('[role="tab"]:has-text("Sign Up")')).toBeVisible();
+    await page.click('[data-testid="signup-tab"]');
+    await expect(page.locator('[data-testid="signup-content"]')).toBeVisible();
     
     // Click Sign In tab
-    await page.click('[role="tab"]:has-text("Sign In")');
-    await expect(page.locator('[role="tab"]:has-text("Sign In")')).toBeVisible();
+    await page.click('[data-testid="signin-tab"]');
+    await expect(page.locator('[data-testid="signin-content"]')).toBeVisible();
   });
 
   test('protected routes redirect to auth', async ({ page }) => {
@@ -112,49 +112,41 @@ test.describe('Authenticated App Tests', () => {
   test('form validation works', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
-    // Click signin tab first
+    // Test empty form submission on sign-in tab
     await page.click('[data-testid="signin-tab"]');
-    
-    // Try to submit empty form
-    await page.click('[data-testid="signin-button"]');
-    await expect(page.locator('body')).toBeVisible();
-    
-    // Fill only email
-    await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
-    await page.click('[data-testid="signin-button"]');
-    await expect(page.locator('body')).toBeVisible();
-    
-    // Fill only password
-    await page.fill('[data-testid="signin-email-input"]', '');
-    await page.fill('[data-testid="signin-password-input"]', 'password123');
-    await page.click('[data-testid="signin-button"]');
-    await expect(page.locator('body')).toBeVisible();
+    await page.click('[data-testid="signin-submit-button"]');
+    // Wait for toast notification to appear
+    await expect(page.locator('[data-sonner-toast], .sonner-toast, [data-testid="toast"]')).toBeVisible({ timeout: 10000 });
+
+    // Test empty form submission on sign-up tab
+    await page.click('[data-testid="signup-tab"]');
+    await page.click('[data-testid="signup-submit-button"]');
+    // Wait for toast notification to appear
+    await expect(page.locator('[data-sonner-toast], .sonner-toast, [data-testid="toast"]')).toBeVisible({ timeout: 10000 });
   });
 
   test('input types work correctly', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
-    // Test email input type
-    const emailInput = page.locator('input[type="email"]');
-    await expect(emailInput).toHaveAttribute('type', 'email');
+    // Test username input type for signup
+    const signupUsernameInput = page.locator('[data-testid="signup-username-input"]');
+    await expect(signupUsernameInput).toHaveAttribute('type', 'text');
     
-    // Test password input type - click signin tab first
-    await page.click('[data-testid="signin-tab"]');
-    const passwordInput = page.locator('[data-testid="signin-password-input"]');
-    await expect(passwordInput).toHaveAttribute('type', 'password');
+    // Test username input type for signin
+    await page.click('[data-testid="signin-tab"]'); // Ensure on signin tab
+    const signinUsernameInput = page.locator('[data-testid="signin-username-input"]');
+    await expect(signinUsernameInput).toHaveAttribute('type', 'text');
   });
 
   test('accessibility features work', async ({ page }) => {
     await page.goto(`${BASE}/auth`);
     
-    // Test keyboard navigation
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
+    // Test keyboard navigation (focused on username input)
+    await page.focus('[data-testid="signup-username-input"]');
     await page.keyboard.press('Tab');
     await expect(page.locator('body')).toBeVisible();
     
-    // Test focus indicators
-    await page.keyboard.press('Tab');
+    // Test focus indicators (on username input)
     const focusedElement = page.locator(':focus');
     await expect(focusedElement).toBeVisible();
   });

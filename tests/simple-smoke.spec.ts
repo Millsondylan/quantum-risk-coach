@@ -41,10 +41,11 @@ test('critical functionality test', async () => {
   await page.goto(`${BASE}/`);
   await expect(page.locator('[data-testid="auth-tabs"]')).toBeVisible();
   
-  // Create user data directly to trigger onboarding
+  // Create user data directly to trigger onboarding (but use correct format)
   await page.evaluate(() => {
     const newUser = {
       id: `user_${Date.now()}`,
+      username: 'testuser',
       preferences: {
         tradingStyle: 'day-trading',
         riskTolerance: 'moderate',
@@ -112,10 +113,11 @@ test('critical functionality test', async () => {
     console.log('Onboarding not shown, continuing...');
   }
 
-  // Test auth form works
+  // Test auth form works with username-only system
   await page.goto(`${BASE}/auth`);
-  await page.fill('[data-testid="signin-email-input"]', 'test@example.com');
-  await expect(page.locator('[data-testid="signin-email-input"]')).toHaveValue('test@example.com');
+  await page.click('[data-testid="signin-tab"]');
+  await page.fill('[data-testid="signin-username-input"]', 'testuser');
+  await expect(page.locator('[data-testid="signin-username-input"]')).toHaveValue('testuser');
 
   await browser.close();
 }); 

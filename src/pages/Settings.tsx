@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { pushNotificationService } from '@/lib/pushNotificationService';
 import ApiStatusCard from '@/components/ApiStatusCard';
+import { applyTheme } from '@/lib/theme';
 
 const Settings: React.FC = () => {
   const { user, updatePreferences } = useUser();
@@ -338,7 +339,12 @@ const Settings: React.FC = () => {
                 <Label>Theme</Label>
                 <Select 
                   value={user.preferences.theme} 
-                  onValueChange={(value) => handlePreferenceUpdate('theme', value)}
+                  onValueChange={(value) => {
+                    handlePreferenceUpdate('theme', value);
+                    // Apply theme immediately
+                    applyTheme(value as any);
+                    toast.success('Theme updated!');
+                  }}
                 >
                   <SelectTrigger data-testid="theme-select">
                     <SelectValue />
@@ -351,11 +357,12 @@ const Settings: React.FC = () => {
                 </Select>
               </div>
               <Button 
-                onClick={() => toast.success('Theme updated!')} 
+                onClick={() => toast.success('Settings saved!')} 
                 data-testid="save-appearance-button"
+                className="mt-4"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Apply Theme
+                Save Settings
               </Button>
             </CardContent>
           </Card>

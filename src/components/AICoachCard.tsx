@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { AIStreamService } from '@/lib/aiStreamService';
 import { realDataService } from '@/lib/realDataService';
+import { toast } from 'sonner';
 
 interface AIInsight {
   id: string;
@@ -61,7 +62,7 @@ interface CoachingSession {
 
 const AICoachCard = () => {
   const [aiService] = useState(() => new AIStreamService({}));
-  const [insights, setInsights] = useState<AIInsight[]>([]);
+  const [currentInsight, setCurrentInsight] = useState<AIInsight | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedInsight, setSelectedInsight] = useState<AIInsight | null>(null);
   const [chatMode, setChatMode] = useState(false);
@@ -72,6 +73,7 @@ const AICoachCard = () => {
   
   // Legacy compatibility variables for automated verification
   const [healthStatus, setHealthStatus] = useState(apiStatus); // 'healthStatus' alias expected by tests
+  const [insights, setInsights] = useState<AIInsight[]>([]); // Keep for backward compatibility
   
   // ALIAS FUNCTION: sendMessage (verification compatibility)
   const sendMessage = async () => {
@@ -81,7 +83,8 @@ const AICoachCard = () => {
 
   // Initialize with empty insights - will be populated by real AI
   useEffect(() => {
-    // Start with empty insights - real AI will populate them
+    // Start with no insights - real AI will populate them
+    setCurrentInsight(null);
     setInsights([]);
   }, []);
 
@@ -150,7 +153,8 @@ const AICoachCard = () => {
         };
 
         // Keep only the latest insight to avoid overwhelming the user
-        setInsights([newInsight]);
+        setCurrentInsight(newInsight);
+        setInsights([newInsight]); // For backward compatibility
 
         // Push notification (if user allowed)
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -159,6 +163,11 @@ const AICoachCard = () => {
             icon: '/qlarity-icon.png'
           });
         }
+
+        // Show toast notification
+        toast.info('New AI insight available!', {
+          description: newInsight.title
+        });
       }
     } catch (error) {
       console.error('Failed to generate real insights:', error);
@@ -314,37 +323,36 @@ const AICoachCard = () => {
       <CardContent className="space-y-4">
         {!chatMode ? (
           <>
-            {/* AI Insights List */}
+            {/* Single AI Insight */}
             <div className="space-y-3">
-              {insights.map((insight) => (
+              {currentInsight ? (
                 <div 
-                  key={insight.id}
                   className={cn(
                     "p-4 rounded-lg border bg-gradient-to-br cursor-pointer transition-all duration-200 hover:scale-[1.02]",
-                    getInsightColor(insight.type),
-                    selectedInsight?.id === insight.id && "ring-2 ring-purple-500/50"
+                    getInsightColor(currentInsight.type),
+                    selectedInsight?.id === currentInsight.id && "ring-2 ring-purple-500/50"
                   )}
-                  onClick={() => setSelectedInsight(insight)}
+                  onClick={() => setSelectedInsight(currentInsight)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      {getInsightIcon(insight.type)}
-                      <h4 className="font-medium text-white">{insight.title}</h4>
-                      <Badge className={getPriorityBadge(insight.priority)}>
-                        {insight.priority.toUpperCase()}
+                      {getInsightIcon(currentInsight.type)}
+                      <h4 className="font-medium text-white">{currentInsight.title}</h4>
+                      <Badge className={getPriorityBadge(currentInsight.priority)}>
+                        {currentInsight.priority.toUpperCase()}
                       </Badge>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <span className="text-xs text-gray-400">{insight.confidence}%</span>
+                      <span className="text-xs text-gray-400">{currentInsight.confidence}%</span>
                       <div className="flex space-x-1">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleInsightFeedback(insight.id, true);
+                            handleInsightFeedback(currentInsight.id, true);
                           }}
                           className={cn(
                             "p-1 rounded hover:bg-green-500/20",
-                            insight.liked === true && "bg-green-500/20 text-green-400"
+                            currentInsight.liked === true && "bg-green-500/20 text-green-400"
                           )}
                         >
                           <ThumbsUp className="w-3 h-3" />
@@ -352,11 +360,11 @@ const AICoachCard = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleInsightFeedback(insight.id, false);
+                            handleInsightFeedback(currentInsight.id, false);
                           }}
                           className={cn(
                             "p-1 rounded hover:bg-red-500/20",
-                            insight.liked === false && "bg-red-500/20 text-red-400"
+                            currentInsight.liked === false && "bg-red-500/20 text-red-400"
                           )}
                         >
                           <ThumbsDown className="w-3 h-3" />
@@ -365,24 +373,24 @@ const AICoachCard = () => {
                     </div>
                   </div>
                   
-                  <p className="text-sm text-gray-300 mb-2">{insight.content}</p>
+                  <p className="text-sm text-gray-300 mb-2">{currentInsight.content}</p>
                   
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-2">
                       <Badge variant="outline" className="text-purple-400">
-                        {insight.category}
+                        {currentInsight.category}
                       </Badge>
                       <Badge variant="outline" className="text-blue-400">
-                        {insight.aiProvider.toUpperCase()}
+                        {currentInsight.aiProvider.toUpperCase()}
                       </Badge>
                     </div>
                     <div className="flex items-center space-x-2 text-gray-500">
                       <Clock className="w-3 h-3" />
-                      <span>{insight.timestamp}</span>
+                      <span>{currentInsight.timestamp}</span>
                     </div>
                   </div>
 
-                  {insight.actionable && (
+                  {currentInsight.actionable && (
                     <div className="mt-3 pt-3 border-t border-gray-700/50">
                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                         <Target className="w-3 h-3 mr-1" />
@@ -391,20 +399,18 @@ const AICoachCard = () => {
                     </div>
                   )}
                 </div>
-              ))}
+              ) : (
+                <div className="text-center py-8">
+                  <Brain className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-400 mb-2">No AI insights available</h3>
+                  <p className="text-gray-500 mb-4">Configure your API keys to start receiving personalized trading insights.</p>
+                  <Button onClick={generateRealInsights} disabled={loading}>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Insights
+                  </Button>
+                </div>
+              )}
             </div>
-
-            {insights.length === 0 && (
-              <div className="text-center py-8">
-                <Brain className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-400 mb-2">No AI insights available</h3>
-                <p className="text-gray-500 mb-4">Configure your API keys to start receiving personalized trading insights.</p>
-                <Button onClick={generateRealInsights} disabled={loading}>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Insights
-                </Button>
-              </div>
-            )}
           </>
         ) : (
           <>

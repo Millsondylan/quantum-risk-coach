@@ -50,18 +50,18 @@ test.describe('Critical App Tests', () => {
     // Navigate to auth page directly
     await page.goto(`${BASE}/auth`);
     
-    // Now we should be on the auth page
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    // Click signin tab to make password input visible
+    // Now we should be on the auth page - check for username input instead of email
+    await expect(page.locator('[data-testid="signup-username-input"]')).toBeVisible();
+    // Click signin tab to make signin username input visible
     await page.click('[data-testid="signin-tab"]');
-    await expect(page.locator('[data-testid="signin-password-input"]')).toBeVisible();
+    await expect(page.locator('[data-testid="signin-username-input"]')).toBeVisible();
     
     // Test form input
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('[data-testid="signin-password-input"]', 'password123');
+    await page.fill('[data-testid="signup-username-input"]', 'testuser');
+    await page.click('[data-testid="signin-tab"]');
+    await page.fill('[data-testid="signin-username-input"]', 'existinguser');
     
-    await expect(page.locator('input[type="email"]')).toHaveValue('test@example.com');
-    await expect(page.locator('[data-testid="signin-password-input"]')).toHaveValue('password123');
+    await expect(page.locator('[data-testid="signin-username-input"]')).toHaveValue('existinguser');
   });
 
   test('404 page works', async ({ page }) => {
