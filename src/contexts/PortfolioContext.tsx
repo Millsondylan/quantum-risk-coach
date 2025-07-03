@@ -6,7 +6,7 @@ import React, {
   ReactNode 
 } from 'react';
 import { database } from '@/lib/localDatabase';
-import { RealBrokerService } from '@/lib/realBrokerService';
+import { realBrokerService } from '@/lib/realBrokerService';
 import { Portfolio, Account } from '@/lib/localDatabase';
 
 interface PortfolioContextType {
@@ -23,7 +23,7 @@ const PortfolioContext = createContext<PortfolioContextType | undefined>(undefin
 export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [currentPortfolio, setCurrentPortfolio] = useState<(Portfolio & { totalPnL: number; accounts: Account[] }) | null>(null);
-  const brokerService = new RealBrokerService();
+  const brokerService = realBrokerService;
 
   useEffect(() => {
     initializePortfolios();
