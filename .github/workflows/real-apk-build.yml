@@ -40,6 +40,13 @@ jobs:
         yes | sdkmanager --licenses
         sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
         
+    - name: Set ANDROID_HOME environment variable
+      run: echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+
+    - name: Verify ANDROID_HOME
+      run: |
+        echo "ANDROID_HOME is: $ANDROID_HOME"
+
     - name: Sync Capacitor
       run: npx cap sync android
       
