@@ -55,6 +55,7 @@ import { Headline, Description, Statistic } from '@/components/ui/typography';
 import { useTrades } from '@/hooks/useTrades';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CurrencyPair {
   symbol: string;
@@ -89,6 +90,7 @@ const Index = () => {
   const { createPortfolio } = usePortfolioContext();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const stored = localStorage.getItem('custom_portfolios');
@@ -558,36 +560,38 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-[#0A0B0D] relative z-10">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
-        <TabsList className="grid w-full grid-cols-4 bg-[#1A1B1E] border-b border-[#2A2B2E] sticky top-0 z-20">
-          <TabsTrigger 
-            value="Dashboard" 
-            className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-            data-testid="dashboard-tab"
-          >
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger 
-            value="Watchlist" 
-            className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-            data-testid="watchlist-tab"
-          >
-            Watchlist
-          </TabsTrigger>
-          <TabsTrigger 
-            value="Analytics" 
-            className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-            data-testid="analytics-tab"
-          >
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger 
-            value="Calendar" 
-            className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-            data-testid="calendar-tab"
-          >
-            Calendar
-          </TabsTrigger>
-        </TabsList>
+        {!isMobile && (
+          <TabsList className="grid w-full grid-cols-4 bg-[#1A1B1E] border-b border-[#2A2B2E] sticky top-0 z-20">
+            <TabsTrigger 
+              value="Dashboard" 
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+              data-testid="dashboard-tab"
+            >
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger 
+              value="Watchlist" 
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+              data-testid="watchlist-tab"
+            >
+              Watchlist
+            </TabsTrigger>
+            <TabsTrigger 
+              value="Analytics" 
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+              data-testid="analytics-tab"
+            >
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger 
+              value="Calendar" 
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+              data-testid="calendar-tab"
+            >
+              Calendar
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="Dashboard" className="mt-0 pb-24">
           {renderDashboard()}
