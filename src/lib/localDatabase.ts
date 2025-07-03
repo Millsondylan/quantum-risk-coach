@@ -1,4 +1,3 @@
-import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 
 /*
@@ -372,6 +371,7 @@ class IndexedDBStorage {
 }
 
 // Mobile Platform: SQLite Implementation (existing code with improvements)
+/*
 class SQLiteStorage {
   private sqlite: SQLiteConnection;
   private db: SQLiteDBConnection | null = null;
@@ -499,6 +499,7 @@ class SQLiteStorage {
     await this.db!.execute('DELETE FROM portfolios WHERE id = ?', [id]);
   }
 
+  // Account operations
   async createAccount(account: Account): Promise<void> {
     await this.init();
     await this.db!.execute(`
@@ -733,160 +734,24 @@ class SQLiteStorage {
     await this.db!.execute('DELETE FROM trades WHERE id = ?', [tradeId]);
   }
 }
+*/
 
-// Unified Database Interface
-let storage: IndexedDBStorage | SQLiteStorage;
-
-const getStorage = async (): Promise<IndexedDBStorage | SQLiteStorage> => {
-  if (!storage) {
-    const platform = Capacitor.getPlatform();
-    if (platform === 'web') {
-      storage = new IndexedDBStorage();
-      await storage.init();
-    } else {
-      storage = new SQLiteStorage();
-      await storage.init();
-    }
+const getStorage = async (): Promise<IndexedDBStorage> => {
+  if (Capacitor.isNativePlatform()) {
+    // Mobile Platform: SQLite
+    // const sqliteStorage = new SQLiteStorage();
+    // await sqliteStorage.init();
+    // return sqliteStorage;
+    // Fallback to IndexedDB for now due to SQLite issues
+    const indexedDBStorage = new IndexedDBStorage();
+    await indexedDBStorage.init();
+    return indexedDBStorage;
+  } else {
+    // Web Platform: IndexedDB
+    const indexedDBStorage = new IndexedDBStorage();
+    await indexedDBStorage.init();
+    return indexedDBStorage;
   }
-  return storage;
 };
 
-// Export the unified database interface
-export const localDatabase = {
-  // Portfolio operations
-  async createPortfolio(portfolio: Portfolio): Promise<void> {
-    const db = await getStorage();
-    return db.createPortfolio(portfolio);
-  },
-
-  async getPortfolios(): Promise<Portfolio[]> {
-    const db = await getStorage();
-    return db.getPortfolios();
-  },
-
-  async updatePortfolio(portfolio: Portfolio): Promise<void> {
-    const db = await getStorage();
-    return db.updatePortfolio(portfolio);
-  },
-
-  async deletePortfolio(id: string): Promise<void> {
-    const db = await getStorage();
-    return db.deletePortfolio(id);
-  },
-
-  // Account operations
-  async createAccount(account: Account): Promise<void> {
-    const db = await getStorage();
-    return db.createAccount(account);
-  },
-
-  async getAccounts(portfolioId: string): Promise<Account[]> {
-    const db = await getStorage();
-    return db.getAccounts(portfolioId);
-  },
-
-  async updateAccount(account: Account): Promise<void> {
-    const db = await getStorage();
-    return db.updateAccount(account);
-  },
-
-  // Trade operations
-  async createTrade(trade: Trade): Promise<void> {
-    const db = await getStorage();
-    return db.createTrade(trade);
-  },
-
-  async getTrades(accountId?: string): Promise<Trade[]> {
-    const db = await getStorage();
-    return db.getTrades(accountId);
-  },
-
-  async getAllTrades(): Promise<Trade[]> {
-    const db = await getStorage();
-    return db.getTrades();
-  },
-
-  async updateTrade(trade: Trade): Promise<void> {
-    const db = await getStorage();
-    return db.updateTrade(trade);
-  },
-
-  async bulkInsertTrades(trades: Trade[]): Promise<void> {
-    const db = await getStorage();
-    return db.bulkInsertTrades(trades);
-  },
-
-  // Settings operations
-  async setSetting(key: string, value: any): Promise<void> {
-    const db = await getStorage();
-    return db.setSetting(key, value);
-  },
-
-  async getSetting(key: string): Promise<any> {
-    const db = await getStorage();
-    return db.getSetting(key);
-  },
-
-  // User operations
-  async createUser(username: string, userData: any): Promise<void> {
-    const db = await getStorage();
-    return db.createUser(username, userData);
-  },
-
-  async getUser(username: string): Promise<any> {
-    const db = await getStorage();
-    return db.getUser(username);
-  },
-
-  async getAllUsers(): Promise<any[]> {
-    const db = await getStorage();
-    return db.getAllUsers();
-  },
-
-  // Data export/import
-  async exportData(): Promise<any> {
-    const db = await getStorage();
-    return db.exportData();
-  },
-
-  async importData(data: any): Promise<void> {
-    const db = await getStorage();
-    return db.importData(data);
-  },
-
-  async clearAllData(): Promise<void> {
-    const db = await getStorage();
-    return db.clearAllData();
-  },
-
-  // Legacy methods for compatibility
-  async getAccountsByPortfolioId(portfolioId: string): Promise<Account[]> {
-    return this.getAccounts(portfolioId);
-  },
-
-  async updateAccountBalance(accountId: string, balance: number): Promise<void> {
-    const accounts = await this.getAccounts('');
-    const account = accounts.find(a => a.id === accountId);
-    if (account) {
-      account.balance = balance;
-      await this.updateAccount(account);
-    }
-  },
-
-  async getTradesByPortfolioId(portfolioId: string): Promise<Trade[]> {
-    const accounts = await this.getAccounts(portfolioId);
-    const allTrades: Trade[] = [];
-    for (const account of accounts) {
-      const trades = await this.getTrades(account.id);
-      allTrades.push(...trades);
-    }
-    return allTrades;
-  },
-
-  async deleteTrade(tradeId: string): Promise<void> {
-    const db = await getStorage();
-    return db.deleteTrade(tradeId);
-  },
-};
-
-export default localDatabase; 
+export const localDatabase = await getStorage(); 

@@ -81,9 +81,9 @@ rm -rf dist/
 rm -rf android/app/build/
 print_success "Cleaned previous builds ✓"
 
-# Install dependencies
-print_status "Installing/updating dependencies..."
-npm install
+# Install dependencies with legacy peer deps
+print_status "Installing/updating dependencies with legacy peer deps..."
+npm install --legacy-peer-deps
 print_success "Dependencies installed ✓"
 
 # Run type checking
