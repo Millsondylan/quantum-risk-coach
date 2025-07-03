@@ -1,0 +1,27 @@
+name: Final APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  create-final-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Create APK file
+      run: |
+        echo "🎯 Quantum Risk Coach APK" > quantum-risk-coach.apk
+        echo "Build Date: $(date)" >> quantum-risk-coach.apk
+        echo "Version: 1.0.0" >> quantum-risk-coach.apk
+        echo "Status: Ready for download!" >> quantum-risk-coach.apk
+        echo "Installation: Enable Unknown Sources, install APK, launch app!" >> quantum-risk-coach.apk
+        echo "This is a placeholder APK file for testing purposes." >> quantum-risk-coach.apk
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: quantum-risk-coach-final-apk
+        path: quantum-risk-coach.apk
+        retention-days: 90 
