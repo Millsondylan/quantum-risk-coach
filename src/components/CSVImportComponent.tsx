@@ -109,6 +109,7 @@ export const CSVImportComponent: React.FC<CSVImportComponentProps> = ({
     } catch (error) {
       console.error('CSV parsing error:', error);
       toast.error('Failed to read CSV file');
+      setValidationErrors(['Failed to read CSV file. Please check the file format.']);
     } finally {
       setIsProcessing(false);
     }

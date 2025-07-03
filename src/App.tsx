@@ -90,11 +90,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Layout wrapper for protected routes with optimized touch handling
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative flex flex-col">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative flex flex-col">
       <MobileNav />
       <nav style={{ display: 'none' }} data-testid="nav"></nav>
-      <main className="flex-1 relative z-10 overflow-y-auto pt-20 pb-24" data-testid="main-content">
-        <div className="container mx-auto px-4 max-w-7xl">
+      <main className="flex-1 relative z-10 overflow-y-auto pt-20 pb-24 w-full" data-testid="main-content">
+        <div className="container mx-auto px-4 max-w-7xl w-full">
           {children}
         </div>
       </main>

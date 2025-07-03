@@ -61,7 +61,16 @@ const AdvancedAnalytics = () => {
       try {
         setLoading(true);
         
+        // Get all trades from the database
         const allTrades = await localDatabase.getTrades();
+        
+        // Only proceed if we have real trade data
+        if (allTrades.length === 0) {
+          setMetrics(null);
+          setAIInsights(null);
+          return;
+        }
+        
         const analyticsData = tradeAnalyticsService.calculateAnalytics(allTrades);
         const convertedTrades: AdvancedTrade[] = allTrades.map(trade => {
           // Ensure all required fields are present and typed correctly
@@ -77,11 +86,11 @@ const AdvancedAnalytics = () => {
             profit: trade.profit || 0,
             quantity: trade.amount || 0,
             mood: trade.mood || 'neutral',
-            emotion: trade.mood === 'calm' ? 'calm' : 
+            emotion: (trade.mood === 'calm' ? 'calm' : 
                      trade.mood === 'stressed' ? 'anxious' : 
                      trade.mood === 'excited' ? 'excited' : 
                      trade.mood === 'fearful' ? 'anxious' : 
-                     'calm' as 'calm' | 'anxious' | 'excited' | 'frustrated'
+                     'calm') as 'calm' | 'anxious' | 'excited' | 'frustrated'
           };
 
           return baseTrade;
@@ -92,6 +101,8 @@ const AdvancedAnalytics = () => {
         setAIInsights(aiTradeInsights);
       } catch (error) {
         console.error('Error fetching analytics:', error);
+        setMetrics(null);
+        setAIInsights(null);
       } finally {
         setLoading(false);
       }

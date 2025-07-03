@@ -76,15 +76,26 @@ export const OCRTradeCapture: React.FC<OCRTradeCaptureProps> = ({
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      toast.error('Please upload a valid image file');
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error('Image size must be less than 10MB');
+          return;
+        }
+        
+        setImageFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.onerror = () => {
+          toast.error('Failed to read image file');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast.error('Please upload a valid image file (PNG, JPG, JPEG, GIF)');
+      }
     }
   };
 

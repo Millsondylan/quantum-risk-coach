@@ -78,11 +78,19 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
         return;
       }
       
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload a valid image file');
+        return;
+      }
+      
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setUploadedImages(prev => [...prev, result]);
         toast.success('Image uploaded successfully');
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read image file');
       };
       reader.readAsDataURL(file);
     }

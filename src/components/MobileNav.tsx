@@ -64,7 +64,7 @@ const MobileNav: React.FC = () => {
   return (
     <>
       {/* Top Header - Fixed */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-b border-[#2A2B2E] p-4">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-b border-[#2A2B2E] p-4 w-full">
         <div className="flex items-center justify-between">
           {/* App Title */}
           <div className="flex items-center space-x-3">
@@ -101,9 +101,10 @@ const MobileNav: React.FC = () => {
 
       {/* Bottom Navigation - Fixed */}
       <nav 
-        className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-t border-[#2A2B2E] p-4"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0B0D]/95 backdrop-blur-xl border-t border-[#2A2B2E] p-4 w-full"
         role="navigation"
         aria-label="Mobile Navigation"
+        data-testid="mobile-bottom-nav"
       >
         <div className="flex items-center justify-around">
           {navItems.map((item) => {

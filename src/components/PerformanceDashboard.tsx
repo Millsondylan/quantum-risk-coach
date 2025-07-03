@@ -21,143 +21,109 @@ export const PerformanceDashboard: React.FC = () => {
   
   React.useEffect(() => {
     const fetchTrades = async () => {
-      if (currentPortfolio) {
-        setLoading(true);
-        try {
-          // Get all trades for the current portfolio across all accounts
-          const portfolioTrades: Trade[] = [];
-          
+      setLoading(true);
+      try {
+        // Get all trades from the database regardless of portfolio
+        const allTrades = await localDatabase.getTrades();
+        
+        // If we have a current portfolio, filter by it
+        let portfolioTrades: Trade[] = allTrades;
+        if (currentPortfolio && currentPortfolio.accounts.length > 0) {
+          portfolioTrades = [];
           for (const account of currentPortfolio.accounts) {
             const accountTrades = await localDatabase.getTrades(account.id);
-            
-            // Convert trades to the standardized Trade type
-            const convertedTrades: Trade[] = accountTrades.map(trade => {
-              // Ensure all required fields are present and typed correctly
-              const baseTrade: Trade = {
-                id: trade.id || uuidv4(),
-                accountId: trade.accountId || '',
-                symbol: trade.symbol || '',
-                type: 'long',
-                side: 'buy',
-                amount: 0,
-                quantity: 0,
-                price: 0,
-                entryPrice: 0,
-                exitPrice: 0,
-                fee: 0,
-                profit: 0,
-                profitLoss: 0,
-                status: 'closed',
-                entryDate: new Date().toISOString(),
-                entryTime: new Date().toISOString(),
-                exitDate: new Date().toISOString(),
-                exitTime: new Date().toISOString(),
-                riskReward: undefined,
-                riskRewardRatio: undefined,
-                strategy: undefined,
-                tags: [],
-                notes: undefined,
-                exitReason: undefined,
-                takeProfit: undefined,
-                stopLoss: undefined,
-                confidence: undefined,
-                confidenceRating: undefined,
-                emotion: 'calm',
-                mood: 'neutral'
-              };
-
-              // Check if it's a LocalTrade or DatabaseTrade
-              if ('entryPrice' in trade) {
-                // LocalTrade type
-                return {
-                  ...baseTrade,
-                  id: trade.id,
-                  accountId: trade.accountId || '',
-                  symbol: trade.symbol,
-                  type: trade.type || 'long',
-                  side: trade.side || 'buy',
-                  amount: trade.quantity || 0,
-                  quantity: trade.quantity || 0,
-                  price: trade.entryPrice || 0,
-                  entryPrice: trade.entryPrice || 0,
-                  exitPrice: trade.exitPrice || 0,
-                  fee: 0, // Not present in original trade
-                  profit: trade.profit || 0,
-                  profitLoss: trade.profit || 0,
-                  status: 'closed', // Default status
-                  entryDate: trade.entryTime || new Date().toISOString(),
-                  entryTime: trade.entryTime || new Date().toISOString(),
-                  exitDate: trade.exitTime || new Date().toISOString(),
-                  exitTime: trade.exitTime || new Date().toISOString(),
-                  riskReward: trade.riskRewardRatio,
-                  riskRewardRatio: trade.riskRewardRatio,
-                  strategy: trade.strategy,
-                  tags: trade.tags || [],
-                  notes: trade.notes,
-                  exitReason: trade.exitReason,
-                  takeProfit: trade.takeProfit,
-                  stopLoss: trade.stopLoss,
-                  confidence: trade.confidence,
-                  confidenceRating: trade.confidence,
-                  emotion: trade.emotion || 'calm',
-                  mood: 'neutral' // Default mood
-                };
-              } else {
-                // DatabaseTrade type
-                const databaseTrade = trade as any;
-                return {
-                  ...baseTrade,
-                  id: databaseTrade.id,
-                  accountId: databaseTrade.accountId || '',
-                  symbol: databaseTrade.symbol,
-                  type: databaseTrade.side === 'buy' ? 'long' : 'short',
-                  side: databaseTrade.side,
-                  amount: databaseTrade.amount || 0,
-                  quantity: databaseTrade.amount || 0,
-                  price: databaseTrade.price || 0,
-                  entryPrice: databaseTrade.price || 0,
-                  exitPrice: databaseTrade.price || 0,
-                  fee: databaseTrade.fee || 0,
-                  profit: databaseTrade.profit || 0,
-                  profitLoss: databaseTrade.profit || 0,
-                  status: databaseTrade.status || 'closed',
-                  entryDate: databaseTrade.entryDate || new Date().toISOString(),
-                  entryTime: databaseTrade.entryDate || new Date().toISOString(),
-                  exitDate: databaseTrade.exitDate || new Date().toISOString(),
-                  exitTime: databaseTrade.exitDate || new Date().toISOString(),
-                  riskReward: databaseTrade.riskReward,
-                  riskRewardRatio: databaseTrade.riskReward,
-                  strategy: undefined,
-                  tags: [],
-                  notes: undefined,
-                  exitReason: undefined,
-                  takeProfit: undefined,
-                  stopLoss: undefined,
-                  confidence: databaseTrade.confidenceRating,
-                  confidenceRating: databaseTrade.confidenceRating,
-                  emotion: databaseTrade.mood === 'calm' ? 'calm' : 
-                           databaseTrade.mood === 'stressed' ? 'anxious' : 
-                           databaseTrade.mood === 'excited' ? 'excited' : 
-                           databaseTrade.mood === 'fearful' ? 'anxious' : 
-                           'calm',
-                  mood: databaseTrade.mood || 'neutral'
-                };
-              }
-            });
-            
-            portfolioTrades.push(...convertedTrades);
+            portfolioTrades.push(...accountTrades);
           }
-          
-          setTradeData(portfolioTrades);
-          
-          // Calculate advanced analytics
-          const advancedAnalytics = advancedAnalyticsService.calculateAdvancedAnalytics(portfolioTrades);
-          setAdvancedAnalytics(advancedAnalytics);
-        } catch (err) {
-          console.error('Failed to fetch trades:', err);
-        } finally {
-          setLoading(false);
         }
+        
+        // Convert trades to the standardized Trade type
+        const convertedTrades: Trade[] = portfolioTrades.map(trade => {
+          if ('type' in trade) {
+            // LocalTrade type
+            const localTrade = trade as LocalTrade;
+            return {
+              id: localTrade.id,
+              accountId: localTrade.accountId,
+              symbol: localTrade.symbol,
+              type: localTrade.type,
+              side: localTrade.type === 'long' ? 'buy' : 'sell',
+              amount: localTrade.amount,
+              quantity: localTrade.quantity,
+              price: localTrade.price,
+              entryPrice: localTrade.entryPrice,
+              exitPrice: localTrade.exitPrice,
+              fee: localTrade.fee,
+              profit: localTrade.profit,
+              profitLoss: localTrade.profitLoss,
+              status: localTrade.status,
+              entryDate: localTrade.entryDate,
+              entryTime: localTrade.entryTime,
+              exitDate: localTrade.exitDate,
+              exitTime: localTrade.exitTime,
+              riskReward: localTrade.riskReward,
+              riskRewardRatio: localTrade.riskRewardRatio,
+              strategy: localTrade.strategy,
+              tags: localTrade.tags,
+              notes: localTrade.notes,
+              exitReason: localTrade.exitReason,
+              takeProfit: localTrade.takeProfit,
+              stopLoss: localTrade.stopLoss,
+              confidence: localTrade.confidence,
+              confidenceRating: localTrade.confidenceRating,
+              emotion: localTrade.emotion,
+              mood: localTrade.mood
+            };
+          } else {
+            // DatabaseTrade type
+            const databaseTrade = trade as DatabaseTrade;
+            return {
+              id: databaseTrade.id,
+              accountId: databaseTrade.accountId,
+              symbol: databaseTrade.symbol,
+              type: databaseTrade.side === 'buy' ? 'long' : 'short',
+              side: databaseTrade.side,
+              amount: databaseTrade.amount,
+              quantity: databaseTrade.amount,
+              price: databaseTrade.price,
+              entryPrice: databaseTrade.price,
+              exitPrice: databaseTrade.price,
+              fee: databaseTrade.fee,
+              profit: databaseTrade.profit || 0,
+              profitLoss: databaseTrade.profit,
+              status: databaseTrade.status,
+              entryDate: databaseTrade.entryDate,
+              entryTime: databaseTrade.entryDate,
+              exitDate: databaseTrade.exitDate,
+              exitTime: databaseTrade.exitDate,
+              riskReward: databaseTrade.riskReward,
+              riskRewardRatio: databaseTrade.riskReward,
+              strategy: undefined,
+              tags: [],
+              notes: databaseTrade.notes,
+              exitReason: undefined,
+              takeProfit: undefined,
+              stopLoss: undefined,
+              confidence: databaseTrade.confidenceRating,
+              confidenceRating: databaseTrade.confidenceRating,
+              emotion: databaseTrade.mood === 'calm' ? 'calm' : 
+                       databaseTrade.mood === 'stressed' ? 'anxious' : 
+                       databaseTrade.mood === 'excited' ? 'excited' : 
+                       databaseTrade.mood === 'fearful' ? 'anxious' : 
+                       'calm',
+              mood: databaseTrade.mood || 'neutral'
+            };
+          }
+        });
+        
+        setTradeData(convertedTrades);
+        
+        // Calculate advanced analytics
+        const advancedAnalytics = advancedAnalyticsService.calculateAdvancedAnalytics(convertedTrades);
+        setAdvancedAnalytics(advancedAnalytics);
+      } catch (err) {
+        console.error('Failed to fetch trades:', err);
+      } finally {
+        setLoading(false);
       }
     };
     

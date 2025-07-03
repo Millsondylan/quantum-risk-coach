@@ -313,6 +313,8 @@ const AddTrade: React.FC = () => {
       } else if (file.type.startsWith('image/')) {
         // Handle image upload for OCR
         await handleImageUpload(file);
+      } else {
+        toast.error('Unsupported file type. Please upload a CSV or image file.');
       }
     }
   };

@@ -51,89 +51,16 @@ interface FilterMetrics {
 }
 
 const ApiMonitorDashboard = () => {
-  const [apiStatuses, setApiStatuses] = useState<ApiStatus[]>([
-    {
-      name: 'CoinGecko',
-      endpoint: 'coingecko',
-      status: 'healthy',
-      usage: 45,
-      limit: 1000,
-      responseTime: 250,
-      lastCheck: new Date(),
-      cost: 2.5
-    },
-    {
-      name: 'NewsAPI',
-      endpoint: 'newsapi',
-      status: 'degraded',
-      usage: 180,
-      limit: 500,
-      responseTime: 450,
-      lastCheck: new Date(),
-      cost: 8.2
-    },
-    {
-      name: 'Finnhub',
-      endpoint: 'finnhub',
-      status: 'healthy',
-      usage: 92,
-      limit: 1000,
-      responseTime: 180,
-      lastCheck: new Date(),
-      cost: 4.1
-    },
-    {
-      name: 'Alpha Vantage',
-      endpoint: 'alpha_vantage',
-      status: 'healthy',
-      usage: 15,
-      limit: 100,
-      responseTime: 320,
-      lastCheck: new Date(),
-      cost: 1.8
-    },
-    {
-      name: 'OpenAI',
-      endpoint: 'openai',
-      status: 'healthy',
-      usage: 8,
-      limit: 100,
-      responseTime: 1200,
-      lastCheck: new Date(),
-      cost: 15.6
-    }
-  ]);
+  const [apiStatuses, setApiStatuses] = useState<ApiStatus[]>([]);
 
-  const [notificationStatuses, setNotificationStatuses] = useState<NotificationStatus[]>([
-    {
-      channel: 'Browser Push',
-      enabled: true,
-      messagesSent: 23,
-      lastMessage: new Date(Date.now() - 1000 * 60 * 15),
-      errorRate: 2.1
-    },
-    {
-      channel: 'Telegram Bot',
-      enabled: true,
-      messagesSent: 47,
-      lastMessage: new Date(Date.now() - 1000 * 60 * 5),
-      errorRate: 0.5
-    },
-    {
-      channel: 'Email',
-      enabled: false,
-      messagesSent: 0,
-      lastMessage: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      errorRate: 0
-    }
-  ]);
+  const [notificationStatuses, setNotificationStatuses] = useState<NotificationStatus[]>([]);
 
   const [filterMetrics, setFilterMetrics] = useState<FilterMetrics>({
-    totalNewsItems: 1247,
-    filteredItems: 89,
-    activeFilters: 6,
-    savedFilters: 3,
-    cacheHitRate: 78
+    totalNewsItems: 0,
+    filteredItems: 0,
+    activeFilters: 0,
+    savedFilters: 0,
+    cacheHitRate: 0
   });
 
   const [refreshing, setRefreshing] = useState(false);

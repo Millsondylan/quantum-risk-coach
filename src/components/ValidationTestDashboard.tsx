@@ -20,29 +20,29 @@ const ValidationTestDashboard = () => {
 
   // Real-time market data with proper validation attributes
   const realTimeData = {
-    BTCUSD: { price: 43567.89, change: 1245.67, changePercent: 2.94 },
-    ETHUSD: { price: 2876.34, change: 89.23, changePercent: 3.21 },
-    EURUSD: { price: 1.0845, change: 0.0023, changePercent: 0.21 },
-    GBPUSD: { price: 1.2634, change: -0.0012, changePercent: -0.09 },
-    USDJPY: { price: 148.76, change: 0.34, changePercent: 0.23 },
-    GOLD: { price: 2034.56, change: 12.34, changePercent: 0.61 }
+    BTCUSD: { price: 0, change: 0, changePercent: 0 },
+    ETHUSD: { price: 0, change: 0, changePercent: 0 },
+    EURUSD: { price: 0, change: 0, changePercent: 0 },
+    GBPUSD: { price: 0, change: 0, changePercent: 0 },
+    USDJPY: { price: 0, change: 0, changePercent: 0 },
+    GOLD: { price: 0, change: 0, changePercent: 0 }
   };
 
-  // Portfolio data with comprehensive metrics
+  // Portfolio data with comprehensive metrics - will be populated with real data
   const portfolioData = {
-    balance: 125847.32,
-    todayPnL: 2847.65,
-    todayPnLPercent: 2.31,
-    realizedPnL: 18750.25,
-    unrealizedPnL: -1203.45,
-    totalFees: 892.75,
-    winRate: 73.2,
-    profitFactor: 1.47,
-    sharpeRatio: 1.23,
-    maxDrawdown: 8.4,
-    totalTrades: 456,
-    winningTrades: 334,
-    losingTrades: 122
+    balance: 0,
+    todayPnL: 0,
+    todayPnLPercent: 0,
+    realizedPnL: 0,
+    unrealizedPnL: 0,
+    totalFees: 0,
+    winRate: 0,
+    profitFactor: 0,
+    sharpeRatio: 0,
+    maxDrawdown: 0,
+    totalTrades: 0,
+    winningTrades: 0,
+    losingTrades: 0
   };
 
   // Active challenges for validation
