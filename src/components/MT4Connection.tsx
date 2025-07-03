@@ -42,7 +42,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { realBrokerService, RealBrokerConnection } from '@/lib/realBrokerService';
+import { mt4mt5Service, MT4MT5ConnectionParams, MT4MT5AccountInfo } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
 interface MT4Account {
@@ -175,7 +175,7 @@ const MT4Connection = () => {
     accountType: 'Live',
   });
 
-  // Connection simulation
+  // Connection to MT4/MT5
   const handleConnect = async () => {
     // Validate required fields
     if (!credentials.server || !credentials.login || !credentials.password) {
@@ -194,46 +194,33 @@ const MT4Connection = () => {
 
     try {
       // Real MT4/MT5 connection attempt
-      const connection: RealBrokerConnection = {
-        id: `mt4_${Date.now()}`,
-        userId: user?.id || '',
-        name: `MT4 - ${credentials.server}`,
-        type: 'mt4',
-        status: 'connecting',
-        credentials: {
-          apiKey: '', // Not used for MT4
-          secretKey: '', // Not used for MT4
-          server: credentials.server,
-          login: credentials.login,
-          password: credentials.password,
-        },
-        lastSync: new Date().toISOString(),
-        settings: {
-          autoSync: true,
-          syncInterval: 30,
-        },
+      const connectionParams: MT4MT5ConnectionParams = {
+        server: credentials.server,
+        login: parseInt(credentials.login),
+        password: credentials.password,
+        platform: 'MT4' // or 'MT5' based on user selection
       };
 
       // Attempt real connection to MT4/MT5 terminal
-      const result = await realBrokerService.connectToBroker(connection);
+      const result = await mt4mt5Service.connectToMT4MT5(connectionParams);
       
       if (result.success) {
         setConnectionStatus('connected');
         
         // Set account info from real connection
-        if (result.accountInfo) {
+        if (result.account) {
           setAccount({
-            accountNumber: credentials.login,
-            serverName: credentials.server,
+            accountNumber: result.account.login.toString(),
+            serverName: result.account.server,
             brokerName: 'Connected Broker',
             accountType: 'Live',
-            balance: result.accountInfo.balance || 0,
-            equity: result.accountInfo.equity || 0,
-            margin: result.accountInfo.margin || 0,
-            freeMargin: result.accountInfo.freeMargin || 0,
-            marginLevel: result.accountInfo.freeMargin > 0 ? (result.accountInfo.equity / result.accountInfo.margin) * 100 : 0,
-            currency: result.accountInfo.currency || 'USD',
-            leverage: '1:100', // Would come from real API
+            balance: result.account.balance,
+            equity: result.account.equity,
+            margin: result.account.margin,
+            freeMargin: result.account.freeMargin,
+            marginLevel: result.account.freeMargin > 0 ? (result.account.equity / result.account.margin) * 100 : 0,
+            currency: result.account.currency,
+            leverage: `1:${result.account.leverage}`,
             connectionStatus: 'connected',
             lastSync: new Date().toLocaleString()
           });
@@ -293,25 +280,26 @@ const MT4Connection = () => {
     try {
       // In a real-world scenario, this would call your backend to fetch real trades.
       // Since this is a client-only app without a backend, this will return no trades.
-      const fetchedTrades = await realBrokerService.fetchTradesFromBroker(
-        `mt4_${credentials.login}` // Use a unique ID for the connection
+      const fetchedTrades = await mt4mt5Service.getHistory(
+        `mt4_${credentials.login}`, // Use a unique ID for the connection
+        { limit: 100 }
       );
 
-      const mappedTrades: MT4Position[] = fetchedTrades.map(trade => ({
-        ticket: parseInt(trade.brokerTradeId || trade.id, 10) || Date.now(), // Use brokerTradeId or generate unique if not available
+      const mappedTrades: MT4Position[] = fetchedTrades.success && fetchedTrades.trades ? fetchedTrades.trades.map(trade => ({
+        ticket: trade.ticket,
         symbol: trade.symbol,
-        type: trade.side.toUpperCase() as 'BUY' | 'SELL',
-        lots: trade.amount,
+        type: trade.type.toUpperCase() as 'BUY' | 'SELL',
+        lots: trade.volume,
         openPrice: trade.price,
         currentPrice: trade.price, // For imported trades, current price is often the same as open price unless live updates
-        sl: trade.stopLoss || 0,
-        tp: trade.takeProfit || 0,
-        profit: trade.profit || 0,
-        swap: 0, // Not typically provided in simple trade history import
-        commission: trade.fee || 0,
-        comment: '', // No comment from simple trade history
-        openTime: trade.openTime || trade.timestamp,
-      }));
+        sl: 0, // Stop loss not available in trade history
+        tp: 0, // Take profit not available in trade history
+        profit: trade.profit,
+        swap: trade.swap,
+        commission: trade.fee,
+        comment: trade.comment,
+        openTime: new Date(trade.time * 1000).toISOString(),
+      })) : [];
 
       for (let i = 0; i < mappedTrades.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay per trade
