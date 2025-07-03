@@ -1,21 +1,61 @@
 # Page snapshot
 
 ```yaml
-- img
-- heading "Quantum Risk Coach" [level=3]
-- paragraph: Username-Only Access • No Email Required
-- tablist:
-  - tab "Create Account" [selected]
-  - tab "Sign In"
-- tabpanel "Create Account":
-  - form:
-    - text: Username
+- main:
+  - tablist:
+    - tab "Dashboard" [selected]
+    - tab "Watchlist"
+    - tab "Analytics"
+    - tab "Calendar"
+  - tabpanel "Dashboard":
+    - button "📈 Select Portfolio":
+      - text: 📈 Select Portfolio
+      - img
+    - heading "Statistics" [level=2]
+    - text: "Trade Count: 0 Realized PNL 0 Win Rate 0%"
     - img
-    - textbox "Username"
-    - paragraph: No email or password required. Just pick a username and start trading!
-    - textbox
-    - textbox
-    - button "Create Account"
-- paragraph: ✨ Privacy-first design • No personal data required
-- paragraph: Your trading data stays secure and anonymous
+    - text: 0 Average RR 0
+    - img
+    - text: 0 Profit Factor 0 Expected Value 0 Average Holding Time
+    - img
+    - text: 0 Days
+    - img
+    - text: 0 Hours
+    - img
+    - text: 0 Minutes Balance 0
+    - heading "AI Coach" [level=3]:
+      - img
+      - text: AI Coach
+    - paragraph: Get personalized trading insights and ask questions
+    - 'heading "AI Trading Coach OPENAI: Disconnected GROQ: Connected GEMINI: Connected" [level=3]':
+      - img
+      - text: AI Trading Coach
+    - button "Refresh":
+      - img
+      - text: Refresh
+    - button "Ask AI":
+      - img
+      - text: Ask AI
+    - img
+    - heading "Real-Time Market Analysis" [level=4]
+    - text: MEDIUM 50%
+    - button:
+      - img
+    - button:
+      - img
+    - paragraph: "Based on the current market analysis, here are some specific trading recommendations for the cryptocurrency market: **Recommendation 1: Long BTC** * Entry Point: $109,500 * Stop Loss: $108,500 * Take Profit: $111,000 * Position Sizing: 0.5% of overall portfolio Reasoning: BTC is showing signs of strength, with a 1.94% gain in the last 24 hours. The RSI is indicating a moderate overbought condition, but the MACD is still trending upwards, suggesting that the upward momentum may continue. With a stop loss at $108,500, this trade has a potential upside of around 1.4%. **Recommendation 2: Long ETH** * Entry Point: $2580 * Stop Loss: $2540 * Take Profit: $2640 * Position Sizing: 0.7% of overall portfolio Reasoning: ETH is also showing strength, with a 6.20% gain in the last 24 hours. The RSI is indicating a moderate overbought condition, but the MACD is still trending upwards, suggesting that the upward momentum may continue. With a stop loss at $2540, this trade has a potential upside of around 2.3%. **Recommendation 3: Long XRP** * Entry Point: $2.22 * Stop Loss: $2.12 * Take Profit: $"
+    - text: Live Analysis OPENAI
+    - img
+    - text: Just now
+    - button "Take Action":
+      - img
+      - text: Take Action
+    - heading "Broker Connections" [level=3]
+    - paragraph: Connect your trading accounts for automatic trade sync
+    - button "Connect Broker":
+      - img
+      - text: Connect Broker
+    - text: 🔗
+    - paragraph: No brokers connected
+    - paragraph: Connect your first broker to start syncing trades automatically
 ```

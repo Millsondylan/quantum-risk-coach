@@ -2,65 +2,55 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Basic Navigation Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // Set up authenticated user state directly
-    await page.goto('http://localhost:5178/');
+    // Go to auth page and authenticate properly
+    await page.goto('http://localhost:5178/auth');
+    await page.waitForLoadState('networkidle');
     
-    // Create user data that bypasses auth and onboarding
-    await page.evaluate(() => {
-      const userData = {
-        id: `user_${Date.now()}`,
-        name: 'testuser',
-        preferences: {
-          tradingStyle: 'day-trading',
-          riskTolerance: 'moderate',
-          preferredMarkets: ['Forex (FX)', 'Stocks'],
-          experienceLevel: 'intermediate',
-          notifications: {
-            priceAlerts: true,
-            newsAlerts: true,
-            aiInsights: true,
-            tradeSignals: true,
-            economicEvents: true,
-            portfolioAlerts: true,
-            riskWarnings: true,
-            pushNotifications: true,
-            telegram: false,
-            soundEnabled: true,
-            marketUpdates: true,
-            tradeAlerts: true,
-            marketSentiment: true,
-            quietHours: {
-              enabled: false,
-              start: '22:00',
-              end: '08:00'
-            },
-            weekends: true,
-            minimumImpact: 'medium',
-            frequency: 'instant',
-            personalizedSymbols: [],
-            tradingStyle: 'day',
-            riskTolerance: 'moderate',
-            experience: 'intermediate'
-          },
-          theme: 'dark',
-          language: 'en',
-        },
-        onboardingCompleted: true,
-        createdAt: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-    });
+    // Wait for auth page to load
+    await page.locator('[data-testid="auth-tabs"]').waitFor({ state: 'visible', timeout: 10000 });
     
-    // Reload to trigger the authenticated state
-    await page.reload();
+    // Fill in username and submit
+    await page.locator('[data-testid="signup-username-input"]').fill('testuser');
+    await page.locator('[data-testid="signup-submit-button"]').click();
+    
+    // Wait for authentication to complete
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
+    
+    // Check if we need to complete onboarding
+    const onboardingVisible = await page.locator('[data-testid="onboarding-step-username"]').isVisible();
+    if (onboardingVisible) {
+      // Complete onboarding quickly
+      await page.locator('[data-testid="onboarding-username-input"]').fill('testuser');
+      await page.locator('[data-testid="onboarding-next-button"]').click();
+      await page.waitForTimeout(1000);
+      
+      // Skip through other onboarding steps
+      for (let i = 0; i < 5; i++) {
+        const nextButton = page.locator('[data-testid="onboarding-next-button"]');
+        if (await nextButton.isVisible()) {
+          await nextButton.click();
+          await page.waitForTimeout(500);
+        }
+      }
+      
+      // Complete setup
+      const completeButton = page.locator('button:has-text("Complete Setup")');
+      if (await completeButton.isVisible()) {
+        await completeButton.click();
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(2000);
+      }
+    }
+    
+    // Wait for main app to load
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
   });
 
   test('should navigate to all main sections', async ({ page }) => {
     // Wait for navigation to be visible
-    await page.locator('[data-testid="mobile-bottom-nav"]').waitFor({ state: 'visible', timeout: 10000 });
+    await page.locator('[data-testid="mobile-bottom-nav"]').waitFor({ state: 'visible', timeout: 15000 });
     
     // Test navigation to each main section
     const sections = [

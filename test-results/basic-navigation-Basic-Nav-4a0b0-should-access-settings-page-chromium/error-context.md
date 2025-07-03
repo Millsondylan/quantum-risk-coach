@@ -1,21 +1,61 @@
 # Page snapshot
 
 ```yaml
-- img
-- heading "Quantum Risk Coach" [level=3]
-- paragraph: Username-Only Access • No Email Required
-- tablist:
-  - tab "Create Account" [selected]
-  - tab "Sign In"
-- tabpanel "Create Account":
-  - form:
-    - text: Username
+- main:
+  - tablist:
+    - tab "Dashboard" [selected]
+    - tab "Watchlist"
+    - tab "Analytics"
+    - tab "Calendar"
+  - tabpanel "Dashboard":
+    - button "📈 Select Portfolio":
+      - text: 📈 Select Portfolio
+      - img
+    - heading "Statistics" [level=2]
+    - text: "Trade Count: 0 Realized PNL 0 Win Rate 0%"
     - img
-    - textbox "Username": d
-    - paragraph: No email or password required. Just pick a username and start trading!
-    - textbox
-    - textbox
-    - button "Create Account"
-- paragraph: ✨ Privacy-first design • No personal data required
-- paragraph: Your trading data stays secure and anonymous
+    - text: 0 Average RR 0
+    - img
+    - text: 0 Profit Factor 0 Expected Value 0 Average Holding Time
+    - img
+    - text: 0 Days
+    - img
+    - text: 0 Hours
+    - img
+    - text: 0 Minutes Balance 0
+    - heading "AI Coach" [level=3]:
+      - img
+      - text: AI Coach
+    - paragraph: Get personalized trading insights and ask questions
+    - 'heading "AI Trading Coach OPENAI: Disconnected GROQ: Connected GEMINI: Connected" [level=3]':
+      - img
+      - text: AI Trading Coach
+    - button "Refresh":
+      - img
+      - text: Refresh
+    - button "Ask AI":
+      - img
+      - text: Ask AI
+    - img
+    - heading "Real-Time Market Analysis" [level=4]
+    - text: MEDIUM 40%
+    - button:
+      - img
+    - button:
+      - img
+    - paragraph: "Based on the current market analysis, here are some specific trading recommendations for the next 24 hours: **Recommendation 1: Short BTC** * Entry Point: $109500 * Stop Loss: $110200 * Take Profit: $108000 * Position Sizing: 0.5% of total portfolio The recent surge in BTC prices may be overextended, and a slight correction could be imminent. The RSI is also showing signs of overbought conditions. A short position with a stop loss above the current price and a take profit below the 50-day moving average could be a profitable trade. **Recommendation 2: Long ETH** * Entry Point: $2550 * Stop Loss: $2450 * Take Profit: $2850 * Position Sizing: 1.5% of total portfolio ETH has been outperforming the broader market, and the recent breakout above the 50-day moving average suggests further upside potential. A long position with a stop loss below the current price and a take profit above the 100-day moving average could be a profitable trade. **Recommendation 3: Long XRP** * Entry Point: $2.20 * Stop Loss: $2.00 * Take Profit: $2.60 * Position Sizing: 1% of total portfolio XRP has been making steady gains and is showing signs of a potential breakout above the 50-day moving average."
+    - text: Live Analysis OPENAI
+    - img
+    - text: Just now
+    - button "Take Action":
+      - img
+      - text: Take Action
+    - heading "Broker Connections" [level=3]
+    - paragraph: Connect your trading accounts for automatic trade sync
+    - button "Connect Broker":
+      - img
+      - text: Connect Broker
+    - text: 🔗
+    - paragraph: No brokers connected
+    - paragraph: Connect your first broker to start syncing trades automatically
 ```
