@@ -81,12 +81,45 @@ const AICoachCard = () => {
     await handleAskAI();
   };
 
-  // Initialize with empty insights - will be populated by real AI
+  // Initialize with sample insights and start real AI analysis
   useEffect(() => {
-    // Start with no insights - real AI will populate them
-    setCurrentInsight(null);
+    // Start with sample insights, then replace with real AI
+    setCurrentInsight({
+      id: 'sample-1',
+      type: 'analysis',
+      title: 'AI Analysis Ready',
+      content: 'Welcome! Click "Ask AI" to get personalized trading insights, or "Get Real Insights" for market analysis.',
+      confidence: 85,
+      timestamp: 'Just now',
+      priority: 'medium',
+      actionable: true,
+      category: 'Welcome',
+      aiProvider: 'openai'
+    });
     setInsights([]);
+    
+    // Check API status on load
+    checkApiStatus();
   }, []);
+
+  // Check AI service status
+  const checkApiStatus = async () => {
+    try {
+      const health = await aiService.healthCheck();
+      const healthStatus = {
+        openai: health.openai || false,
+        groq: health.groq || false,
+        gemini: health.gemini || false
+      };
+      setApiStatus(healthStatus);
+      setHealthStatus(healthStatus); // Compatibility alias
+    } catch (error) {
+      console.error('Health check failed:', error);
+      const defaultStatus = { openai: false, groq: false, gemini: false };
+      setApiStatus(defaultStatus);
+      setHealthStatus(defaultStatus);
+    }
+  };
 
   // Check AI service health and update insights
   useEffect(() => {

@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLocalTrades } from '@/hooks/useLocalTrades';
+import { useTrades } from '@/hooks/useTrades';
+import { usePortfolios } from '@/contexts/PortfolioContext';
 
 interface LivePosition {
   id: string;
@@ -49,7 +51,8 @@ interface PriceAlert {
 }
 
 const LiveTrades = () => {
-  const { trades, addTrade } = useLocalTrades();
+  const { selectedAccountId } = usePortfolios();
+  const { trades, addTrade } = useTrades(selectedAccountId || '');
   const [isLive, setIsLive] = useState(true);
   const [positions, setPositions] = useState<LivePosition[]>([]);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
@@ -103,17 +106,18 @@ const LiveTrades = () => {
   const handleClosePosition = async (position: LivePosition) => {
     // Close position and add to journal
     const tradeData = {
+      accountId: selectedAccountId || '',
       symbol: position.symbol,
-      type: position.type,
-      entryPrice: position.entryPrice,
-      exitPrice: position.currentPrice,
-      quantity: position.quantity / 100000, // Convert to lots
+      side: position.type,
+      amount: position.quantity / 100000,
+      price: position.entryPrice,
+      fee: 0,
+      profit: position.pnl,
+      status: 'closed' as const,
       entryDate: position.entryTime,
       exitDate: new Date().toISOString(),
-      status: 'closed' as const,
       notes: `Closed from live trades. P&L: $${position.pnl.toFixed(2)}`,
-      strategy: 'Manual Close'
-    };
+    } as any;
 
     await addTrade(tradeData);
     setPositions(prev => prev.filter(p => p.id !== position.id));

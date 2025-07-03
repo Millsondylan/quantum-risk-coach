@@ -13,7 +13,8 @@ import {
   LineChart,
   Search,
   Wallet,
-  Bell
+  Bell,
+  Brain
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

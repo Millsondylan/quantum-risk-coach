@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocalTrades } from '@/hooks/useLocalTrades';
+import { useTrades, CombinedTrade } from '@/hooks/useTrades';
 import { useUser } from '@/contexts/UserContext';
 import { realDataService } from '@/lib/realDataService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { Calendar, Plus, TrendingUp, Tag, Download, Search, Zap, RefreshCw } fro
 import { format } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import Header from '@/components/Header';
+import { usePortfolios } from '@/contexts/PortfolioContext';
 
 interface JournalProps {
   defaultTab?: string;
@@ -21,7 +22,8 @@ interface JournalProps {
 
 const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
   const { user } = useUser();
-  const { trades, isLoading, addTrade, updateTrade, deleteTrade, getTradeStats } = useLocalTrades();
+  const { selectedAccountId, accounts } = usePortfolios();
+  const { trades, isLoading, addTrade, updateTrade, deleteTrade, getTradeStats } = useTrades(selectedAccountId || '');
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'closed'>('all');
@@ -29,10 +31,10 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
   // New trade form state
   const [newTrade, setNewTrade] = useState({
     symbol: '',
-    type: 'buy' as 'buy' | 'sell',
-    entryPrice: 0,
-    exitPrice: 0,
-    quantity: 1,
+    side: 'buy' as 'buy' | 'sell',
+    price: 0,
+    profit: 0,
+    amount: 1,
     entryDate: new Date().toISOString(),
     exitDate: '',
     notes: '',
@@ -40,6 +42,7 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
     strategy: '',
     useCurrentPrice: false,
     currentPrice: 0,
+    fee: 0,
   });
 
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
@@ -99,8 +102,8 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
         setNewTrade(prev => ({
           ...prev,
           currentPrice: price,
-          entryPrice: newTrade.useCurrentPrice ? price : prev.entryPrice,
-          exitPrice: newTrade.useCurrentPrice ? price : prev.exitPrice,
+          price: newTrade.useCurrentPrice ? price : prev.price,
+          profit: newTrade.useCurrentPrice && newTrade.side === 'sell' ? price : prev.profit,
         }));
       }
     } catch (error) {
@@ -118,34 +121,36 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
   }, [newTrade.symbol]);
 
   const handleAddTrade = async () => {
-    if (!newTrade.symbol || newTrade.entryPrice <= 0) {
-      alert('Please fill in all required fields');
+    if (!newTrade.symbol || newTrade.price <= 0 || !selectedAccountId) {
+      alert('Please fill in all required fields and select an account');
       return;
     }
 
     const tradeData = {
+      accountId: selectedAccountId,
       symbol: newTrade.symbol,
-      type: newTrade.type,
-      entryPrice: newTrade.entryPrice,
-      exitPrice: newTrade.exitPrice > 0 ? newTrade.exitPrice : undefined,
-      quantity: newTrade.quantity,
+      side: newTrade.side,
+      amount: newTrade.amount,
+      price: newTrade.price,
+      fee: newTrade.fee,
+      profit: newTrade.profit > 0 ? newTrade.profit : undefined,
       entryDate: newTrade.entryDate,
       exitDate: newTrade.exitDate || undefined,
-      status: newTrade.exitPrice > 0 ? 'closed' as const : 'open' as const,
+      status: (newTrade.profit !== undefined && newTrade.profit !== 0) ? 'closed' as const : 'open' as const,
       notes: newTrade.notes,
       tags: newTrade.tags,
       strategy: newTrade.strategy,
     };
 
-    await addTrade(tradeData);
+    await addTrade(tradeData as any);
     
     // Reset form
     setNewTrade({
       symbol: '',
-      type: 'buy',
-      entryPrice: 0,
-      exitPrice: 0,
-      quantity: 1,
+      side: 'buy',
+      price: 0,
+      profit: 0,
+      amount: 1,
       entryDate: new Date().toISOString(),
       exitDate: '',
       notes: '',
@@ -153,11 +158,27 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
       strategy: '',
       useCurrentPrice: false,
       currentPrice: 0,
+      fee: 0,
     });
   };
 
   const handleUpdateTrade = async (id: string, updates: any) => {
-    await updateTrade(id, updates);
+    // Map legacy fields back to DB fields if present
+    const dbUpdates: Partial<CombinedTrade> = {
+      symbol: updates.symbol,
+      side: updates.type || updates.side,
+      amount: updates.quantity || updates.amount,
+      price: updates.entryPrice || updates.price,
+      profit: updates.profitLoss || updates.profit,
+      status: updates.status,
+      entryDate: updates.entryDate,
+      exitDate: updates.exitDate,
+      riskReward: updates.riskReward,
+      fee: updates.commission || updates.fee,
+      stopLoss: updates.stopLoss,
+      takeProfit: updates.takeProfit,
+    };
+    await updateTrade(id, dbUpdates);
   };
 
   const handleDeleteTrade = async (id: string) => {
@@ -170,8 +191,8 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
     setNewTrade(prev => ({
       ...prev,
       useCurrentPrice: useCurrent,
-      entryPrice: useCurrent ? prev.currentPrice : prev.entryPrice,
-      exitPrice: useCurrent ? prev.currentPrice : prev.exitPrice,
+      price: useCurrent ? prev.currentPrice : prev.price,
+      profit: useCurrent ? prev.currentPrice : prev.profit,
     }));
   };
 
@@ -319,8 +340,8 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="font-semibold">{trade.symbol}</h3>
-                            <Badge variant={trade.type === 'buy' ? 'default' : 'secondary'}>
-                              {trade.type.toUpperCase()}
+                            <Badge variant={trade.side === 'buy' ? 'default' : 'secondary'}>
+                              {trade.side.toUpperCase()}
                             </Badge>
                             <Badge variant={trade.status === 'open' ? 'outline' : 'default'}>
                               {trade.status}
@@ -330,26 +351,26 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
                             <div>
                               <span className="text-muted-foreground">Entry:</span>
                               <br />
-                              ${trade.entryPrice}
+                              ${trade.price}
                             </div>
-                            {trade.exitPrice && (
+                            {trade.exitDate && (
                               <div>
                                 <span className="text-muted-foreground">Exit:</span>
                                 <br />
-                                ${trade.exitPrice}
+                                ${trade.profit}
                               </div>
                             )}
                             <div>
                               <span className="text-muted-foreground">Quantity:</span>
                               <br />
-                              {trade.quantity}
+                              {trade.amount}
                             </div>
-                            {trade.profitLoss !== undefined && (
+                            {trade.profit !== undefined && (
                               <div>
                                 <span className="text-muted-foreground">P&L:</span>
                                 <br />
-                                <span className={trade.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                  ${trade.profitLoss.toFixed(2)}
+                                <span className={trade.profit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                  ${trade.profit.toFixed(2)}
                                 </span>
                               </div>
                             )}
@@ -369,7 +390,7 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleUpdateTrade(trade.id, { status: 'closed' })}
+                            onClick={() => handleUpdateTrade(trade.id, { status: 'closed', profit: trade.profit || 0 })}
                           >
                             Close
                           </Button>
@@ -416,7 +437,7 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
                   </div>
                   <div>
                     <Label htmlFor="type">Type</Label>
-                    <Select value={newTrade.type} onValueChange={(value: 'buy' | 'sell') => setNewTrade({ ...newTrade, type: value })}>
+                    <Select value={newTrade.side} onValueChange={(value: 'buy' | 'sell') => setNewTrade({ ...newTrade, side: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -427,21 +448,21 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="entryPrice">Entry Price *</Label>
+                    <Label htmlFor="price">Price *</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="entryPrice"
+                        id="price"
                         type="number"
                         step="0.0001"
                         placeholder="Enter entry price"
-                        value={newTrade.entryPrice || ''}
-                        onChange={(e) => setNewTrade({ ...newTrade, entryPrice: parseFloat(e.target.value) || 0 })}
+                        value={newTrade.price || ''}
+                        onChange={(e) => setNewTrade({ ...newTrade, price: parseFloat(e.target.value) || 0 })}
                       />
                       {newTrade.currentPrice > 0 && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setNewTrade({ ...newTrade, entryPrice: newTrade.currentPrice })}
+                          onClick={() => setNewTrade({ ...newTrade, price: newTrade.currentPrice })}
                           className="flex items-center gap-1"
                         >
                           <Zap className="h-3 w-3" />
@@ -451,21 +472,21 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="exitPrice">Exit Price (Optional)</Label>
+                    <Label htmlFor="profit">Profit (Optional)</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="exitPrice"
+                        id="profit"
                         type="number"
                         step="0.0001"
                         placeholder="Enter exit price"
-                        value={newTrade.exitPrice || ''}
-                        onChange={(e) => setNewTrade({ ...newTrade, exitPrice: parseFloat(e.target.value) || 0 })}
+                        value={newTrade.profit || ''}
+                        onChange={(e) => setNewTrade({ ...newTrade, profit: parseFloat(e.target.value) || 0 })}
                       />
                       {newTrade.currentPrice > 0 && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setNewTrade({ ...newTrade, exitPrice: newTrade.currentPrice })}
+                          onClick={() => setNewTrade({ ...newTrade, profit: newTrade.currentPrice })}
                           className="flex items-center gap-1"
                         >
                           <Zap className="h-3 w-3" />
@@ -475,14 +496,14 @@ const Journal: React.FC<JournalProps> = ({ defaultTab = 'trades' }) => {
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="quantity">Quantity</Label>
+                    <Label htmlFor="amount">Amount</Label>
                     <Input
-                      id="quantity"
+                      id="amount"
                       type="number"
                       step="0.01"
                       placeholder="1"
-                      value={newTrade.quantity}
-                      onChange={(e) => setNewTrade({ ...newTrade, quantity: parseFloat(e.target.value) || 1 })}
+                      value={newTrade.amount}
+                      onChange={(e) => setNewTrade({ ...newTrade, amount: parseFloat(e.target.value) || 1 })}
                     />
                   </div>
                   <div>

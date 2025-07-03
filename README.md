@@ -1037,3 +1037,27 @@ For support and questions:
 - [ ] Advanced sentiment analysis
 - [ ] Machine learning predictions
 - [ ] Real-time alerts and notifications
+
+## Lovable.dev Compatibility
+
+### Migration Preparation
+
+This project is prepared for potential migration to Lovable.dev. We've included several tools to help with the transition:
+
+- `npm run lovable:prepare`: Prepares your project for Lovable.dev migration
+- `npm run lovable:check-compatibility`: Runs compatibility checks
+- `npm run lovable:migrate`: Initiates migration to Next.js (if applicable)
+
+#### Compatibility Status
+- ✅ React 18 Support
+- ✅ TypeScript Configuration
+- ✅ Tailwind CSS
+- ✅ Mobile Development Ready
+- 🔄 Recommended: Migrate to Next.js App Router
+
+### Migration Considerations
+- Review and update routing from React Router to Next.js App Router
+- Verify Supabase and AI integration compatibility
+- Test mobile capabilities after migration
+
+For more details, check the `lovable.config.js` and `lovable-migration-report.json` files.

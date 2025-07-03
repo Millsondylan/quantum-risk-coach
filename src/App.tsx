@@ -22,6 +22,7 @@ const MT4Connection = lazy(() => import('./pages/MT4Connection'));
 const ValidationTest = lazy(() => import('./pages/ValidationTest'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AICoach = lazy(() => import('./pages/AICoach'));
+const AIStrategyBuilder = lazy(() => import('./pages/AIStrategyBuilder'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -193,6 +194,17 @@ function App() {
               <ProtectedRoute>
                 <ProtectedLayout>
                   <AICoach />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/ai-strategy-builder" 
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <AIStrategyBuilder />
                 </ProtectedLayout>
               </ProtectedRoute>
             } 

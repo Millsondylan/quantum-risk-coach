@@ -20,7 +20,14 @@ import {
   Trash2,
   Save,
   Settings as SettingsIcon,
-  TestTube
+  TestTube,
+  Brain,
+  BarChart3,
+  TrendingUp,
+  Target,
+  Zap,
+  Activity,
+  ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { pushNotificationService } from '@/lib/pushNotificationService';
@@ -130,9 +137,10 @@ const Settings: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="ai-tools">AI Tools</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="data">Data</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
@@ -223,6 +231,125 @@ const Settings: React.FC = () => {
                 <Save className="h-4 w-4" />
                 Save Profile
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ai-tools" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5" />
+                AI Trading Tools
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* AI Coach */}
+                <div className="p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Brain className="w-8 h-8 text-purple-400" />
+                    <div>
+                      <h3 className="font-semibold">AI Trading Coach</h3>
+                      <p className="text-sm text-muted-foreground">Personalized trading insights</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/ai-coach'}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open AI Coach
+                  </Button>
+                </div>
+
+                {/* AI Strategy Builder */}
+                <div className="p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Target className="w-8 h-8 text-blue-400" />
+                    <div>
+                      <h3 className="font-semibold">AI Strategy Builder</h3>
+                      <p className="text-sm text-muted-foreground">Create & backtest strategies</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/ai-strategy-builder'}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open Strategy Builder
+                  </Button>
+                </div>
+
+                {/* Strategy Analyzer */}
+                <div className="p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <BarChart3 className="w-8 h-8 text-green-400" />
+                    <div>
+                      <h3 className="font-semibold">Strategy Analyzer</h3>
+                      <p className="text-sm text-muted-foreground">Advanced strategy analysis</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/strategy-analyzer'}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open Analyzer
+                  </Button>
+                </div>
+
+                {/* MT4/MT5 Connection */}
+                <div className="p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Activity className="w-8 h-8 text-orange-400" />
+                    <div>
+                      <h3 className="font-semibold">Broker Sync</h3>
+                      <p className="text-sm text-muted-foreground">Connect MT4/MT5 accounts</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/mt4-connection'}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Broker Settings
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="w-5 h-5 text-yellow-400" />
+                  <h3 className="font-semibold">AI Features Status</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">OpenAI GPT-4:</span>
+                    <Badge variant="outline" className="text-green-400 border-green-400">Active</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Groq Llama3:</span>
+                    <Badge variant="outline" className="text-green-400 border-green-400">Active</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Google Gemini:</span>
+                    <Badge variant="outline" className="text-green-400 border-green-400">Active</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Real-time Analysis:</span>
+                    <Badge variant="outline" className="text-blue-400 border-blue-400">Running</Badge>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

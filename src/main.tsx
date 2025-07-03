@@ -6,7 +6,9 @@ import './index.css'
 import './lib/localUserUtils'
 import { performanceMonitor } from './lib/performanceMonitor'
 import { UserProvider } from './contexts/UserContext'
-import { pushNotificationService } from './lib/pushNotificationService'
+import { PortfolioProvider } from './contexts/PortfolioContext'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { PushNotificationService } from './lib/pushNotificationService'
 
 // Register service worker for caching and offline functionality
 if ('serviceWorker' in navigator) {
@@ -30,13 +32,18 @@ try {
     throw new Error("Root element not found");
   }
   
+  const queryClient = new QueryClient();
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
       <BrowserRouter>
-        <UserProvider>
-          <App />
-        </UserProvider>
+        <QueryClientProvider client={queryClient}>
+          <UserProvider>
+            <PortfolioProvider>
+              <App />
+            </PortfolioProvider>
+          </UserProvider>
+        </QueryClientProvider>
       </BrowserRouter>
     </React.StrictMode>
   );
@@ -57,5 +64,5 @@ performanceMonitor.measure('app-initialization', 'app-start', 'app-loaded');
 
 // Expose push notification service globally for testing
 if (typeof window !== 'undefined') {
-  (window as any).pushNotificationService = pushNotificationService;
+  (window as any).pushNotificationService = PushNotificationService;
 }

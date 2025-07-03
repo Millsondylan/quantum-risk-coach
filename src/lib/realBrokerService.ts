@@ -1,3 +1,5 @@
+import { database } from '@/lib/localDatabase';
+
 export interface RealBrokerConnection {
   id: string;
   userId: string;
@@ -113,6 +115,21 @@ class RealBrokerService {
 
         // Save to database instead of localStorage for production
         await this.saveConnectionToDatabase(connection);
+
+        // Persist account row locally
+        try {
+          await database.createAccount({
+            id: connection.id,
+            portfolioId: 'default', // TODO: link to selected portfolio via context
+            type: 'broker',
+            broker: connection.type,
+            credentials: this.encryptCredentials(connection.credentials),
+            balance: result.accountInfo?.balance || 0,
+            createdAt: new Date().toISOString(),
+          });
+        } catch (err) {
+          console.error('Failed to create account in local DB', err);
+        }
 
         // Start auto-sync if enabled
         if (connection.settings.autoSync) {
@@ -452,20 +469,50 @@ class RealBrokerService {
     }
 
     try {
-      // Implement actual trade fetching based on broker type
+      let trades: RealTrade[] = [];
       switch (connection.type) {
         case 'binance':
-          return await this.fetchBinanceTrades(connection, symbol, limit);
+          trades = await this.fetchBinanceTrades(connection, symbol, limit);
+          break;
         case 'bybit':
-          return await this.fetchBybitTrades(connection, symbol, limit);
+          trades = await this.fetchBybitTrades(connection, symbol, limit);
+          break;
         case 'kucoin':
-          return await this.fetchKucoinTrades(connection, symbol, limit);
+          trades = await this.fetchKucoinTrades(connection, symbol, limit);
+          break;
         case 'mt4':
         case 'mt5':
-          return await this.fetchMT45Trades(connection, symbol, limit);
+          trades = await this.fetchMT45Trades(connection, symbol, limit);
+          break;
         default:
           throw new Error(`Trade fetching not implemented for ${connection.type}`);
       }
+
+      if (trades.length) {
+        // Map RealTrade to database.Trade schema
+        const mapped = trades.map(t => ({
+          id: t.id,
+          accountId: connectionId,
+          symbol: t.symbol,
+          side: t.side,
+          amount: t.amount,
+          price: t.price,
+          fee: t.fee,
+          profit: t.profit,
+          status: t.status,
+          entryDate: t.openTime || t.timestamp,
+          exitDate: t.closeTime,
+          riskReward: undefined,
+        }));
+
+        try {
+          await database.bulkInsertTrades(mapped as any);
+        } catch (err) {
+          console.error('Failed to persist trades', err);
+        }
+      }
+
+      return trades;
     } catch (error) {
       console.error('Failed to fetch trades:', error);
       throw error;
