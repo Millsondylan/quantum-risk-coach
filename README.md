@@ -1061,3 +1061,5 @@ This project is prepared for potential migration to Lovable.dev. We've included 
 - Test mobile capabilities after migration
 
 For more details, check the `lovable.config.js` and `lovable-migration-report.json` files.
+
+<!-- Trigger APK build - $(date) -->
