@@ -6,7 +6,6 @@ import React, {
   ReactNode 
 } from 'react';
 import { localDatabase as database } from '@/lib/localStorage';
-import { realBrokerService } from '@/lib/realBrokerService';
 import { Portfolio, Account } from '@/lib/localStorage';
 
 interface PortfolioContextType {
@@ -23,7 +22,6 @@ const PortfolioContext = createContext<PortfolioContextType | undefined>(undefin
 export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [currentPortfolio, setCurrentPortfolio] = useState<(Portfolio & { totalPnL: number; accounts: Account[] }) | null>(null);
-  const brokerService = realBrokerService;
 
   useEffect(() => {
     initializePortfolios();
@@ -128,13 +126,10 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
     
     for (const account of brokerAccounts) {
       try {
-        const connection = brokerService.getConnection(account.id);
-        if (connection) {
-          const balance = await brokerService.getAccountBalance(connection.id);
-          
-          // Update account balance in database
-          await database.updateAccountBalance(account.id, balance);
-        }
+        const balance = await database.getAccountBalance(account.id);
+        
+        // Update account balance in database
+        await database.updateAccountBalance(account.id, balance);
       } catch (error) {
         console.error(`Failed to refresh balance for account ${account.id}`, error);
       }

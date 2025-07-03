@@ -32,7 +32,6 @@ import RecentTrades from '@/components/RecentTrades';
 import QuickStats from '@/components/QuickStats';
 import { useLocalTrades } from '@/hooks/useLocalTrades';
 import { tradingPlaceholders } from '@/lib/placeholderService';
-import { realBrokerService } from '@/lib/realBrokerService';
 import { database } from '@/lib/localDatabase';
 import { usePortfolioContext } from '@/contexts/PortfolioContext';
 import { BrokerConnectionModal } from '@/components/BrokerConnectionModal';
@@ -585,8 +584,6 @@ const Index = () => {
     setOnboardingModalOpen(false);
   };
 
-  const supportedBrokers = realBrokerService.getSupportedBrokers();
-
   return (
     <div className="min-h-screen bg-[#0A0B0D] relative z-10">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
@@ -649,16 +646,7 @@ const Index = () => {
           </DialogHeader>
           
           <div className="grid grid-cols-3 gap-2 mt-4">
-            {supportedBrokers.slice(0, 9).map(broker => (
-              <Button 
-                key={broker}
-                className="py-6 flex flex-col items-center justify-center gap-2 h-auto"
-                onClick={() => handleBrokerSelection(broker)}
-              >
-                <span className="text-xl">{broker === 'mt4' ? '📊' : broker === 'mt5' ? '📈' : '🔶'}</span>
-                <span className="text-xs uppercase">{broker}</span>
-              </Button>
-            ))}
+            {/* Placeholder for supported brokers */}
           </div>
           
           <div className="mt-4">

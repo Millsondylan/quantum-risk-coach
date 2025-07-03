@@ -8,7 +8,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { realBrokerService } from '@/lib/realBrokerService';
 import { Icons } from '@/components/Icons';
 
 const Onboarding = () => {
@@ -127,46 +126,15 @@ const Onboarding = () => {
       
       // Set up account based on selection
       if (accountType === 'broker' && selectedBroker) {
-        if (selectedBroker && apiCredentials.apiKey && apiCredentials.secretKey) {
-          const connectionId = `${selectedBroker}_${Date.now()}`;
-          
-          // Try to connect to broker
-          const connectionResult = await realBrokerService.connectToBroker({
-            id: connectionId,
-            userId: user?.id || `user_${Date.now()}`,
-            name: `${brokerOptions.find(b => b.value === selectedBroker)?.label} Account`,
-            type: selectedBroker as any,
-            status: 'connecting',
-            credentials: {
-              apiKey: apiCredentials.apiKey,
-              secretKey: apiCredentials.secretKey,
-              passphrase: apiCredentials.passphrase || undefined,
-              server: apiCredentials.server || undefined,
-              login: apiCredentials.login || undefined,
-              password: apiCredentials.password || undefined,
-              sandbox: apiCredentials.sandbox
-            },
-            lastSync: new Date().toISOString(),
-            settings: {
-              autoSync: true,
-              syncInterval: 5
-            }
-          });
-          
-          if (!connectionResult.success) {
-            throw new Error(connectionResult.message || 'Failed to connect to broker');
-          }
-          
-          // Add account to portfolio
-          await addAccountToPortfolio({
-            portfolioId: 'default',
-            name: `${brokerOptions.find(b => b.value === selectedBroker)?.label} Account`,
-            type: 'broker',
-            broker: selectedBroker,
-            balance: connectionResult.accountInfo?.balance || parseFloat(accountBalance) || 0,
-            currency: 'USD'
-          });
-        }
+        // Add account to portfolio
+        await addAccountToPortfolio({
+          portfolioId: 'default',
+          name: `${brokerOptions.find(b => b.value === selectedBroker)?.label} Account`,
+          type: 'broker',
+          broker: selectedBroker,
+          balance: parseFloat(accountBalance) || 0,
+          currency: 'USD'
+        });
       } else if (accountType === 'manual') {
         // Create manual journal account
         await addAccountToPortfolio({

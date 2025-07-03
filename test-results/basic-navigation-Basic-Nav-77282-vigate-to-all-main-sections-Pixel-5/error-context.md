@@ -1,0 +1,80 @@
+# Page snapshot
+
+```yaml
+- main:
+  - tablist:
+    - tab "Dashboard" [selected]
+    - tab "Watchlist"
+    - tab "Analytics"
+    - tab "Calendar"
+  - tabpanel "Dashboard":
+    - button "📈 Select Portfolio":
+      - text: 📈 Select Portfolio
+      - img
+    - heading "Statistics" [level=2]
+    - text: "Trade Count: 0 Realized PNL 0 Win Rate 0%"
+    - img
+    - text: 0 Average RR 0
+    - img
+    - text: 0 Profit Factor 0 Expected Value 0 Average Holding Time
+    - img
+    - text: 0 Days
+    - img
+    - text: 0 Hours
+    - img
+    - text: 0 Minutes Balance 0
+    - heading "AI Coach" [level=3]:
+      - img
+      - text: AI Coach
+    - paragraph: Get personalized trading insights and ask questions
+    - 'heading "AI Trading Coach OPENAI: Disconnected GROQ: Connected GEMINI: Connected" [level=3]':
+      - img
+      - text: AI Trading Coach
+    - button "Refresh":
+      - img
+      - text: Refresh
+    - button "Ask AI":
+      - img
+      - text: Ask AI
+    - img
+    - heading "Real-Time Market Analysis" [level=4]
+    - text: MEDIUM 50%
+    - button:
+      - img
+    - button:
+      - img
+    - paragraph: "**Market Analysis Request - Recommendation (1D)** **Symbol:** AAPL (Apple Inc.) **Timeframe:** 1-Day **Market:** NASDAQ **Date:** 2023-02-20 **Technical Analysis:** AAPL has been trading in a consolidation phase, forming a symmetrical triangle pattern. The stock has been testing the upper trend line of the triangle, indicating a potential breakout. **Indicators:** * **RSI (14):** 55.42 (neutral) * **Stochastic Oscillator (14,3,3):** 50.00 (neutral) * **Bollinger Bands (20,2):** Currently contracting, indicating a potential breakout **Trading Recommendations:** **Long Trade:** * **Entry Point:** $175.50 (above the upper trend line of the symmetrical triangle) * **Stop Loss:** $173.50 (below the lower trend line of the symmetrical triangle) * **Take Profit:** $180.00 (above the upper trend line of the symmetrical triangle) * **Position Sizing:** 0.5% of total portfolio (medium risk) **Short Trade:** * **Entry Point:** $173.50 (below the lower trend line of the symmetrical triangle) * **Stop Loss:** $175.50 (above the upper trend line of the symmetrical triangle) * **Take Profit:** $170.00 (below the lower trend line of"
+    - text: Live Analysis OPENAI
+    - img
+    - text: Just now
+    - button "Take Action":
+      - img
+      - text: Take Action
+    - heading "Broker Connections" [level=3]
+    - paragraph: Connect your trading accounts for automatic trade sync
+    - button "Connect Broker":
+      - img
+      - text: Connect Broker
+    - text: 🔗
+    - paragraph: No brokers connected
+    - paragraph: Connect your first broker to start syncing trades automatically
+- navigation "Mobile navigation":
+  - button "Navigate to Home":
+    - img
+    - text: Home
+  - button "Navigate to News":
+    - img
+    - text: News
+  - button "Navigate to Journal":
+    - img
+    - text: Journal
+  - button "Navigate to Add Trade":
+    - img
+    - text: Add Trade
+  - button "Navigate to Analytics":
+    - img
+    - text: Analytics
+  - button "Navigate to Settings":
+    - img
+    - text: Settings
+```

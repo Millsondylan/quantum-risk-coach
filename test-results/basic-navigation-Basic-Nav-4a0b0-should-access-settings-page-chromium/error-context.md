@@ -38,12 +38,12 @@
       - text: Ask AI
     - img
     - heading "Real-Time Market Analysis" [level=4]
-    - text: MEDIUM 40%
+    - text: MEDIUM 50%
     - button:
       - img
     - button:
       - img
-    - paragraph: "Based on the current market analysis, here are some specific trading recommendations for the next 24 hours: **Recommendation 1: Short BTC** * Entry Point: $109500 * Stop Loss: $110200 * Take Profit: $108000 * Position Sizing: 0.5% of total portfolio The recent surge in BTC prices may be overextended, and a slight correction could be imminent. The RSI is also showing signs of overbought conditions. A short position with a stop loss above the current price and a take profit below the 50-day moving average could be a profitable trade. **Recommendation 2: Long ETH** * Entry Point: $2550 * Stop Loss: $2450 * Take Profit: $2850 * Position Sizing: 1.5% of total portfolio ETH has been outperforming the broader market, and the recent breakout above the 50-day moving average suggests further upside potential. A long position with a stop loss below the current price and a take profit above the 100-day moving average could be a profitable trade. **Recommendation 3: Long XRP** * Entry Point: $2.20 * Stop Loss: $2.00 * Take Profit: $2.60 * Position Sizing: 1% of total portfolio XRP has been making steady gains and is showing signs of a potential breakout above the 50-day moving average."
+    - paragraph: "Based on the current market trends and analysis, I'm providing the following trading recommendations: **BTC (1D)** * Recommendation: Long position * Entry point: $109500 (slightly below the current price) * Target: $111500 (approximately 2.5% above the current price) * Stop-loss: $108500 (approximately 1.5% below the current price) * Position sizing: 0.5% of the account balance **ETH (1D)** * Recommendation: Long position * Entry point: $2560 (slightly below the current price) * Target: $2700 (approximately 5.5% above the current price) * Stop-loss: $2520 (approximately 1.5% below the current price) * Position sizing: 0.5% of the account balance **XRP (1D)** * Recommendation: Short position * Entry point: $2.20 (slightly above the current price) * Target: $2.00 (approximately 10% below the current price) * Stop-loss: $2.40 (approximately 5% above the current price) * Position sizing: 0.5% of the account balance **BNB (1D)** * Recommendation: Neutral position * No clear buy or sell signal * Hold current position or wait for a clear signal before entering a trade **USDT (1D)** *"
     - text: Live Analysis OPENAI
     - img
     - text: Just now

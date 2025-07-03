@@ -42,7 +42,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUser } from '@/contexts/UserContext';
-import { realBrokerService } from '@/lib/realBrokerService';
 
 interface OnboardingData {
   // User Profile
@@ -437,7 +436,7 @@ const UltraTraderOnboarding: React.FC = () => {
           id: `${selectedBroker}_${Date.now()}`,
           name: connectionForm.name || broker.name,
           type: selectedBroker as any,
-          status: 'connecting',
+          status: 'connected',
           credentials: {
             apiKey: connectionForm.apiKey,
             secretKey: connectionForm.secretKey,
@@ -457,7 +456,6 @@ const UltraTraderOnboarding: React.FC = () => {
         // Simulate connection (replace with real broker service)
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        connection.status = 'connected';
         setData({
           ...data,
           brokerConnections: [...data.brokerConnections, connection]

@@ -46,6 +46,10 @@ test.describe('Basic Navigation Tests', () => {
     // Wait for main app to load
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
+
+    // Debug: Take a screenshot and log the current URL
+    await page.screenshot({ path: 'playwright-debug-after-onboarding.png' });
+    console.log('DEBUG URL after onboarding:', page.url());
   });
 
   test('should navigate to all main sections', async ({ page }) => {

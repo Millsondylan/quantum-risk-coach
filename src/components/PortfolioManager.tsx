@@ -45,7 +45,6 @@ import {
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useTrades } from '@/hooks/useTrades';
-import realBrokerService from '@/lib/realBrokerService';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
