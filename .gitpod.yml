@@ -1,0 +1,78 @@
+ports:
+  - port: 3000
+    onOpen: open-preview
+    name: Frontend
+  - port: 3001
+    onOpen: open-preview
+    name: Backend API
+  - port: 3002
+    onOpen: open-preview
+    name: MT4/MT5 Service
+  - port: 8080
+    onOpen: open-preview
+    name: Health Check
+
+tasks:
+  - name: Setup Environment
+    init: |
+      # Install frontend dependencies
+      npm install
+      
+      # Install backend dependencies
+      cd backend && npm install
+      
+      # Create necessary directories
+      mkdir -p backend/logs
+      mkdir -p logs
+      
+      # Copy environment file
+      cp env.example .env
+      
+      # Set up Python environment
+      python3 -m pip install --upgrade pip
+      python3 -m pip install -r backend/requirements.txt || echo "No requirements.txt found"
+      
+      # Install MetaTrader5 package
+      python3 -m pip install MetaTrader5
+      
+      # Set up Gitpod environment variables
+      echo "export PYTHONPATH=/workspaces/quantum-risk-coach/backend/scripts:\$PYTHONPATH" >> ~/.bashrc
+      echo "export NODE_ENV=development" >> ~/.bashrc
+      echo "export MT5_PATH=/usr/local/lib/python3.*/site-packages/MetaTrader5" >> ~/.bashrc
+      echo "export DISPLAY=:99" >> ~/.bashrc
+      
+      # Start Xvfb for MetaTrader5
+      Xvfb :99 -screen 0 1024x768x24 &
+      
+      echo "Environment setup complete!"
+
+  - name: Start Backend Services
+    command: |
+      # Start the backend server
+      cd backend
+      npm start &
+      
+      # Wait for backend to start
+      sleep 5
+      
+      # Start the frontend
+      cd ..
+      npm run dev &
+      
+      echo "All services started!"
+      echo "Frontend: http://localhost:3000"
+      echo "Backend API: http://localhost:3001"
+      echo "MT4/MT5 Service: http://localhost:3002"
+
+vscode:
+  extensions:
+    - ms-python.python
+    - ms-python.vscode-pylance
+    - ms-vscode.vscode-typescript-next
+    - bradlc.vscode-tailwindcss
+    - esbenp.prettier-vscode
+    - ms-vscode.vscode-json
+    - redhat.vscode-yaml
+    - ms-vscode.vscode-docker
+    - ms-vscode.vscode-node-debug2
+    - ms-vscode.vscode-js-debug 
