@@ -128,6 +128,7 @@
     "jsdom": "^23.0.1",
     "prettier": "^3.1.1",
     "prettier-plugin-tailwindcss": "^0.5.9",
+    "terser": "^5.43.1",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vitest": "^1.0.4",

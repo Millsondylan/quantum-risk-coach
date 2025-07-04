@@ -69,9 +69,9 @@ const Headline = React.forwardRef<
   align,
   ...props 
 }, ref) => {
-  const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements
+  const HeadingTag = `h${level}` as keyof React.JSX.IntrinsicElements
   return React.createElement(
-    HeadingTag, 
+    HeadingTag as any, 
     {
       ref,
       className: cn(

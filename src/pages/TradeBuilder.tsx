@@ -87,19 +87,25 @@ const TradeBuilder = () => {
   const handleExecuteTrade = async (setup: TradeSetup) => {
     try {
       await addTrade({
-        instrument: setup.instrument,
-        trade_type: setup.tradeType,
-        entry_price: setup.entryPrice,
-        exit_price: null,
-        stop_loss: setup.stopLoss || null,
-        take_profit: setup.takeProfit || null,
-        lot_size: setup.lotSize,
-        profit_loss: null,
+        id: crypto.randomUUID(),
+        symbol: setup.instrument,
+        type: setup.tradeType === 'buy' ? 'long' : 'short',
+        side: setup.tradeType,
+        quantity: setup.lotSize,
+        entryPrice: setup.entryPrice,
+        price: setup.entryPrice,
+        exitPrice: null,
+        stopLoss: setup.stopLoss || null,
+        takeProfit: setup.takeProfit || null,
+        pnl: null,
+        profit: null,
+        profitLoss: null,
         status: 'open',
-        source: 'trade_builder',
-        opened_at: new Date().toISOString(),
-        closed_at: null,
-        mt5_ticket_id: null,
+        entryTime: new Date().toISOString(),
+        exitTime: null,
+        entryDate: new Date().toISOString(),
+        exitDate: null,
+        updatedAt: new Date().toISOString()
       });
 
       toast.success('Trade executed successfully!');

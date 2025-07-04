@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,13 +46,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '../hooks/use-toast';
 import { pushNotificationService, NotificationPreferences as ServiceNotificationPreferences } from '@/lib/pushNotificationService';
 import { useUser } from '@/contexts/UserContext';
+import type { NotificationPreferences } from '@/types/user';
 
 interface NotificationChannel {
   id: string;
   name: string;
   type: 'browser' | 'telegram' | 'email' | 'sms'; // Extend types as needed
   enabled: boolean;
-  icon: JSX.Element;
+  icon: React.JSX.Element;
 }
 
 interface PriceAlert {
@@ -65,9 +66,6 @@ interface PriceAlert {
   triggered?: Date;
   triggerCount: number;
 }
-
-// Use the comprehensive NotificationPreferences from pushNotificationService
-type NotificationPreferences = ServiceNotificationPreferences;
 
 interface TelegramConfig {
   botToken: string;
@@ -128,9 +126,19 @@ const NotificationsAlerts = () => {
     // Initialize with default preferences from service
     const defaultPrefs = pushNotificationService.getPreferences();
     // Merge with user's saved preferences if available
-    return user?.preferences?.notifications ? 
-      { ...defaultPrefs, ...user.preferences.notifications } : 
-      defaultPrefs;
+    const userPrefs = user?.preferences?.notifications;
+    if (userPrefs) {
+      return { ...defaultPrefs, ...userPrefs };
+    }
+    // Convert service preferences to user preferences format
+    return {
+      ...defaultPrefs,
+      email: true,
+      push: true,
+      tradingStyle: 'day',
+      riskTolerance: 'moderate',
+      experience: 'intermediate'
+    } as NotificationPreferences;
   });
   const [activeTab, setActiveTab] = useState('notifications');
   const [filter, setFilter] = useState('all');
@@ -166,9 +174,16 @@ const NotificationsAlerts = () => {
     if (user?.preferences?.notifications) {
       const mergedPreferences = { ...currentPreferences, ...user.preferences.notifications };
       pushNotificationService.updatePreferences(mergedPreferences);
-      setPreferences(mergedPreferences);
+      setPreferences(mergedPreferences as NotificationPreferences);
     } else {
-      setPreferences(currentPreferences);
+      setPreferences({
+        ...currentPreferences,
+        email: true,
+        push: true,
+        tradingStyle: 'day',
+        riskTolerance: 'moderate',
+        experience: 'intermediate'
+      } as NotificationPreferences);
     }
   }, [user]);
 
@@ -182,7 +197,14 @@ const NotificationsAlerts = () => {
   const loadSavedData = () => {
     // Load settings from pushNotificationService
     const currentPreferences = pushNotificationService.getPreferences();
-    setPreferences(currentPreferences);
+    setPreferences({
+      ...currentPreferences,
+      email: true,
+      push: true,
+      tradingStyle: 'day',
+      riskTolerance: 'moderate',
+      experience: 'intermediate'
+    } as NotificationPreferences);
 
     // Load existing alerts from localStorage
     const storedAlerts = localStorage.getItem('priceAlerts');
@@ -238,7 +260,7 @@ const NotificationsAlerts = () => {
     setIsLoading(true);
     try {
       const permission = await pushNotificationService.requestPermission();
-      setPushPermission(permission);
+      setPushPermission(permission as NotificationPermission);
       
       if (permission === 'granted') {
         toast.success('Browser notifications enabled!');
@@ -317,18 +339,6 @@ const NotificationsAlerts = () => {
           badge: '/icon-72x72.png',
           tag: 'price-alert',
           requireInteraction: true,
-          actions: [
-            {
-              action: 'view',
-              title: 'View Chart',
-              icon: '/icon-chart.png'
-            },
-            {
-              action: 'dismiss',
-              title: 'Dismiss',
-              icon: '/icon-close.png'
-            }
-          ],
           data: {
             type: 'price_alert',
             timestamp: Date.now()

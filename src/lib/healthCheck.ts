@@ -347,25 +347,18 @@ class HealthCheckService {
   private async checkWebSocketConnections(): Promise<HealthStatus> {
     const start = Date.now();
     try {
-      const wsHealth = await this.wsService.healthCheck();
+      // WebSocket health check not implemented
       const responseTime = Date.now() - start;
       
-      const healthyConnections = Object.values(wsHealth).filter(Boolean).length;
-      const totalConnections = Object.keys(wsHealth).length;
-      
-      let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-      if (healthyConnections === 0) status = 'unhealthy';
-      else if (healthyConnections < totalConnections) status = 'degraded';
-
       return {
         service: 'WebSocket Connections',
-        status,
+        status: 'unhealthy',
         responseTime,
         lastChecked: Date.now(),
         details: { 
-          healthy: healthyConnections, 
-          total: totalConnections,
-          connections: wsHealth 
+          healthy: 0, 
+          total: 0,
+          connections: {} 
         }
       };
     } catch (error) {

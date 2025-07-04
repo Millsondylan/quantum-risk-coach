@@ -99,7 +99,7 @@ const CalendarView = () => {
         }
 
         if (newsResponse.status === 'fulfilled') {
-          setAllNews(newsResponse.value);
+          setAllNews(newsResponse.value as NewsItem[]);
         } else {
           console.error('Error fetching news:', newsResponse.reason);
           const errorMessage = tradesResponse.status === 'rejected' ? tradesResponse.reason : newsResponse.reason;
@@ -396,7 +396,7 @@ const CalendarView = () => {
         localDatabase.getJournalEntries(),
       ]);
       if (tradesResponse.status === 'fulfilled') setAllTrades(tradesResponse.value);
-      if (newsResponse.status === 'fulfilled') setAllNews(newsResponse.value);
+      if (newsResponse.status === 'fulfilled') setAllNews(newsResponse.value as NewsItem[]);
       if (journalResponse.status === 'fulfilled') setAllJournalEntries(journalResponse.value);
     } catch (err) {
       console.error('Failed to add journal entry:', err);
@@ -551,9 +551,6 @@ const CalendarView = () => {
                     head_row: "flex",
                     row: "flex w-full mt-2",
                     cell: "h-16 w-16 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-slate-800/50 [&:has([aria-selected])]:bg-slate-800 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                  }}
-                  components={{
-                    DayContent: ({ date }) => getDayContent(date),
                   }}
                 />
               ) : (

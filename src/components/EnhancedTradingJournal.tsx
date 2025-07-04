@@ -253,24 +253,47 @@ const EnhancedTradingJournal = () => {
     }
 
     try {
+      // Map TradeEntry to Trade type for addTrade
       const tradeData = {
-        symbol: currentTrade.instrument,
-        type: currentTrade.tradeType || 'buy',
-        entryPrice: currentTrade.entryPrice,
+        id: currentTrade.id || crypto.randomUUID(),
+        symbol: currentTrade.instrument || '',
+        type: (currentTrade.tradeType === 'buy' ? 'long' : 'short') as 'long' | 'short',
+        side: currentTrade.tradeType || 'buy',
+        quantity: currentTrade.quantity || 0,
+        entryPrice: currentTrade.entryPrice || 0,
+        price: currentTrade.entryPrice || 0,
+        exitPrice: currentTrade.exitPrice,
+        pnl: currentTrade.pnl,
+        profit: currentTrade.pnl,
+        profitLoss: currentTrade.pnl,
+        status: currentTrade.status || 'open',
+        entryTime: currentTrade.timestamp?.toISOString() || new Date().toISOString(),
         entryDate: currentTrade.timestamp?.toISOString() || new Date().toISOString(),
-        exitPrice: currentTrade.exitPrice || null,
-        exitDate: currentTrade.exitPrice ? new Date().toISOString() : null,
-        quantity: currentTrade.quantity,
-        stopLoss: currentTrade.stopLoss || null,
-        takeProfit: currentTrade.takeProfit || null,
-        status: currentTrade.exitPrice ? 'closed' as const : 'open' as const,
-        profitLoss: currentTrade.pnl || null,
-        strategy: currentTrade.strategy || '',
+        exitTime: currentTrade.exitPrice ? new Date().toISOString() : undefined,
+        exitDate: currentTrade.exitPrice ? new Date().toISOString() : undefined,
         notes: currentTrade.postTradeReview || '',
+        strategy: currentTrade.strategy || '',
         tags: currentTrade.tags || [],
-        lessons: currentTrade.lessons || []
+        fee: 0,
+        commission: currentTrade.commission || 0,
+        stopLoss: currentTrade.stopLoss,
+        takeProfit: currentTrade.takeProfit,
+        riskReward: currentTrade.riskRewardRatio,
+        riskRewardRatio: currentTrade.riskRewardRatio,
+        confidence: currentTrade.confidence,
+        confidenceRating: currentTrade.confidence,
+        emotion: currentTrade.emotionalState,
+        mood: currentTrade.emotionalState,
+        exitReason: undefined,
+        currentPrice: undefined,
+        useCurrentPrice: false,
+        instrument: currentTrade.instrument,
+        opened_at: undefined,
+        closed_at: undefined,
+        profit_loss: currentTrade.pnl,
+        createdAt: currentTrade.timestamp?.toISOString() || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
-
       await addTrade(tradeData);
       
       // Reset form

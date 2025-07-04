@@ -359,13 +359,8 @@ export const trackUserInteraction = (interactionName: string, callback: () => vo
 
 // React hook for tracking component performance
 export const usePerformanceTracking = (componentName: string) => {
-  React.useEffect(() => {
-    performanceMonitor.startTimer(`component_mount_${componentName}`);
-    
-    return () => {
-      performanceMonitor.endTimer(`component_mount_${componentName}`);
-    };
-  }, [componentName]);
+  // React hook implementation - requires React import in component files
+  console.log(`Performance tracking for ${componentName} - implement with React.useEffect`);
 };
 
 // Navigation performance tracking

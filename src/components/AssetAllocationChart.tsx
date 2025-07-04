@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LabelProps } from 'recharts';
 import { useLocalTrades } from '@/hooks/useLocalTrades';
 import { PieChart as PieChartIcon, TrendingUp, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -75,9 +75,9 @@ export const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
     return `$${value.toFixed(2)}`;
   };
 
-  const renderCustomLabel = (entry: AssetData) => {
-    if (entry.percentage < 5) return null;
-    return `${entry.percentage.toFixed(1)}%`;
+  const renderCustomLabel = (props: any) => {
+    if (typeof props.percent !== 'number' || props.percent < 0.05) return null;
+    return `${(props.percent * 100).toFixed(1)}%`;
   };
 
   if (isWidget) {

@@ -16,7 +16,7 @@ export const QuantumDesignDemo: React.FC = () => {
       </div>
 
       {/* Color Palette */}
-      <QuantumPanel variant="glass" padding="lg" glow>
+      <QuantumPanel variant="default" padding="lg" glow>
         <h2 className="text-2xl font-semibold text-[#F4F4F4] mb-6">Color Palette</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-2">
@@ -97,7 +97,7 @@ export const QuantumDesignDemo: React.FC = () => {
       </QuantumPanel>
 
       {/* Input Fields */}
-      <QuantumPanel variant="glass" padding="lg">
+      <QuantumPanel variant="default" padding="lg">
         <h2 className="text-2xl font-semibold text-[#F4F4F4] mb-6">Input Components</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
@@ -175,7 +175,7 @@ export const QuantumDesignDemo: React.FC = () => {
       </QuantumPanel>
 
       {/* Loading States */}
-      <QuantumPanel variant="glass" padding="lg">
+      <QuantumPanel variant="default" padding="lg">
         <h2 className="text-2xl font-semibold text-[#F4F4F4] mb-6">Loading Components</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="text-center space-y-4">
@@ -221,7 +221,7 @@ export const QuantumDesignDemo: React.FC = () => {
       </QuantumPanel>
 
       {/* Typography & Colors */}
-      <QuantumPanel variant="glass" padding="lg">
+      <QuantumPanel variant="default" padding="lg">
         <h2 className="text-2xl font-semibold text-[#F4F4F4] mb-6">Typography & Colors</h2>
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -251,7 +251,7 @@ export const QuantumDesignDemo: React.FC = () => {
       </QuantumPanel>
 
       {/* Interactive Demo */}
-      <QuantumPanel variant="quantum" padding="lg" glow>
+      <QuantumPanel variant="default" padding="lg" glow>
         <h2 className="text-2xl font-semibold text-[#F4F4F4] mb-6">Interactive Demo</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">

@@ -1,47 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '@/contexts/UserContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { 
   TrendingUp, 
   Shield, 
   Zap, 
-  CheckCircle, 
+  Sparkles, 
   ArrowRight, 
   ArrowLeft,
+  CheckCircle,
+  AlertTriangle,
+  Settings,
+  Bell,
+  Globe,
+  MessageSquare,
+  Database,
+  Lock,
+  Unlock,
+  Play,
+  Pause,
+  RefreshCw,
+  Download,
+  Upload,
+  Trash2,
+  Plus,
+  X,
   Eye,
   EyeOff,
-  Settings,
-  Globe,
-  Lock,
-  Server,
-  Key,
-  Activity,
+  Wifi,
   BarChart3,
   BookOpen,
-  Target,
-  DollarSign,
-  Clock,
-  Users,
-  Star,
-  Award,
-  Sparkles,
-  Wifi,
-  Database,
-  RefreshCw,
-  AlertTriangle,
-  Info
+  Target
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { useUser } from '@/contexts/UserContext';
+import type { UserPreferences } from '@/types/user';
 
 interface OnboardingData {
   // User Profile
@@ -102,7 +103,7 @@ const UltraTraderOnboarding: React.FC = () => {
   
   const [data, setData] = useState<OnboardingData>({
     name: user?.name || '',
-    email: user?.email || '',
+    email: '',
     tradingExperience: '',
     preferredMarkets: [],
     riskTolerance: 5,
@@ -185,7 +186,46 @@ const UltraTraderOnboarding: React.FC = () => {
 
   const handleComplete = async () => {
     try {
-      await completeOnboarding(data);
+      const userPreferences: UserPreferences = {
+        tradingStyle: data.tradingStyle as 'scalping' | 'day-trading' | 'swing-trading' | 'position-trading',
+        riskTolerance: data.riskTolerance <= 3 ? 'conservative' : data.riskTolerance <= 7 ? 'moderate' : 'aggressive',
+        preferredMarkets: data.preferredMarkets,
+        experienceLevel: data.tradingExperience as 'beginner' | 'intermediate' | 'advanced',
+        notifications: {
+          priceAlerts: data.notifications.tradeAlerts,
+          newsAlerts: data.notifications.newsAlerts,
+          aiInsights: true,
+          tradeSignals: true,
+          economicEvents: true,
+          portfolioAlerts: data.notifications.performanceReports,
+          riskWarnings: data.notifications.riskWarnings,
+          pushNotifications: true,
+          telegram: false,
+          soundEnabled: true,
+          marketUpdates: data.notifications.marketUpdates,
+          tradeAlerts: data.notifications.tradeAlerts,
+          marketSentiment: true,
+          quietHours: {
+            enabled: false,
+            start: '22:00',
+            end: '08:00'
+          },
+          weekends: true,
+          minimumImpact: 'medium',
+          frequency: 'instant',
+          personalizedSymbols: [],
+          tradingStyle: data.tradingStyle,
+          riskTolerance: data.riskTolerance <= 3 ? 'conservative' : data.riskTolerance <= 7 ? 'moderate' : 'aggressive',
+          experience: data.tradingExperience,
+          email: true,
+          push: true
+        },
+        theme: data.theme,
+        language: data.language,
+        currency: 'USD'
+      };
+      
+      await completeOnboarding(userPreferences);
       toast.success('UltraTrader setup completed successfully!');
       navigate('/');
     } catch (error) {

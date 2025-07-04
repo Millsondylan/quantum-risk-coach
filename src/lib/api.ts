@@ -545,6 +545,9 @@ export interface MarketNews {
   content: string;
   publishedAt: string;
   source: string;
+  sentiment?: string;
+  impact?: string;
+  symbols?: string[];
 }
 
 export interface EconomicEvent {
@@ -561,6 +564,10 @@ export const marketService = {
   },
   
   async getEconomicEvents(): Promise<EconomicEvent[]> {
+    return [];
+  },
+
+  async getEconomicCalendar(): Promise<EconomicEvent[]> {
     return [];
   }
 };

@@ -75,15 +75,17 @@ export class AdvancedAnalyticsService {
         // LocalTrade type
         return {
           ...trade,
-          type: trade.type,
+          type: trade.type === 'buy' ? 'long' : 'short',
           side: trade.side || (trade.type === 'long' ? 'buy' : 'sell'),
           quantity: trade.quantity,
           entryPrice: trade.entryPrice,
           exitPrice: trade.exitPrice,
           entryTime: trade.entryTime,
           exitTime: trade.exitTime,
+          profit: trade.profit || 0,
           riskRewardRatio: trade.riskRewardRatio,
           confidenceRating: trade.confidence,
+          emotion: trade.emotion as 'calm' | 'anxious' | 'excited' | 'frustrated',
           mood: trade.emotion ? 
             (trade.emotion === 'calm' ? 'calm' : 
              trade.emotion === 'anxious' ? 'stressed' : 
@@ -122,11 +124,11 @@ export class AdvancedAnalyticsService {
           stopLoss: undefined,
           confidence: databaseTrade.confidenceRating,
           confidenceRating: databaseTrade.confidenceRating,
-          emotion: databaseTrade.mood === 'calm' ? 'calm' : 
+          emotion: (databaseTrade.mood === 'calm' ? 'calm' : 
                    databaseTrade.mood === 'stressed' ? 'anxious' : 
                    databaseTrade.mood === 'excited' ? 'excited' : 
                    databaseTrade.mood === 'fearful' ? 'anxious' : 
-                   'calm',
+                   'calm') as 'calm' | 'anxious' | 'excited' | 'frustrated',
           mood: databaseTrade.mood
         };
       }

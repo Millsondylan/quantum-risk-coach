@@ -71,7 +71,7 @@ const PerformanceCalendar = () => {
     const fetchNews = async () => {
       try {
         const news = await realDataService.getFinancialNews();
-        setNewsData(news);
+        setNewsData(news as NewsItem[]);
       } catch (error) {
         console.error('Failed to fetch news:', error);
         toast.error('Failed to load news data');

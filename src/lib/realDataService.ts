@@ -51,6 +51,7 @@ interface MarketDataPoint {
 }
 
 interface NewsItem {
+  id?: string;
   title: string;
   description: string;
   url: string;
@@ -59,6 +60,8 @@ interface NewsItem {
   urlToImage?: string;
   category?: string;
   impact?: 'high' | 'medium' | 'low';
+  sentiment?: string;
+  symbols?: string[];
 }
 
 type RealNewsItem = NewsItem;

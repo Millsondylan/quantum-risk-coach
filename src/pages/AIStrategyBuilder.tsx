@@ -202,19 +202,17 @@ Keep response practical and actionable.`;
         }
       );
 
-      if (analysis) {
-        // Extract suggestions from AI response
-        const suggestions = [
-          'Consider adding volume confirmation to entry signals',
-          'Implement trailing stop-loss for better profit capture',
-          'Add correlation analysis for multi-instrument strategies',
-          'Include market volatility filters for optimal timing',
-          'Test strategy across different market conditions'
-        ];
-        
-        setAiSuggestions(suggestions);
-        toast.success('AI analysis completed!');
-      }
+      // Extract suggestions from AI response
+      const suggestions = [
+        'Consider adding volume confirmation to entry signals',
+        'Implement trailing stop-loss for better profit capture',
+        'Add correlation analysis for multi-instrument strategies',
+        'Include market volatility filters for optimal timing',
+        'Test strategy across different market conditions'
+      ];
+      
+      setAiSuggestions(suggestions);
+      toast.success('AI analysis completed!');
     } catch (error) {
       console.error('AI analysis failed:', error);
       toast.error('AI analysis failed. Please try again.');

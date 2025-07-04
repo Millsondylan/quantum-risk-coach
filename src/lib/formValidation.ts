@@ -148,7 +148,7 @@ export class FormStateManager {
     return new Promise((resolve) => {
       this.validationTimeout = setTimeout(() => {
         resolve(quickValidation(value, this.validationRules));
-      }, this.debounceDelay);
+      }, this.debounceDelay) as unknown as number;
     });
   };
 

@@ -17,7 +17,7 @@ const WatchlistTab = () => {
         {watchlistData.map((item) => (
           <li key={item.symbol} className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <FlagIcon code={item.flag} size={32} />
+              <FlagIcon code={item.flag as any} size={32} />
               <span className="font-semibold">{item.symbol}</span>
             </div>
             <div className="text-right">

@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { useUser } from '@/contexts/UserContext';
 import { Separator } from '@/components/ui/separator';
 import { pushNotificationService } from '@/lib/pushNotificationService';
-import { UserPreferences } from '@/contexts/UserContext';
+import type { UserPreferences } from '@/types/user';
 
 type NotificationPreferences = UserPreferences['notifications'];
 
@@ -81,6 +81,23 @@ const NotificationSystem = () => {
       economicEvents: true,
       marketSentiment: true,
       portfolioAlerts: true,
+      pushNotifications: true,
+      telegram: false,
+      soundEnabled: true,
+      quietHours: {
+        enabled: false,
+        start: '22:00',
+        end: '08:00'
+      },
+      weekends: true,
+      minimumImpact: 'medium',
+      frequency: 'instant',
+      personalizedSymbols: [],
+      tradingStyle: 'day',
+      riskTolerance: 'moderate',
+      experience: 'intermediate',
+      email: true,
+      push: true
     }
   );
 
@@ -165,7 +182,7 @@ const NotificationSystem = () => {
     setIsLoading(true);
     try {
       const permission = await pushNotificationService.requestPermission();
-      setPushPermission(permission);
+      setPushPermission(permission as NotificationPermission);
       
       if (permission === 'granted') {
         toast.success('Browser notifications enabled!');
@@ -185,9 +202,7 @@ const NotificationSystem = () => {
     if (pushPermission === 'granted') {
       await pushNotificationService.sendNotification({
         title: 'Test Notification',
-        body: 'Your Qlarity notifications are working!',
-        icon: '/qlarity-icon.png',
-        tag: 'test-notification'
+        body: 'Your Qlarity notifications are working!'
       });
       toast.success('Test notification sent!');
     } else {
@@ -439,7 +454,7 @@ const NotificationSystem = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch 
-                      checked={preferences[key as keyof NotificationPreferences]}
+                      checked={typeof preferences[key as keyof NotificationPreferences] === 'boolean' ? preferences[key as keyof NotificationPreferences] as boolean : false}
                       onCheckedChange={() => togglePreference(key as keyof NotificationPreferences)}
                     />
                     <Button 

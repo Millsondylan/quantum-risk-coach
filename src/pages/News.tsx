@@ -152,7 +152,7 @@ const News: React.FC = () => {
     try {
       const news = await realDataService.getFinancialNews();
       if (news && news.length > 0) {
-        setNewsItems(news);
+        setNewsItems(news as NewsItem[]);
         toast.success('News refreshed successfully');
       } else {
         setNewsItems(getFallbackNews());

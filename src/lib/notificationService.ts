@@ -179,7 +179,7 @@ class NotificationService {
           const notification = new Notification(config.title, {
             body: config.body,
             icon: config.icon || '/favicon.ico',
-            badge: config.badge,
+            badge: config.badge?.toString(),
             data: config.data,
             silent: config.silent || false,
             requireInteraction: false, // Don't keep notification on screen

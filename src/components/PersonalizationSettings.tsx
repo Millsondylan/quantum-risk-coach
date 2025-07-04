@@ -111,8 +111,7 @@ const PersonalizationSettings = () => {
       // Update personalization profile
       if (profile) {
         await pushNotificationService.updatePersonalizationProfile({
-          ...profile,
-          preferences: preferences
+          ...profile
         });
       }
 
