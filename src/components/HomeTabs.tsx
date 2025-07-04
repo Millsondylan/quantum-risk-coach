@@ -533,8 +533,17 @@ const CalendarTab = () => {
 
 
 const HomeTabs = () => {
+  // Force Dashboard as default tab
+  React.useEffect(() => {
+    // Ensure Dashboard tab is selected on mount
+    const dashboardTab = document.querySelector('[data-value="Dashboard"]') as HTMLElement;
+    if (dashboardTab) {
+      dashboardTab.click();
+    }
+  }, []);
+
   return (
-    <Tabs defaultValue="Watchlist" className="w-full">
+    <Tabs defaultValue="Dashboard" className="w-full" value="Dashboard">
       <TabsList className="grid w-full grid-cols-6 bg-transparent border-b border-gray-700 rounded-none px-0">
         <TabsTrigger value="Dashboard">Dashboard</TabsTrigger>
         <TabsTrigger value="Time Metrics">Time Metrics</TabsTrigger>

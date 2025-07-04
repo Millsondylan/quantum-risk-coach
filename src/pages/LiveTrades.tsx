@@ -22,7 +22,6 @@ import {
   DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLocalTrades } from '@/hooks/useLocalTrades';
 import { useTrades } from '@/hooks/useTrades';
 import { usePortfolios } from '@/contexts/PortfolioContext';
 
@@ -58,6 +57,7 @@ const LiveTrades = () => {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [activeTab, setActiveTab] = useState('positions');
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [error, setError] = useState<string | null>(null);
   
   // New alert form
   const [newAlert, setNewAlert] = useState({
@@ -71,25 +71,32 @@ const LiveTrades = () => {
 
   // Initialize with some sample positions
   useEffect(() => {
-    // Get positions from real trades
-    const activePositions = trades
-      .filter(trade => trade.status === 'open')
-      .map((trade, index) => ({
-        id: trade.id || index.toString(),
-        symbol: trade.symbol,
-        type: trade.side as 'buy' | 'sell',
-        entryPrice: trade.entryPrice || 0,
-        currentPrice: trade.entryPrice || 0, // Will be updated with real prices
-        quantity: (trade.quantity || 0) * 100000, // Convert lots to units
-        pnl: trade.profitLoss || 0,
-        percentage: 0,
-        entryTime: trade.entryDate || new Date().toISOString(),
-        stopLoss: trade.stopLoss,
-        takeProfit: trade.takeProfit,
-        isActive: true
-      }));
-    
-    setPositions(activePositions);
+    try {
+      setError(null);
+      // Get positions from real trades
+      const activePositions = trades
+        .filter(trade => trade.status === 'open')
+        .map((trade, index) => ({
+          id: trade.id || index.toString(),
+          symbol: trade.symbol || 'Unknown',
+          type: (trade.side as 'buy' | 'sell') || 'buy',
+          entryPrice: trade.entryPrice || 0,
+          currentPrice: trade.entryPrice || 0, // Will be updated with real prices
+          quantity: (trade.quantity || 0) * 100000, // Convert lots to units
+          pnl: trade.profitLoss || 0,
+          percentage: 0,
+          entryTime: trade.entryDate || new Date().toISOString(),
+          stopLoss: trade.stopLoss,
+          takeProfit: trade.takeProfit,
+          isActive: true
+        }));
+      
+      setPositions(activePositions);
+    } catch (err) {
+      console.error('Error initializing LiveTrades:', err);
+      setError('Failed to load trading data');
+      setPositions([]);
+    }
   }, [trades]);
 
   // Simulate real-time price updates - REMOVED, will use real market data
@@ -104,24 +111,29 @@ const LiveTrades = () => {
   }, [isLive]);
 
   const handleClosePosition = async (position: LivePosition) => {
-    // Close position and add to journal
-    const tradeData = {
-      accountId: selectedAccountId || '',
-      symbol: position.symbol,
-      side: position.type,
-      amount: position.quantity / 100000,
-      price: position.entryPrice,
-      fee: 0,
-      profit: position.pnl,
-      status: 'closed' as const,
-      entryDate: position.entryTime,
-      exitDate: new Date().toISOString(),
-      notes: `Closed from live trades. P&L: $${position.pnl.toFixed(2)}`,
-    } as any;
+    try {
+      // Close position and add to journal
+      const tradeData = {
+        accountId: selectedAccountId || '',
+        symbol: position.symbol,
+        side: position.type,
+        amount: position.quantity / 100000,
+        price: position.entryPrice,
+        fee: 0,
+        profit: position.pnl,
+        status: 'closed' as const,
+        entryDate: position.entryTime,
+        exitDate: new Date().toISOString(),
+        notes: `Closed from live trades. P&L: $${position.pnl.toFixed(2)}`,
+      } as any;
 
-    await addTrade(tradeData);
-    setPositions(prev => prev.filter(p => p.id !== position.id));
-    toast.success(`Position ${position.symbol} closed with P&L: $${position.pnl.toFixed(2)}`);
+      await addTrade(tradeData);
+      setPositions(prev => prev.filter(p => p.id !== position.id));
+      toast.success(`Position ${position.symbol} closed with P&L: $${position.pnl.toFixed(2)}`);
+    } catch (err) {
+      console.error('Error closing position:', err);
+      toast.error('Failed to close position');
+    }
   };
 
   const handleAddAlert = () => {
@@ -151,6 +163,30 @@ const LiveTrades = () => {
 
   const totalPnL = positions.reduce((sum, pos) => sum + pos.pnl, 0);
   const openPositions = positions.filter(p => p.isActive).length;
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Live Trades</h1>
+            <p className="text-slate-400">Monitor your active positions and market alerts</p>
+          </div>
+        </div>
+        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Error Loading Data</h3>
+            <p className="text-slate-400 mb-6">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

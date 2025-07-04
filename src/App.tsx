@@ -7,6 +7,8 @@ import BottomNav from './components/BottomNav';
 import TopHeader from './components/TopHeader';
 import DebugInfo from './components/DebugInfo';
 import { logger } from './lib/logger';
+import { Plus } from 'lucide-react';
+import AutoTestSuite from './pages/AutoTestSuite';
 
 // Lazy load components for better performance with preloading
 const Auth = lazy(() => import('./pages/Auth'));
@@ -90,15 +92,27 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 // Layout wrapper for protected routes with optimized touch handling
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative flex flex-col">
       <TopHeader />
       <nav style={{ display: 'none' }} data-testid="nav"></nav>
-      <main className="flex-1 relative z-10 overflow-y-auto pt-20 pb-28 w-full" data-testid="main-content">
+      <main className="flex-1 relative z-10 overflow-y-auto pt-16 pb-20 w-full scroll-smooth" data-testid="main-content">
         <div className="container mx-auto px-4 max-w-7xl w-full">
           {children}
         </div>
       </main>
+      
+      {/* Floating Add Button */}
+      <button
+        onClick={() => navigate('/add-trade')}
+        className="fixed bottom-24 right-4 z-50 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+        style={{ boxShadow: '0 4px 20px rgba(59, 130, 246, 0.3)' }}
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+      
       <BottomNav />
     </div>
   );
@@ -362,6 +376,14 @@ function App() {
                   <Suspense fallback={<LoadingSpinner message="Loading functional tests..." />}>
                     <FunctionalTestSuite />
                   </Suspense>
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/auto-test" element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <AutoTestSuite />
                 </ProtectedLayout>
               </ProtectedRoute>
             } />

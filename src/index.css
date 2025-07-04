@@ -437,6 +437,15 @@
     width: 8px;
   }
 
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   ::-webkit-scrollbar-track {
     background: rgba(26, 34, 51, 0.5);
   }

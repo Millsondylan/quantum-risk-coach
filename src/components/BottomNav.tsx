@@ -14,8 +14,8 @@ const BottomNav = () => {
   const location = useLocation();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm border-t border-gray-700 z-50">
-      <div className="flex justify-around items-center h-20">
+    <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md border-t border-gray-700/50 z-50 shadow-lg">
+      <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           if (item.path === '/add-trade') {
@@ -25,8 +25,8 @@ const BottomNav = () => {
                 to={item.path}
                 className="flex-shrink-0"
               >
-                <div className="bg-blue-600 rounded-full p-4 -mt-8 border-4 border-gray-800 shadow-lg">
-                  <item.icon className="h-8 w-8 text-white" />
+                <div className="bg-blue-600 rounded-full p-3 -mt-6 border-3 border-gray-800 shadow-lg">
+                  <item.icon className="h-6 w-6 text-white" />
                 </div>
               </NavLink>
             );
@@ -35,11 +35,11 @@ const BottomNav = () => {
             <NavLink
               key={item.label}
               to={item.path}
-              className={`flex flex-col items-center justify-center space-y-1 transition-colors duration-200 ${
+              className={`flex flex-col items-center justify-center space-y-0.5 transition-colors duration-200 ${
                 isActive ? 'text-blue-400' : 'text-gray-400 hover:text-white'
               }`}
             >
-              <item.icon className="h-6 w-6" />
+              <item.icon className="h-5 w-5" />
               <span className="text-xs font-medium">{item.label}</span>
             </NavLink>
           );

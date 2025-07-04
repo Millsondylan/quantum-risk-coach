@@ -553,6 +553,13 @@ const Settings: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <div className="flex items-center gap-2 mt-8">
+        <Button onClick={() => navigate('/auto-test')} variant="outline" className="w-full flex items-center gap-2">
+          <span role="img" aria-label="test">🧪</span>
+          Run Automated Test Suite
+        </Button>
+      </div>
     </div>
   );
 };

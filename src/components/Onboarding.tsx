@@ -67,14 +67,14 @@ const tradingPersonas: TradingPersona[] = [
 const Onboarding = () => {
   const { completeOnboarding, user } = useUser();
   const { createPortfolio, addAccountToPortfolio } = usePortfolioContext();
-  const [step, setStep] = useState(user ? 2 : 1); // Start at step 2 if user already exists
+  const [step, setStep] = useState(1); // Always start at step 1
   
   // Update step when user state changes
   useEffect(() => {
-    if (user && step === 1) {
-      setStep(2); // Skip to step 2 if user exists
+    if (user) {
+      setStep(2); // Move to step 2 if user exists
     }
-  }, [user, step]);
+  }, [user]);
   
   const [preferences, setPreferences] = useState({
     tradingStyle: 'day-trading' as any,
