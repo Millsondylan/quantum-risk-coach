@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.quantumriskcoach.tradenote',
-  appName: 'TradeNote',
+  appId: 'com.quantumriskcoach.app',
+  appName: 'Quantum Risk Coach',
   webDir: 'dist',
   server: {
     androidScheme: 'https'
@@ -42,7 +42,7 @@ const config: CapacitorConfig = {
   },
   android: {
     backgroundColor: '#0B0F1A',
-    allowMixedContent: true,
+    allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: false
   }

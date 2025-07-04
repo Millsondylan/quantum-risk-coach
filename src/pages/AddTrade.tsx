@@ -190,7 +190,7 @@ const AddTrade: React.FC = () => {
     }
 
     // Extract profit/loss
-    const profitLossRegex = /(?:Profit|Loss|P&L|P/L)[:\s]+([+\-]?\$?\d+(?:[.,]\d+)?)/i;
+    const profitLossRegex = /(?:Profit|Loss|P&L|P\/L)[:\s]+([+\-]?\$?\d+(?:[.,]\d+)?)/i;
     const profitLossMatch = text.match(profitLossRegex);
     if (profitLossMatch) {
       data.profitLoss = parseFloat(profitLossMatch[1].replace('$', '').replace(',', '.'));
@@ -198,7 +198,7 @@ const AddTrade: React.FC = () => {
     }
 
     // Extract date (various formats: MM/DD/YYYY, YYYY-MM-DD, DD.MM.YYYY)
-    const dateRegex = /(\d{1,2}[/-.]\d{1,2}[/-.]\d{2,4})/; // MM/DD/YYYY or DD.MM.YYYY
+    const dateRegex = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/; // MM/DD/YYYY or DD.MM.YYYY
     const dateMatch = text.match(dateRegex);
     if (dateMatch) {
       data.date = dateMatch[1];

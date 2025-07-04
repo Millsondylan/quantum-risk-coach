@@ -66,6 +66,20 @@ const AutoTestSuite: React.FC = () => {
     duration: 0
   });
 
+  // Initialize console error tracking
+  useEffect(() => {
+    (window as any).consoleErrors = [];
+    const originalError = console.error;
+    console.error = (...args) => {
+      (window as any).consoleErrors.push(args.join(' '));
+      originalError.apply(console, args);
+    };
+    
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
   const categories: TestCategory[] = [
     { name: 'Navigation', icon: <Navigation className="w-4 h-4" />, color: 'text-blue-400' },
     { name: 'Authentication', icon: <Shield className="w-4 h-4" />, color: 'text-green-400' },
@@ -73,7 +87,8 @@ const AutoTestSuite: React.FC = () => {
     { name: 'Data Management', icon: <Database className="w-4 h-4" />, color: 'text-purple-400' },
     { name: 'UI Components', icon: <Target className="w-4 h-4" />, color: 'text-pink-400' },
     { name: 'Performance', icon: <Zap className="w-4 h-4" />, color: 'text-orange-400' },
-    { name: 'Mobile Interaction', icon: <Smartphone className="w-4 h-4" />, color: 'text-indigo-400' }
+    { name: 'Mobile Interaction', icon: <Smartphone className="w-4 h-4" />, color: 'text-indigo-400' },
+    { name: 'Button Testing', icon: <MousePointer className="w-4 h-4" />, color: 'text-red-400' }
   ];
 
   const initializeTests = (): TestResult[] => [
@@ -122,7 +137,14 @@ const AutoTestSuite: React.FC = () => {
     { id: 'mobile-touch', name: 'Touch Interactions', description: 'Test touch interactions and gestures', status: 'pending', category: 'Mobile Interaction' },
     { id: 'mobile-scroll', name: 'Mobile Scrolling', description: 'Test smooth scrolling on mobile', status: 'pending', category: 'Mobile Interaction' },
     { id: 'mobile-tap', name: 'Tap Accuracy', description: 'Test tap accuracy on buttons and links', status: 'pending', category: 'Mobile Interaction' },
-    { id: 'mobile-swipe', name: 'Swipe Gestures', description: 'Test swipe gestures if implemented', status: 'pending', category: 'Mobile Interaction' }
+    { id: 'mobile-swipe', name: 'Swipe Gestures', description: 'Test swipe gestures if implemented', status: 'pending', category: 'Mobile Interaction' },
+
+    // Button Testing Tests
+    { id: 'btn-all-buttons', name: 'All Buttons Test', description: 'Systematically test all clickable buttons in the app', status: 'pending', category: 'Button Testing' },
+    { id: 'btn-navigation-buttons', name: 'Navigation Buttons', description: 'Test all navigation and tab buttons', status: 'pending', category: 'Button Testing' },
+    { id: 'btn-form-buttons', name: 'Form Buttons', description: 'Test all form submit and action buttons', status: 'pending', category: 'Button Testing' },
+    { id: 'btn-action-buttons', name: 'Action Buttons', description: 'Test all action and utility buttons', status: 'pending', category: 'Button Testing' },
+    { id: 'btn-modal-buttons', name: 'Modal Buttons', description: 'Test all modal and dialog buttons', status: 'pending', category: 'Button Testing' }
   ];
 
   const updateTestResult = (testId: string, status: TestResult['status'], error?: string, duration?: number) => {
@@ -751,6 +773,240 @@ const AutoTestSuite: React.FC = () => {
     }
   };
 
+  const runButtonTestingTests = async () => {
+    interface ButtonTestResult {
+      selector: string;
+      text: string;
+      type: string;
+      status: 'passed' | 'failed' | 'skipped';
+      error?: string;
+      location: string;
+    }
+
+    const buttonResults: ButtonTestResult[] = [];
+
+    const testButton = async (button: HTMLElement, type: string): Promise<ButtonTestResult> => {
+      const selector = button.tagName.toLowerCase() + (button.className ? '.' + button.className.split(' ').join('.') : '');
+      const text = button.textContent?.trim() || button.getAttribute('aria-label') || 'Unknown';
+      const location = window.location.pathname;
+
+      try {
+        // Check if button is visible and clickable
+        const style = window.getComputedStyle(button);
+        if (button.offsetParent === null || style.display === 'none' || style.visibility === 'hidden') {
+          return { selector, text, type, status: 'skipped', location, error: 'Button not visible' };
+        }
+
+        // Check if button is disabled
+        if (button.hasAttribute('disabled') || button.classList.contains('disabled') || button.classList.contains('opacity-50')) {
+          return { selector, text, type, status: 'skipped', location, error: 'Button disabled' };
+        }
+
+        // Store current URL to detect navigation
+        const currentUrl = window.location.href;
+        
+        // Click the button
+        button.click();
+        await sleep(500);
+
+        // Check for navigation
+        const newUrl = window.location.href;
+        const navigated = currentUrl !== newUrl;
+
+        // Check for any errors or unexpected behavior
+        const hasError = document.querySelector('.error, .alert, [role="alert"], .toast-error');
+        if (hasError) {
+          return { selector, text, type, status: 'failed', location, error: 'Error occurred after click' };
+        }
+
+        // Check for console errors
+        const consoleErrors = (window as any).consoleErrors || [];
+        if (consoleErrors.length > 0) {
+          return { selector, text, type, status: 'failed', location, error: 'Console errors detected' };
+        }
+
+        return { 
+          selector, 
+          text, 
+          type, 
+          status: 'passed', 
+          location: navigated ? newUrl : location 
+        };
+      } catch (error) {
+        return { 
+          selector, 
+          text, 
+          type, 
+          status: 'failed', 
+          location, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        };
+      }
+    };
+
+    const getAllButtons = (): HTMLElement[] => {
+      const buttons = Array.from(document.querySelectorAll('button, [role="button"], .btn, [data-testid*="button"], [data-testid*="btn"]'));
+      const links = Array.from(document.querySelectorAll('a[href], a[onclick], a[data-testid]'));
+      const clickables = Array.from(document.querySelectorAll('[onclick], [data-action], [data-click]'));
+      
+      // Remove duplicates and filter out hidden elements
+      const allElements = [...buttons, ...links, ...clickables] as HTMLElement[];
+      const uniqueElements = allElements.filter((element, index, self) => 
+        index === self.findIndex(e => e === element)
+      );
+      
+      return uniqueElements.filter(element => {
+        // Filter out hidden elements
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none' && 
+               style.visibility !== 'hidden' && 
+               element.offsetParent !== null &&
+               !element.hasAttribute('disabled');
+      });
+    };
+
+    // All Buttons Test
+    setCurrentTest('Testing All Buttons Systematically...');
+    updateTestResult('btn-all-buttons', 'running');
+    try {
+      await sleep(1000);
+      
+      const allButtons = getAllButtons();
+      console.log(`Found ${allButtons.length} clickable elements to test`);
+
+      for (let i = 0; i < allButtons.length && i < 100; i++) { // Limit to 100 buttons to prevent infinite loops
+        const button = allButtons[i];
+        setCurrentTest(`Testing button ${i + 1}/${allButtons.length}: ${button.textContent?.trim() || 'Unknown'}`);
+        
+        const result = await testButton(button, 'general');
+        buttonResults.push(result);
+        
+        await sleep(200); // Small delay between button tests
+        
+        // Clear console errors after each button test
+        (window as any).consoleErrors = [];
+      }
+
+      const passed = buttonResults.filter(r => r.status === 'passed').length;
+      const failed = buttonResults.filter(r => r.status === 'failed').length;
+      const skipped = buttonResults.filter(r => r.status === 'skipped').length;
+
+      updateTestResult('btn-all-buttons', 'passed', 
+        `Tested ${allButtons.length} buttons: ${passed} passed, ${failed} failed, ${skipped} skipped`, 
+        2000 + allButtons.length * 200
+      );
+
+      // Store detailed results for reporting
+      (window as any).buttonTestResults = buttonResults;
+    } catch (error) {
+      updateTestResult('btn-all-buttons', 'failed', error instanceof Error ? error.message : 'Unknown error');
+    }
+
+    // Navigation Buttons Test
+    setCurrentTest('Testing Navigation Buttons...');
+    updateTestResult('btn-navigation-buttons', 'running');
+    try {
+      await sleep(1000);
+      
+      const navButtons = Array.from(document.querySelectorAll('nav button, .nav button, [data-testid*="nav"], .tabs-trigger, .tab-button'));
+      let navPassed = 0;
+      let navFailed = 0;
+
+      for (const button of navButtons) {
+        const result = await testButton(button as HTMLElement, 'navigation');
+        if (result.status === 'passed') navPassed++;
+        else if (result.status === 'failed') navFailed++;
+        await sleep(300);
+      }
+
+      updateTestResult('btn-navigation-buttons', 'passed', 
+        `Navigation buttons: ${navPassed} passed, ${navFailed} failed`, 
+        1000 + navButtons.length * 300
+      );
+    } catch (error) {
+      updateTestResult('btn-navigation-buttons', 'failed', error instanceof Error ? error.message : 'Unknown error');
+    }
+
+    // Form Buttons Test
+    setCurrentTest('Testing Form Buttons...');
+    updateTestResult('btn-form-buttons', 'running');
+    try {
+      await sleep(1000);
+      
+      // Navigate to add trade page for form testing
+      navigate('/add-trade');
+      await sleep(2000);
+      
+      const formButtons = Array.from(document.querySelectorAll('form button, button[type="submit"], button[type="button"], .form-button'));
+      let formPassed = 0;
+      let formFailed = 0;
+
+      for (const button of formButtons) {
+        const result = await testButton(button as HTMLElement, 'form');
+        if (result.status === 'passed') formPassed++;
+        else if (result.status === 'failed') formFailed++;
+        await sleep(300);
+      }
+
+      updateTestResult('btn-form-buttons', 'passed', 
+        `Form buttons: ${formPassed} passed, ${formFailed} failed`, 
+        3000 + formButtons.length * 300
+      );
+    } catch (error) {
+      updateTestResult('btn-form-buttons', 'failed', error instanceof Error ? error.message : 'Unknown error');
+    }
+
+    // Action Buttons Test
+    setCurrentTest('Testing Action Buttons...');
+    updateTestResult('btn-action-buttons', 'running');
+    try {
+      await sleep(1000);
+      
+      const actionButtons = Array.from(document.querySelectorAll('.action-button, .btn-primary, .btn-secondary, [data-action], .floating-button'));
+      let actionPassed = 0;
+      let actionFailed = 0;
+
+      for (const button of actionButtons) {
+        const result = await testButton(button as HTMLElement, 'action');
+        if (result.status === 'passed') actionPassed++;
+        else if (result.status === 'failed') actionFailed++;
+        await sleep(300);
+      }
+
+      updateTestResult('btn-action-buttons', 'passed', 
+        `Action buttons: ${actionPassed} passed, ${actionFailed} failed`, 
+        1000 + actionButtons.length * 300
+      );
+    } catch (error) {
+      updateTestResult('btn-action-buttons', 'failed', error instanceof Error ? error.message : 'Unknown error');
+    }
+
+    // Modal Buttons Test
+    setCurrentTest('Testing Modal Buttons...');
+    updateTestResult('btn-modal-buttons', 'running');
+    try {
+      await sleep(1000);
+      
+      const modalButtons = Array.from(document.querySelectorAll('.modal button, .dialog button, [data-modal], .modal-trigger'));
+      let modalPassed = 0;
+      let modalFailed = 0;
+
+      for (const button of modalButtons) {
+        const result = await testButton(button as HTMLElement, 'modal');
+        if (result.status === 'passed') modalPassed++;
+        else if (result.status === 'failed') modalFailed++;
+        await sleep(300);
+      }
+
+      updateTestResult('btn-modal-buttons', 'passed', 
+        `Modal buttons: ${modalPassed} passed, ${modalFailed} failed`, 
+        1000 + modalButtons.length * 300
+      );
+    } catch (error) {
+      updateTestResult('btn-modal-buttons', 'failed', error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
+
   const runAllTests = async () => {
     setIsRunning(true);
     setCurrentTest('Initializing automated test suite...');
@@ -786,6 +1042,10 @@ const AutoTestSuite: React.FC = () => {
       await sleep(1000);
       
       await runMobileInteractionTests();
+      setProgress(90);
+      await sleep(1000);
+      
+      await runButtonTestingTests();
       setProgress(100);
 
       const endTime = Date.now();
@@ -973,6 +1233,176 @@ const AutoTestSuite: React.FC = () => {
           </CardContent>
         </Card>
       ))}
+
+      {/* Detailed Button Test Report */}
+      {(window as any).buttonTestResults && (window as any).buttonTestResults.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MousePointer className="w-4 h-4 text-red-400" />
+              Detailed Button Test Report
+              <Badge variant="outline" className="ml-2">
+                {(window as any).buttonTestResults.length} Buttons Tested
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-3 gap-4 p-4 bg-gray-800/50 rounded-lg">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-500">
+                    {(window as any).buttonTestResults.filter((r: any) => r.status === 'passed').length}
+                  </div>
+                  <div className="text-sm text-gray-400">Passed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-500">
+                    {(window as any).buttonTestResults.filter((r: any) => r.status === 'failed').length}
+                  </div>
+                  <div className="text-sm text-gray-400">Failed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-500">
+                    {(window as any).buttonTestResults.filter((r: any) => r.status === 'skipped').length}
+                  </div>
+                  <div className="text-sm text-gray-400">Skipped</div>
+                </div>
+              </div>
+
+              {/* Failed Buttons */}
+              {(window as any).buttonTestResults.filter((r: any) => r.status === 'failed').length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-red-400 mb-2">❌ Failed Buttons ({((window as any).buttonTestResults.filter((r: any) => r.status === 'failed').length)})</h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {(window as any).buttonTestResults
+                      .filter((r: any) => r.status === 'failed')
+                      .map((result: any, index: number) => (
+                        <div key={index} className="p-3 bg-red-900/20 border border-red-700/50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-red-300">{result.text}</div>
+                              <div className="text-sm text-gray-400">Type: {result.type}</div>
+                              <div className="text-sm text-gray-400">Location: {result.location}</div>
+                              <div className="text-sm text-gray-400">Selector: {result.selector}</div>
+                              {result.error && (
+                                <div className="text-sm text-red-400 mt-1">Error: {result.error}</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Skipped Buttons */}
+              {(window as any).buttonTestResults.filter((r: any) => r.status === 'skipped').length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-yellow-400 mb-2">⚠️ Skipped Buttons ({((window as any).buttonTestResults.filter((r: any) => r.status === 'skipped').length)})</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {(window as any).buttonTestResults
+                      .filter((r: any) => r.status === 'skipped')
+                      .map((result: any, index: number) => (
+                        <div key={index} className="p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-yellow-300">{result.text}</div>
+                              <div className="text-sm text-gray-400">Type: {result.type}</div>
+                              <div className="text-sm text-gray-400">Location: {result.location}</div>
+                              {result.error && (
+                                <div className="text-sm text-yellow-400 mt-1">Reason: {result.error}</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All Button Results Table */}
+              <div>
+                <h4 className="font-semibold mb-2">📊 Complete Button Test Results</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-700">
+                        <th className="text-left p-2">Button</th>
+                        <th className="text-left p-2">Type</th>
+                        <th className="text-left p-2">Location</th>
+                        <th className="text-left p-2">Status</th>
+                        <th className="text-left p-2">Error</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(window as any).buttonTestResults.map((result: any, index: number) => (
+                        <tr key={index} className="border-b border-gray-800">
+                          <td className="p-2 font-medium">{result.text}</td>
+                          <td className="p-2 text-gray-400">{result.type}</td>
+                          <td className="p-2 text-gray-400">{result.location}</td>
+                          <td className="p-2">
+                            <Badge 
+                              variant={result.status === 'passed' ? 'default' : result.status === 'failed' ? 'destructive' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {result.status}
+                            </Badge>
+                          </td>
+                          <td className="p-2 text-gray-400 text-xs">
+                            {result.error || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Export Results */}
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const data = JSON.stringify((window as any).buttonTestResults, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'button-test-results.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Export Results (JSON)
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const csv = [
+                      'Button,Type,Location,Status,Error',
+                      ...(window as any).buttonTestResults.map((r: any) => 
+                        `"${r.text}","${r.type}","${r.location}","${r.status}","${r.error || ''}"`
+                      )
+                    ].join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'button-test-results.csv';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Export Results (CSV)
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
