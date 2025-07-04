@@ -61,6 +61,8 @@ interface NewsItem {
   impact?: 'high' | 'medium' | 'low';
 }
 
+type RealNewsItem = NewsItem;
+
 interface EconomicEvent {
   title: string;
   country: string;
@@ -764,4 +766,5 @@ class RealDataService {
 }
 
 export const realDataService = RealDataService.getInstance();
+export type { RealNewsItem };
 export type { MarketDataPoint, NewsItem, EconomicEvent, CryptoPrice, ForexRate }; 

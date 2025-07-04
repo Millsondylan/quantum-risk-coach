@@ -21,7 +21,7 @@ const TradeBuilder = lazy(() => import('./pages/TradeBuilder'));
 const StrategyAnalyzer = lazy(() => import('./pages/StrategyAnalyzer'));
 const Settings = lazy(() => import('./pages/Settings'));
 const PerformanceCalendar = lazy(() => import('./pages/PerformanceCalendar'));
-const MT4Connection = lazy(() => import('./pages/MT4Connection'));
+
 const ValidationTest = lazy(() => import('./pages/ValidationTest'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AICoach = lazy(() => import('./pages/AICoach'));
@@ -314,15 +314,7 @@ function App() {
               </ProtectedRoute>
             } />
             
-            <Route path="/mt4-connection" element={
-              <ProtectedRoute>
-                <ProtectedLayout>
-                  <Suspense fallback={<LoadingSpinner message="Loading MT4 connection..." />}>
-                    <MT4Connection />
-                  </Suspense>
-                </ProtectedLayout>
-              </ProtectedRoute>
-            } />
+
             
             <Route path="/validation-test" element={
               <ProtectedRoute>

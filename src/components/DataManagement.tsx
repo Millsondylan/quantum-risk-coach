@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Download, Upload, Database, Trash2, FileText, Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import { localDatabase } from '@/lib/localStorage';
+import { localDatabase } from '@/lib/localDatabase';
 
 const DataManagement: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);

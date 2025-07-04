@@ -31,7 +31,7 @@ import {
   Sparkles,
   Wallet
 } from 'lucide-react';
-import BrokerIntegration from './BrokerIntegration';
+
 
 // Memoized component wrappers for better performance
 const MemoizedQuickStats = memo(QuickStats);
@@ -418,7 +418,10 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ layout = 'standard' }) =>
             Manage All
           </Button>
         </div>
-        <BrokerIntegration />
+        <div className="p-4 bg-card rounded-lg border">
+          <h3 className="text-lg font-semibold mb-2">Data Integration</h3>
+          <p className="text-muted-foreground">Connect to data providers for live market data</p>
+        </div>
       </div>
 
       {/* Advanced Analytics Section */}

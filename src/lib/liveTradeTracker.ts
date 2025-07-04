@@ -16,7 +16,7 @@ export interface LiveTrade {
   unrealizedPnL: number;
   unrealizedPnLPercent: number;
   commission: number;
-  broker: string;
+  dataProvider: string;
   notes?: string;
 }
 
@@ -251,10 +251,6 @@ class LiveTradeTracker {
     await pushNotificationService.sendNotification({
       title,
       body: message,
-      icon: '/favicon.ico',
-      tag: `trade-${trade.id}-${type}`,
-      type: 'trade_alert',
-      priority: severity === 'critical' ? 'high' : severity,
       data: { tradeId: trade.id, alertType: type, symbol: trade.symbol }
     });
 

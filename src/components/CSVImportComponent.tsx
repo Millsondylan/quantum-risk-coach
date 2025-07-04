@@ -21,8 +21,8 @@ import {
   Info
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Trade } from '@/lib/localStorage';
-import { localDatabase } from '@/lib/localStorage';
+import { Trade } from '@/lib/localDatabase';
+import { localDatabase } from '@/lib/localDatabase';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 

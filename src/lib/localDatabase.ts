@@ -55,6 +55,7 @@ export interface Trade {
   tags?: string[];
   accountId?: string;
   fee?: number;
+  commission?: number;
   stopLoss?: number;
   takeProfit?: number;
   riskReward?: number;
@@ -66,6 +67,10 @@ export interface Trade {
   exitReason?: string;
   currentPrice?: number;
   useCurrentPrice?: boolean;
+  instrument?: string;
+  opened_at?: string;
+  closed_at?: string;
+  profit_loss?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -75,6 +80,8 @@ export interface Portfolio {
   name: string;
   description?: string;
   userId: string;
+  color?: string;
+  icon?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -89,6 +96,15 @@ export interface Account {
   userId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  title?: string;
+  content: string;
+  mood?: 'positive' | 'negative' | 'neutral' | 'excited' | 'stressed' | 'calm' | 'greedy' | 'fearful';
+  tags: string[];
 }
 
 // Simple localStorage-based database
@@ -279,6 +295,80 @@ class LocalStorageDB {
       aiCoachSessions: await this.getAICoachSessions(),
       aiStrategies: await this.getAIStrategies()
     };
+  }
+
+  async importData(data: any): Promise<void> {
+    if (data.user) {
+      await this.saveUser(data.user);
+    }
+    if (data.trades) {
+      for (const trade of data.trades) {
+        await this.createTrade(trade);
+      }
+    }
+    if (data.portfolios) {
+      for (const portfolio of data.portfolios) {
+        await this.createPortfolio(portfolio);
+      }
+    }
+    if (data.accounts) {
+      for (const account of data.accounts) {
+        await this.createAccount(account);
+      }
+    }
+    if (data.aiCoachSessions) {
+      for (const session of data.aiCoachSessions) {
+        await this.saveAICoachSession(session);
+      }
+    }
+    if (data.aiStrategies) {
+      for (const strategy of data.aiStrategies) {
+        await this.saveAIStrategy(strategy);
+      }
+    }
+  }
+
+  // Journal Entry methods
+  async createJournalEntry(entry: any): Promise<string> {
+    const entries = await this.getJournalEntries();
+    const newEntry = {
+      ...entry,
+      id: entry.id || crypto.randomUUID()
+    };
+    entries.push(newEntry);
+    localStorage.setItem(this.getKey('journalEntries'), JSON.stringify(entries));
+    return newEntry.id;
+  }
+
+  async getJournalEntries(): Promise<any[]> {
+    const entriesData = localStorage.getItem(this.getKey('journalEntries'));
+    return entriesData ? JSON.parse(entriesData) : [];
+  }
+
+  async updateJournalEntry(entry: any): Promise<void> {
+    const entries = await this.getJournalEntries();
+    const index = entries.findIndex(e => e.id === entry.id);
+    if (index >= 0) {
+      entries[index] = { ...entries[index], ...entry };
+      localStorage.setItem(this.getKey('journalEntries'), JSON.stringify(entries));
+    }
+  }
+
+  async deleteJournalEntry(id: string): Promise<void> {
+    const entries = await this.getJournalEntries();
+    const filteredEntries = entries.filter(e => e.id !== id);
+    localStorage.setItem(this.getKey('journalEntries'), JSON.stringify(filteredEntries));
+  }
+
+  // Alias methods for compatibility
+  async getAllTrades(): Promise<Trade[]> {
+    return this.getTrades();
+  }
+
+  async bulkInsertTrades(trades: Trade[]): Promise<void> {
+    for (const trade of trades) {
+      await this.createTrade(trade);
+    }
   }
 }
 

@@ -127,6 +127,7 @@ export const useTrades = (accountId?: string) => {
       maxDrawdown,
       averageWin,
       averageLoss,
+      tradingDays: Math.ceil(totalTrades / 5), // Simple calculation
     };
   };
 
@@ -139,5 +140,7 @@ export const useTrades = (accountId?: string) => {
     deleteTrade,
     fetchTrades,
     getTradeStats,
+    isLoading: loading,
+    getPerformanceMetrics: getTradeStats,
   };
 };

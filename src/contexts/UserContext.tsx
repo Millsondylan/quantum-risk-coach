@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import type { UserPreferences, UserData, TradingGoal, NotificationPreferences } from '@/types/user';
+import type { UserData, TradingGoal, NotificationPreferences, UserPreferences } from '@/types/user';
 import { getDefaultPreferences } from '@/types/user';
 
 interface UserContextType {

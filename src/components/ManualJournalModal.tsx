@@ -11,9 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Import from localStorage
 import { Trade } from '@/lib/localDatabase';
-import { IndexedDBStorage } from '@/lib/localStorage';
-
-const localDatabase = new IndexedDBStorage();
+import { localDatabase } from '@/lib/localDatabase';
 
 interface ManualJournalModalProps {
   open: boolean;

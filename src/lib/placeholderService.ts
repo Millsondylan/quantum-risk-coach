@@ -78,15 +78,15 @@ export class PlaceholderService {
   public showDemoData(feature: string) {
     this.showFeaturePlaceholder(feature, {
       description: 'Showing demo data',
-      action: 'connect real broker for live data',
+      action: 'connect real data provider for live data',
       requiresSetup: true
     });
   }
 
-  public showBrokerConnection(feature: string) {
+  public showDataConnection(feature: string) {
     this.showFeaturePlaceholder(feature, {
-      description: 'Requires broker connection',
-      action: 'connect MT4/MT5 in settings',
+      description: 'Requires data connection',
+      action: 'connect data provider in settings',
       requiresSetup: true
     });
   }
@@ -186,14 +186,14 @@ export const showComingSoon = (feature: string) => placeholderService.showComing
 export const showRequiresSetup = (feature: string, setup?: string) => placeholderService.showRequiresSetup(feature, setup);
 export const showPremiumFeature = (feature: string) => placeholderService.showPremiumFeature(feature);
 export const showDemoData = (feature: string) => placeholderService.showDemoData(feature);
-export const showBrokerConnection = (feature: string) => placeholderService.showBrokerConnection(feature);
+export const showDataConnection = (feature: string) => placeholderService.showDataConnection(feature);
 export const showAPIConnection = (feature: string, service: string) => placeholderService.showAPIConnection(feature, service);
 export const createButtonPlaceholder = (feature: string, options?: PlaceholderOptions) => 
   placeholderService.createButtonPlaceholder(feature, options);
 
 // Specific trading app placeholders
 export const tradingPlaceholders = {
-  liveData: () => showBrokerConnection('Live Market Data'),
+  liveData: () => showDataConnection('Live Market Data'),
   realTimeAlerts: () => showComingSoon('Real-time Trading Alerts'),
   advancedAnalytics: () => showComingSoon('Advanced Analytics'),
   socialTrading: () => showComingSoon('Social Trading Features'),

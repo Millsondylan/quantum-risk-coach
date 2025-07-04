@@ -32,8 +32,8 @@ import {
   Smile, Meh, Frown
 } from 'lucide-react';
 import { format, parseISO, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval } from 'date-fns';
-import { localDatabase } from '@/lib/localStorage';
-import { Trade, JournalEntry } from '@/lib/localStorage';
+import { localDatabase } from '@/lib/localDatabase';
+import { Trade, JournalEntry } from '@/lib/localDatabase';
 import { realDataService } from '@/lib/realDataService';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';

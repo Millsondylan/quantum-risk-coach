@@ -5,7 +5,7 @@ import { Toast } from '@capacitor/toast';
 import { realDataService } from './realDataService';
 import { AIStreamService } from './aiStreamService';
 
-interface NotificationPreferences {
+export interface NotificationPreferences {
   priceAlerts: boolean;
   newsAlerts: boolean;
   aiInsights: boolean;
@@ -31,6 +31,18 @@ interface NotificationPreferences {
   tradingStyle?: string;
   riskTolerance?: string;
   experience?: string;
+}
+
+export interface PersonalizationProfile {
+  id: string;
+  userId: string;
+  tradingStyle: string;
+  riskTolerance: string;
+  experience: string;
+  preferredSymbols: string[];
+  notificationPreferences: NotificationPreferences;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface PushNotificationData {
@@ -526,6 +538,69 @@ class PushNotificationService {
 
   async getRegistrationToken(): Promise<string | null> {
     return this.registrationToken;
+  }
+
+  getPreferences(): NotificationPreferences {
+    return this.userPreferences || {
+      priceAlerts: false,
+      newsAlerts: false,
+      aiInsights: false,
+      tradeSignals: false,
+      economicEvents: false,
+      portfolioAlerts: false,
+      riskWarnings: false,
+      pushNotifications: false,
+      telegram: false,
+      soundEnabled: true,
+      marketUpdates: false,
+      tradeAlerts: false,
+      marketSentiment: false,
+      quietHours: {
+        enabled: false,
+        start: '22:00',
+        end: '08:00'
+      },
+      weekends: false,
+      minimumImpact: 'medium',
+      frequency: 'normal',
+      personalizedSymbols: []
+    };
+  }
+
+  async requestPermission(): Promise<string> {
+    return 'granted';
+  }
+
+  async sendTestNotification(): Promise<void> {
+    await this.sendNotification({
+      title: 'Test Notification',
+      body: 'This is a test notification from Quantum Risk Coach',
+      id: Date.now()
+    });
+  }
+
+  getPersonalization(): PersonalizationProfile | null {
+    return null;
+  }
+
+  async createPersonalizationProfile(userId: string): Promise<PersonalizationProfile> {
+    const profile: PersonalizationProfile = {
+      id: crypto.randomUUID(),
+      userId,
+      tradingStyle: 'swing',
+      riskTolerance: 'medium',
+      experience: 'intermediate',
+      preferredSymbols: [],
+      notificationPreferences: this.getPreferences(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    return profile;
+  }
+
+  async updatePersonalizationProfile(profile: Partial<PersonalizationProfile>): Promise<void> {
+    // Implementation would save to storage
+    console.log('Updating personalization profile:', profile);
   }
 
   private async showLocalNotification(notification: PushNotificationData): Promise<void> {

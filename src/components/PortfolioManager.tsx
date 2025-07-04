@@ -46,6 +46,7 @@ import {
 import { useUser } from '@/contexts/UserContext';
 import { useTrades } from '@/hooks/useTrades';
 import { toast } from 'sonner';
+import { placeholderService } from '@/lib/placeholderService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface Position {
@@ -133,7 +134,8 @@ const PortfolioManager = () => {
     setIsLoading(true);
     try {
       // Get connected brokers
-      const connections = await realBrokerService.getUserConnections(user.id);
+              placeholderService.showDataConnection('User Connections');
+        const connections = [];
       const connectedBrokers = connections.filter(conn => conn.status === 'connected');
       
       if (connectedBrokers.length === 0) {
@@ -163,7 +165,8 @@ const PortfolioManager = () => {
         let totalPnL = 0;
         
         for (const broker of connectedBrokers) {
-          const accountInfo = await realBrokerService.getAccountBalance(broker.id);
+          placeholderService.showDataConnection('Account Balance');
+          const accountInfo = { balance: 0, profit: 0, freeMargin: 0, margin: 0 };
           totalBalance += accountInfo.balance || 0;
           totalPnL += accountInfo.profit || 0;
           
@@ -232,7 +235,8 @@ const PortfolioManager = () => {
       const allPositions: Position[] = [];
       
       for (const brokerId of selectedPortfolio.brokerIds) {
-        const trades = await realBrokerService.fetchTradesFromBroker(brokerId);
+        placeholderService.showDataConnection('Broker Trades');
+        const trades = [];
         // Convert trades to positions (aggregate open trades by symbol)
         // This would be implemented based on broker-specific trade data
       }

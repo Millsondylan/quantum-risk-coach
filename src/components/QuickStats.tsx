@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useTrades } from '@/hooks/useTrades';
+import { placeholderService } from '@/lib/placeholderService';
 
 const QuickStats = () => {
   const { user } = useUser();
@@ -35,7 +36,8 @@ const QuickStats = () => {
       if (!user?.id) return;
       
       try {
-        const connections = await realBrokerService.getUserConnections(user.id);
+        placeholderService.showDataConnection('Broker Connections');
+    const connections = [];
         setConnectedBrokers(connections);
         
         // Get real-time balance from connected brokers
@@ -57,7 +59,7 @@ const QuickStats = () => {
   // Calculate stats with real data only
   const totalTrades = trades.length;
   const winRate = totalTrades > 0 ? ((metrics.winningTrades / totalTrades) * 100) : 0;
-  const totalProfit = realTimeBalance > 0 ? realTimeBalance : metrics.totalProfit;
+  const totalProfit = realTimeBalance > 0 ? realTimeBalance : metrics.totalProfitLoss;
   const activeTrades = trades.filter(trade => trade.status === 'open').length;
   
   // Calculate real daily and weekly P&L from actual trades
@@ -79,12 +81,13 @@ const QuickStats = () => {
       // Refresh broker connections and balances
       for (const connection of connectedBrokers) {
         if (connection.status === 'connected') {
-          await realBrokerService.getAccountBalance(connection.id);
+          placeholderService.showDataConnection('Account Balance');
         }
       }
       
       // Reload data
-      const connections = await realBrokerService.getUserConnections(user?.id || '');
+              placeholderService.showDataConnection('User Connections');
+        const connections = [];
       setConnectedBrokers(connections);
       
       let totalBalance = 0;

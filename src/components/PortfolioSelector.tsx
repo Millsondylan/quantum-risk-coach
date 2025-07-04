@@ -25,7 +25,9 @@ export const PortfolioSelector: React.FC = () => {
     await createPortfolio({
       name: newPortfolioName,
       color: newPortfolioColor,
-      icon: newPortfolioIcon || '📈'
+      icon: newPortfolioIcon || '📈',
+      userId: 'default',
+      updatedAt: new Date().toISOString()
     });
     
     setIsNewPortfolioDialogOpen(false);

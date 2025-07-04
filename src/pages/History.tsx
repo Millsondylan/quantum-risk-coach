@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { localDatabase } from '@/lib/localStorage';
-import { Trade } from '@/lib/localStorage';
+import { localDatabase } from '@/lib/localDatabase';
+import { Trade } from '@/lib/localDatabase';
 import { TagInput } from '@/components/ui/tag-input';
 import { 
   History as HistoryIcon,

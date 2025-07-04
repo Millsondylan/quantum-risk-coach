@@ -85,7 +85,7 @@ const AdvancedAnalytics = () => {
             exitTime: trade.exitDate || '',
             profit: trade.profit || 0,
             quantity: trade.amount || 0,
-            mood: trade.mood || 'neutral',
+            mood: (trade.mood as 'positive' | 'negative' | 'neutral' | 'excited' | 'stressed' | 'calm' | 'greedy' | 'fearful') || 'neutral',
             emotion: (trade.mood === 'calm' ? 'calm' : 
                      trade.mood === 'stressed' ? 'anxious' : 
                      trade.mood === 'excited' ? 'excited' : 
