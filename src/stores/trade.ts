@@ -6,37 +6,39 @@ import { logger } from '@/lib/logger'
 export interface Trade {
   id: string
   symbol: string
-  type: 'buy' | 'sell' | 'long' | 'short'
-  entryPrice: number
-  exitPrice?: number
+  type: 'long' | 'short' | 'buy' | 'sell'
+  side: 'buy' | 'sell'
   quantity: number
-  leverage: number
-  entryTime: string
-  exitTime?: string
+  amount?: number
+  entryPrice: number
+  price?: number
+  exitPrice?: number
   pnl?: number
-  pnlPercentage?: number
-  status: 'open' | 'closed' | 'cancelled'
+  profit?: number
+  profitLoss?: number
+  status: 'open' | 'closed' | 'cancelled' | 'pending'
+  entryTime: string
+  entryDate?: string
+  exitTime?: string
+  exitDate?: string
   notes?: string
-  tags?: string[]
   strategy?: string
-  riskRewardRatio?: number
+  tags?: string[]
+  accountId?: string
+  fee?: number
   stopLoss?: number
   takeProfit?: number
-  commission?: number
-  swap?: number
-  marketSession?: string
-  emotions?: {
-    confidence: number
-    fear: number
-    greed: number
-  }
-  aiAnalysis?: {
-    sentiment: 'bullish' | 'bearish' | 'neutral'
-    confidence: number
-    reasoning: string
-  }
-  createdAt: string
-  updatedAt: string
+  riskReward?: number
+  riskRewardRatio?: number
+  confidence?: number
+  confidenceRating?: number
+  emotion?: string
+  mood?: string
+  exitReason?: string
+  currentPrice?: number
+  useCurrentPrice?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface TradeStats {
@@ -173,14 +175,12 @@ export const useTradeStore = defineStore('trade', () => {
       throw new Error('Trade not found')
     }
 
-    const pnl = (exitPrice - trade.entryPrice) * trade.quantity * trade.leverage
-    const pnlPercentage = (pnl / (trade.entryPrice * trade.quantity)) * 100
+    const pnl = (exitPrice - trade.entryPrice) * trade.quantity
 
     await updateTrade(id, {
       exitPrice,
       exitTime: exitTime || new Date().toISOString(),
       pnl,
-      pnlPercentage,
       status: 'closed'
     })
   }

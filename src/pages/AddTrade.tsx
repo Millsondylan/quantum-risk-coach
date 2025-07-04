@@ -50,7 +50,7 @@ interface TradeFormData {
   useCustomSymbol: boolean;
   tags: string[];
   confidenceRating: number;
-  mood: 'positive' | 'negative' | 'neutral' | 'excited' | 'stressed' | 'calm' | 'greedy' | 'fearful';
+  mood: string;
 }
 
 interface FormErrors {
@@ -312,6 +312,7 @@ const AddTrade: React.FC = () => {
                   fee: 0,
                   profit: parseFloat(csvTrade.profit || csvTrade.pnl || '0') || 0,
                   status: (csvTrade.exitprice || csvTrade.exit ? 'closed' : 'open') as 'open' | 'closed' | 'cancelled' | 'pending',
+                  entryTime: csvTrade.date || csvTrade.entrydate || new Date().toISOString(),
                   entryDate: csvTrade.date || csvTrade.entrydate || new Date().toISOString(),
                   exitDate: csvTrade.exitdate || csvTrade.date || undefined,
                   notes: csvTrade.notes || `Imported from CSV`,

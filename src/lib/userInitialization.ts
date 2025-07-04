@@ -52,9 +52,9 @@ class UserInitializationService {
     const defaultPortfolio: Portfolio = {
       id: `portfolio_${userId}`,
       name: 'Default Portfolio',
-      color: '#3B82F6',
-      icon: 'TrendingUp',
+      userId: userId,
       createdAt: timestamp,
+      updatedAt: timestamp,
     };
 
     // Create default account with zero balance
@@ -62,10 +62,12 @@ class UserInitializationService {
       id: `account_${userId}`,
       portfolioId: defaultPortfolio.id,
       name: 'Trading Account',
-      type: 'manual',
+      type: 'demo',
       balance: 0, // Start with zero balance
       currency: 'USD',
+      userId: userId,
       createdAt: timestamp,
+      updatedAt: timestamp,
     };
 
     // Save to database

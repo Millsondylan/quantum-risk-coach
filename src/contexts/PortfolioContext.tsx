@@ -58,9 +58,9 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
         const fallbackPortfolio: Portfolio = {
           id: `portfolio_fallback_${Date.now()}`,
           name: 'My First Portfolio',
-          color: '#007bff',
-          icon: '📈',
-          createdAt: new Date().toISOString()
+          userId: 'default',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         };
         
         setPortfolios([fallbackPortfolio]);
@@ -80,9 +80,9 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       const defaultPortfolio: Portfolio = {
         id: newPortfolioId,
         name: 'My First Portfolio',
-        color: '#007bff',
-        icon: '📈',
-        createdAt: new Date().toISOString()
+        userId: 'default',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
       await database.createPortfolio(defaultPortfolio);
