@@ -67,12 +67,14 @@ interface NewsItem {
 type RealNewsItem = NewsItem;
 
 interface EconomicEvent {
+  id: string;
   title: string;
   country: string;
   date: string;
   time: string;
   currency: string;
   impact: 'high' | 'medium' | 'low';
+  category: string;
   forecast?: string;
   previous?: string;
   actual?: string;
@@ -354,12 +356,14 @@ class RealDataService {
 
       const data = await response.json();
       const events: EconomicEvent[] = data.map((event: any) => ({
+        id: event.id,
         title: event.Title || 'Economic Event',
         country: event.Country || 'Unknown',
         date: event.Date || new Date().toISOString().split('T')[0],
         time: event.Time || '00:00',
         currency: event.Currency || 'USD',
         impact: this.mapImpact(event.Importance) as 'high' | 'medium' | 'low',
+        category: event.category || 'Economic',
         forecast: event.Forecast || '',
         previous: event.Previous || '',
         actual: event.Actual || ''
@@ -765,6 +769,65 @@ class RealDataService {
       console.error('Finnhub API test failed:', error);
       return { success: false, message: `Finnhub API connection failed: ${error.message || error.toString()}` };
     }
+  }
+
+  async getRealTimePrice(symbol: string): Promise<MarketDataPoint | null> {
+    // Normalize symbol to uppercase for consistent lookup
+    const upperSymbol = symbol.toUpperCase();
+
+    // Try to fetch as Cryptocurrency
+    try {
+      const cryptoPrices = await this.getCryptoPrices();
+      const crypto = cryptoPrices.find(c => c.symbol === upperSymbol);
+      if (crypto) {
+        return {
+          symbol: crypto.symbol,
+          price: crypto.current_price,
+          change: crypto.price_change_24h,
+          changePercent: crypto.price_change_percentage_24h,
+          volume: crypto.volume_24h,
+          timestamp: new Date(crypto.last_updated).getTime(),
+          source: 'CoinGecko'
+        };
+      }
+    } catch (error) {
+      console.warn(`Could not fetch crypto price for ${upperSymbol}:`, error);
+    }
+
+    // Try to fetch as Stock
+    try {
+      const stockQuotes = await this.getStockQuotes([upperSymbol]);
+      const stock = stockQuotes.find(s => s.symbol === upperSymbol);
+      if (stock) {
+        return stock;
+      }
+    } catch (error) {
+      console.warn(`Could not fetch stock price for ${upperSymbol}:`, error);
+    }
+
+    // Try to fetch as Forex
+    try {
+      const forexRates = await this.getForexRates();
+      const forex = forexRates.find(f => f.base === upperSymbol || f.target === upperSymbol);
+      if (forex) {
+        // If symbol is base, return rate as is. If symbol is target, invert rate.
+        const price = forex.base === upperSymbol ? 1 / forex.rate : forex.rate;
+        return {
+          symbol: `${forex.base}/${forex.target}`,
+          price: price,
+          change: forex.change_24h || 0, // Assuming 24h change can be added to ForexRate interface
+          changePercent: 0, // Placeholder, can be calculated if 24h change is available
+          volume: 0, // Not applicable for forex rates directly
+          timestamp: forex.timestamp,
+          source: 'ExchangeRate/Fixer'
+        };
+      }
+    } catch (error) {
+      console.warn(`Could not fetch forex rate for ${upperSymbol}:`, error);
+    }
+
+    console.warn(`No real-time price found for symbol: ${symbol}`);
+    return null;
   }
 }
 

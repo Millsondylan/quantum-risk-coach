@@ -47,6 +47,7 @@ import { useToast } from '../hooks/use-toast';
 import { pushNotificationService, NotificationPreferences as ServiceNotificationPreferences } from '@/lib/pushNotificationService';
 import { useUser } from '@/contexts/UserContext';
 import type { NotificationPreferences } from '@/types/user';
+import { realDataService } from '@/lib/realDataService';
 
 interface NotificationChannel {
   id: string;
@@ -277,21 +278,55 @@ const NotificationsAlerts = () => {
     }
   };
 
-  const checkPriceAlerts = () => {
+  const checkPriceAlerts = async () => {
     // Check if any price alerts should be triggered
-    const triggeredAlerts = alerts.filter(alert => {
-      // For now, we'll use placeholder logic instead of real price checking
-      const shouldTrigger = false; // Disabled live price checking
-      
-      if (shouldTrigger) {
-        toast.info(`Price alert: ${alert.symbol} ${alert.condition} ${alert.value}`);
-        return true;
-      }
-      return false;
-    });
+    const activePriceAlerts = alerts.filter(alert => alert.isActive);
 
-    if (triggeredAlerts.length > 0) {
-      setAlerts(prev => prev.filter(alert => !triggeredAlerts.includes(alert)));
+    for (const alert of activePriceAlerts) {
+      try {
+        const currentPriceData = await realDataService.getRealTimePrice(alert.symbol);
+        if (!currentPriceData || currentPriceData.price === undefined) {
+          console.warn(`Could not get real-time price for ${alert.symbol}`);
+          continue;
+        }
+
+        const currentPrice = currentPriceData.price;
+        let shouldTrigger = false;
+
+        switch (alert.condition) {
+          case 'above':
+            shouldTrigger = currentPrice > alert.value;
+            break;
+          case 'below':
+            shouldTrigger = currentPrice < alert.value;
+            break;
+          case 'crosses_up':
+            // For 'crosses_up', we need to know the previous price.
+            // This would typically involve more sophisticated state management
+            // or backend logic to track historical prices.
+            // For simplicity, we'll assume it triggers if it goes above the value.
+            // A more robust solution would check if prevPrice < value && currentPrice >= value
+            shouldTrigger = currentPrice >= alert.value;
+            break;
+          case 'crosses_down':
+            // Similar to crosses_up, assumes it triggers if it goes below the value.
+            // A more robust solution would check if prevPrice > value && currentPrice <= value
+            shouldTrigger = currentPrice <= alert.value;
+            break;
+          default:
+            break;
+        }
+
+        if (shouldTrigger) {
+          await triggerAlert(alert, currentPrice);
+          // After triggering, you might want to deactivate the alert or set a cooldown
+          setAlerts(prev => prev.map(a => 
+            a.id === alert.id ? { ...a, isActive: false, lastTriggered: new Date().toISOString() } : a
+          ));
+        }
+      } catch (error) {
+        console.error(`Error checking price for ${alert.symbol}:`, error);
+      }
     }
   };
 

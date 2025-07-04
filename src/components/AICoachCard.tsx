@@ -274,13 +274,28 @@ const AICoachCard = () => {
       const behavioralPatterns = analyticsData.behavioralPatterns;
       setAnalyticsMetrics(analyticsData);
 
+      // Fetch real-time market data
+      const [cryptoData, forexData, newsData] = await Promise.allSettled([
+        realDataService.getCryptoPrices(),
+        realDataService.getForexRates(),
+        realDataService.getFinancialNews(),
+      ]);
+
+      const marketData = {
+        forex: forexData.status === 'fulfilled' ? forexData.value : [],
+        crypto: cryptoData.status === 'fulfilled' ? cryptoData.value : [],
+        stocks: [], // You might want to fetch specific stock data if the question implies it
+        news: newsData.status === 'fulfilled' ? newsData.value : [],
+      };
+
       const aiContext = {
         userPersona: user.preferences?.tradingPersona || { type: 'day-trader', quizResults: {}, determinedAt: '' },
         riskTolerance: user.preferences?.riskTolerance,
         experienceLevel: user.preferences?.experienceLevel,
         preferredMarkets: user.preferences?.preferredMarkets,
         behavioralPatterns: behavioralPatterns,
-        userQuestion: userQuestion
+        userQuestion: userQuestion,
+        chatHistory: chatHistory.map(session => ({ question: session.question, response: session.response })), // Include recent chat history
       };
 
       let response = '';
@@ -289,7 +304,7 @@ const AICoachCard = () => {
       // Stream the response with enhanced context
       await aiService.streamMarketAnalysis(
         {
-          marketData: { forex: [], crypto: [], stocks: [], news: [] },
+          marketData: marketData,
           analysisType: 'coaching',
           userContext: aiContext
         },

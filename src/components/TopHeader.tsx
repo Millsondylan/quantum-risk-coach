@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Menu, ChevronDown, Filter, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import PriceTicker from './PriceTicker';
 
 const TopHeader = () => {
   const navigate = useNavigate();
-  const [selectedPortfolio, setSelectedPortfolio] = useState('Default Portfolio');
+  const [selectedPortfolio, setSelectedPortfolio] = useState('All Portfolios');
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -35,69 +36,48 @@ const TopHeader = () => {
   };
 
   return (
-    <div className={`fixed top-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md border-b border-gray-700/50 z-50 h-12 shadow-lg transition-all duration-300 ${
-      isScrolled ? 'shadow-xl' : 'shadow-lg'
-    }`}>
-      <div className="flex items-center justify-between px-3 h-full">
-        <button 
-          className="p-1 text-gray-400 hover:text-white transition-colors rounded-md hover:bg-gray-800/50"
-          onClick={handleMenuClick}
-        >
-          <Menu className="h-4 w-4" />
-        </button>
-
-        <div className="flex-1 mx-3 overflow-x-auto scrollbar-hide">
-          <div className="flex items-center space-x-3 min-w-max py-1">
+    <>
+      {/* Price Ticker - Always at the very top */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <PriceTicker />
+      </div>
+      
+      {/* Main Header - Below the ticker */}
+      <div className={`fixed top-12 left-0 right-0 bg-background/95 backdrop-blur-md border-b border-border z-40 transition-all duration-300 ${
+        isScrolled ? 'shadow-lg' : ''
+      }`}>
+        <div className="flex items-center justify-between px-4 h-14">
+          {/* Left Section - Portfolio Selector */}
+          <div className="flex items-center space-x-3">
             <button 
-              className="flex items-center space-x-1 hover:bg-gray-800/50 px-3 py-1.5 rounded-md transition-colors whitespace-nowrap text-sm"
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors"
               onClick={handlePortfolioClick}
             >
-              <span className="font-medium text-xs truncate max-w-[100px]">{selectedPortfolio}</span>
-              <ChevronDown className="h-3 w-3 text-gray-400 flex-shrink-0" />
+              <span className="text-sm font-medium">{selectedPortfolio}</span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>
+          </div>
+
+          {/* Right Section - Actions */}
+          <div className="flex items-center space-x-2">
             <button 
-              className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap hover:bg-gray-800/50"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50"
               onClick={handleFilterClick}
+              aria-label="Filter trades"
             >
-              <Filter className="h-3 w-3 inline mr-1" />
-              Filters
+              <Filter className="h-5 w-5" />
             </button>
             <button 
-              className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap hover:bg-gray-800/50"
-              onClick={handleLayoutClick}
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50"
+              onClick={handleMenuClick}
+              aria-label="Settings"
             >
-              <LayoutGrid className="h-3 w-3 inline mr-1" />
-              Layout
-            </button>
-            <button 
-              className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap hover:bg-gray-800/50"
-              onClick={() => navigate('/add-trade')}
-            >
-              + Add Trade
-            </button>
-            <button 
-              className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap hover:bg-gray-800/50"
-              onClick={() => navigate('/live-trades')}
-            >
-              Live Trades
-            </button>
-            <button 
-              className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap hover:bg-gray-800/50"
-              onClick={() => navigate('/news')}
-            >
-              News
+              <Menu className="h-5 w-5" />
             </button>
           </div>
         </div>
-
-        <button 
-          className="p-1 text-gray-400 hover:text-white transition-colors rounded-md hover:bg-gray-800/50"
-          onClick={() => navigate('/settings')}
-        >
-          <LayoutGrid className="h-4 w-4" />
-        </button>
       </div>
-    </div>
+    </>
   );
 };
 

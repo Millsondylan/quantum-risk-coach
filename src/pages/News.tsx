@@ -39,9 +39,7 @@ import {
 interface NewsItem {
   id?: string;
   title: string;
-  summary?: string;
-  content?: string;
-  description?: string;
+  description: string;
   source: string;
   publishedAt: string;
   category?: string;
@@ -74,14 +72,54 @@ const News: React.FC = () => {
   const [sourceFilter, setSourceFilter] = useState<'all' | string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Function to determine sentiment of a news article
+  const determineSentiment = (title: string, description: string): 'positive' | 'negative' | 'neutral' => {
+    const text = (title + ' ' + description).toLowerCase();
+    const bullishWords = ['rally', 'surge', 'gain', 'growth', 'positive', 'rise', 'boost', 'strong', 'up', 'recover', 'breakthrough'];
+    const bearishWords = ['fall', 'drop', 'decline', 'negative', 'crash', 'plunge', 'tension', 'weak', 'down', 'slump', 'recession'];
+    
+    let bullishCount = 0;
+    let bearishCount = 0;
+
+    bullishWords.forEach(word => {
+      if (text.includes(word)) bullishCount++;
+    });
+    bearishWords.forEach(word => {
+      if (text.includes(word)) bearishCount++;
+    });
+    
+    if (bullishCount > bearishCount) return 'positive';
+    if (bearishCount > bullishCount) return 'negative';
+    return 'neutral';
+  };
+
   useEffect(() => {
     const loadNews = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        // Always use fallback news for now to ensure content displays
-        setNewsItems(getFallbackNews());
+        const news = await realDataService.getFinancialNews();
+        if (news && news.length > 0) {
+          const formattedNews: NewsItem[] = news.map(item => ({
+            id: item.id || Date.now().toString(),
+            title: item.title,
+            description: item.description,
+            source: item.source,
+            publishedAt: item.publishedAt,
+            category: item.category || 'General',
+            sentiment: (item.sentiment as 'positive' | 'negative' | 'neutral') || determineSentiment(item.title, item.description),
+            relatedSymbols: item.symbols,
+            url: item.url,
+            imageUrl: item.urlToImage,
+            urlToImage: item.urlToImage,
+          }));
+          setNewsItems(formattedNews);
+        } else {
+          setNewsItems([]);
+          toast.info('No news available from API. Displaying fallback data.');
+          setNewsItems(getFallbackNews());
+        }
       } catch (err) {
         console.error('Failed to load news:', err);
         setError('Failed to load news. Please try again later.');
@@ -173,7 +211,6 @@ const News: React.FC = () => {
       filtered = filtered.filter(item =>
         (item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.relatedSymbols && item.relatedSymbols.some(symbol => 
           symbol.toLowerCase().includes(searchQuery.toLowerCase())
         )))
@@ -254,7 +291,7 @@ const News: React.FC = () => {
     if (navigator.share) {
       navigator.share({
         title: newsItem.title,
-        text: newsItem.summary || newsItem.description || '',
+        text: newsItem.description || '',
         url: newsItem.url
       });
     } else {
@@ -401,7 +438,7 @@ const News: React.FC = () => {
             
             <CardContent className="pt-0">
               <p className="text-slate-400 text-sm line-clamp-3 mb-4">
-                {item.description || item.summary || 'No description available.'}
+                {item.description || 'No description available.'}
               </p>
               
               {item.relatedSymbols && item.relatedSymbols.length > 0 && (

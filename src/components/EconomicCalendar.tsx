@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { realDataService } from '@/lib/realDataService';
 
 interface FilterOptions {
   impact: 'all' | 'high' | 'medium' | 'low';
@@ -64,70 +65,17 @@ const EconomicCalendar = () => {
   const loadEconomicData = async () => {
     setIsLoading(true);
     try {
-      // Static economic events data
-      const staticEvents: EconomicEvent[] = [
-        {
-          id: '1',
-          title: 'Non-Farm Payrolls',
-          country: 'United States',
-          currency: 'USD',
-          time: '08:30',
-          date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
-          impact: 'high',
-          category: '',
-          forecast: '200K',
-          previous: '187K',
-          actual: ''
-        },
-        {
-          id: '2', 
-          title: 'ECB Interest Rate Decision',
-          country: 'European Union',
-          currency: 'EUR',
-          time: '12:45',
-          date: new Date(Date.now() + 172800000).toISOString().split('T')[0], // Day after tomorrow
-          impact: 'high',
-          category: '',
-          forecast: '4.50%',
-          previous: '4.50%',
-          actual: ''
-        },
-        {
-          id: '3',
-          title: 'Consumer Price Index',
-          country: 'United States', 
-          currency: 'USD',
-          time: '08:30',
-          date: new Date(Date.now() + 259200000).toISOString().split('T')[0], // 3 days from now
-          impact: 'medium',
-          category: '',
-          forecast: '3.2%',
-          previous: '3.1%',
-          actual: ''
-        },
-        {
-          id: '4',
-          title: 'Bank of Japan Policy Meeting',
-          country: 'Japan',
-          currency: 'JPY', 
-          time: '03:00',
-          date: new Date(Date.now() + 345600000).toISOString().split('T')[0], // 4 days from now
-          impact: 'high',
-          category: '',
-          forecast: '-0.10%',
-          previous: '-0.10%',
-          actual: ''
-        }
-      ];
-
-      setEvents(staticEvents);
-      setIsLoading(false);
-      
-      toast.success('Economic calendar loaded (static data)');
+      const fetchedEvents = await realDataService.getEconomicCalendar();
+      setEvents(fetchedEvents);
+      setApiStatus('connected');
+      setAvailableSources(['TradingEconomics']); // Assuming Trading Economics is the source
+      toast.success('Economic calendar loaded (live data)');
     } catch (error) {
       console.error('Error loading economic data:', error);
-      setIsLoading(false);
+      setApiStatus('error');
       toast.error('Failed to load economic calendar');
+    } finally {
+      setIsLoading(false);
     }
   };
 

@@ -36,6 +36,31 @@ import { cn } from '@/lib/utils';
 import { pnlCalculator } from '@/lib/pnlCalculator';
 import { useTrades } from '@/hooks/useTrades';
 import { notificationService } from '@/lib/notificationService';
+import Tesseract from 'tesseract.js';
+
+interface ExtractedTradeData {
+  symbol?: string;
+  entryPrice?: number;
+  exitPrice?: number;
+  quantity?: number;
+  side?: 'buy' | 'sell';
+  entryDate?: string;
+  exitDate?: string;
+  profitLoss?: number;
+  broker?: string;
+  accountNumber?: string;
+  orderType?: string;
+  commission?: number;
+  swap?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  date?: string;
+  time?: string;
+  orderId?: string;
+  type?: 'buy' | 'sell';
+  riskReward?: number;
+  confidence: number;
+}
 
 interface TradeFormData {
   symbol: string;
@@ -81,6 +106,135 @@ const AddTrade: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleOCRTradeExtraction = (extractedData: ExtractedTradeData) => {
+    // Map ExtractedTradeData to TradeFormData
+    setFormData(prev => ({
+      ...prev,
+      symbol: extractedData.symbol || '',
+      type: extractedData.type === 'sell' ? 'sell' : 'buy',
+      entryPrice: extractedData.entryPrice?.toString() || '',
+      exitPrice: extractedData.exitPrice?.toString() || '',
+      size: extractedData.quantity?.toString() || '',
+      entryDate: extractedData.date ? (extractedData.date + (extractedData.time ? `T${extractedData.time}` : '')) : new Date().toISOString().slice(0, 16),
+      exitDate: '',
+      notes: `Imported via OCR` + (extractedData.orderId ? `. Order ID: ${extractedData.orderId}` : ''),
+      tags: [], // Tags are not extracted by OCR yet
+      confidenceRating: Math.round(extractedData.confidence * 100), // Convert 0-1 confidence to 0-100
+      mood: 'neutral' // Mood is not extracted by OCR
+    }));
+    
+    // Switch to manual tab to show the extracted data
+    setActiveTab('manual');
+    toast.success('Trade data extracted! Please review and complete the form.');
+  };
+
+  const extractTradeData = (text: string, overallConfidence: number): ExtractedTradeData => {
+    const data: ExtractedTradeData = { confidence: overallConfidence };
+    let matchCount = 0;
+
+    // Extract symbol
+    const symbolRegex = /(?:Symbol|Ticker|Pair)[:\s]+([A-Z]{2,}[/-]?[A-Z]*)/i;
+    const symbolMatch = text.match(symbolRegex);
+    if (symbolMatch) {
+      data.symbol = symbolMatch[1].toUpperCase();
+      matchCount++;
+    }
+
+    // Extract trade type (buy/sell/long/short)
+    const typeRegex = /(?:Type|Side|Action)[:\s]+(BUY|SELL|LONG|SHORT)/i;
+    const typeMatch = text.match(typeRegex);
+    if (typeMatch) {
+      data.type = typeMatch[1].toLowerCase() === 'sell' || typeMatch[1].toLowerCase() === 'short' ? 'sell' : 'buy';
+      matchCount++;
+    }
+
+    // Extract quantity
+    const quantityRegex = /(?:Quantity|Volume|Size|Units)[:\s]+(\d+(?:[.,]\d+)?)/i;
+    const quantityMatch = text.match(quantityRegex);
+    if (quantityMatch) {
+      data.quantity = parseFloat(quantityMatch[1].replace(',', '.')); // Handle comma as decimal separator
+      matchCount++;
+    }
+
+    // Extract entry price
+    const entryPriceRegex = /(?:Entry Price|Entry)[:\s]+\$?(\d+(?:[.,]\d+)?)/i;
+    const entryPriceMatch = text.match(entryPriceRegex);
+    if (entryPriceMatch) {
+      data.entryPrice = parseFloat(entryPriceMatch[1].replace(',', '.'));
+      matchCount++;
+    }
+
+    // Extract exit price
+    const exitPriceRegex = /(?:Exit Price|Close)[:\s]+\$?(\d+(?:[.,]\d+)?)/i;
+    const exitPriceMatch = text.match(exitPriceRegex);
+    if (exitPriceMatch) {
+      data.exitPrice = parseFloat(exitPriceMatch[1].replace(',', '.'));
+      matchCount++;
+    }
+
+    // Extract stop loss
+    const stopLossRegex = /(?:Stop Loss|SL)[:\s]+\$?(\d+(?:[.,]\d+)?)/i;
+    const stopLossMatch = text.match(stopLossRegex);
+    if (stopLossMatch) {
+      data.stopLoss = parseFloat(stopLossMatch[1].replace(',', '.'));
+      matchCount++;
+    }
+
+    // Extract take profit
+    const takeProfitRegex = /(?:Take Profit|TP|Target)[:\s]+\$?(\d+(?:[.,]\d+)?)/i;
+    const takeProfitMatch = text.match(takeProfitRegex);
+    if (takeProfitMatch) {
+      data.takeProfit = parseFloat(takeProfitMatch[1].replace(',', '.'));
+      matchCount++;
+    }
+
+    // Extract profit/loss
+    const profitLossRegex = /(?:Profit|Loss|P&L|P/L)[:\s]+([+\-]?\$?\d+(?:[.,]\d+)?)/i;
+    const profitLossMatch = text.match(profitLossRegex);
+    if (profitLossMatch) {
+      data.profitLoss = parseFloat(profitLossMatch[1].replace('$', '').replace(',', '.'));
+      matchCount++;
+    }
+
+    // Extract date (various formats: MM/DD/YYYY, YYYY-MM-DD, DD.MM.YYYY)
+    const dateRegex = /(\d{1,2}[/-.]\d{1,2}[/-.]\d{2,4})/; // MM/DD/YYYY or DD.MM.YYYY
+    const dateMatch = text.match(dateRegex);
+    if (dateMatch) {
+      data.date = dateMatch[1];
+      matchCount++;
+    }
+
+    // Extract time (HH:MM or HH:MM:SS)
+    const timeRegex = /(\d{1,2}:\d{2}(?::\d{2})?)/; // Basic HH:MM or HH:MM:SS format
+    const timeMatch = text.match(timeRegex);
+    if (timeMatch) {
+      data.time = timeMatch[1];
+      matchCount++;
+    }
+
+    // Extract broker
+    const brokerRegex = /(?:Broker|Platform)[:\s]+([a-zA-Z0-9\s]+)/i;
+    const brokerMatch = text.match(brokerRegex);
+    if (brokerMatch) {
+      data.broker = brokerMatch[1].trim();
+      matchCount++;
+    }
+
+    // Extract order ID
+    const orderIdRegex = /(?:Order ID|Order #|ID)[:\s]+([A-Z0-9-]+)/i;
+    const orderIdMatch = text.match(orderIdRegex);
+    if (orderIdMatch) {
+      data.orderId = orderIdMatch[1];
+      matchCount++;
+    }
+
+    // Calculate confidence based on matches found relative to potential fields
+    // Adjusted to 13 potential fields (symbol, type, quantity, entryPrice, exitPrice, SL, TP, PnL, date, time, broker, orderId)
+    data.confidence = matchCount / 13; 
+
+    return data;
+  };
 
   const commonSymbols = [
     'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD',
@@ -354,22 +508,23 @@ const AddTrade: React.FC = () => {
     try {
       toast.info('Processing image with OCR...');
       
-      // For now, we'll simulate OCR processing
-      // In a real implementation, you would use Tesseract.js or similar
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Perform OCR using Tesseract.js
+      const { data: { text, confidence } } = await Tesseract.recognize(
+        file,
+        'eng',
+        {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              // console.log('OCR Progress:', m.progress);
+              // You could update a progress bar here if needed
+            }
+          }
+        }
+      );
       
-      // Simulate extracted data
-      const extractedData = {
-        symbol: 'EURUSD',
-        type: 'buy' as const,
-        quantity: 1.0,
-        entryPrice: 1.1000,
-        exitPrice: 1.1050,
-        date: new Date().toISOString().slice(0, 10),
-        time: '10:00',
-        confidence: 0.85
-      };
+      console.log('OCR Raw Text:', text);
       
+      const extractedData = extractTradeData(text, confidence);
       handleOCRTradeExtraction(extractedData);
       toast.success('OCR processing completed!');
       
@@ -402,41 +557,6 @@ const AddTrade: React.FC = () => {
   };
 
   const profit = calculateProfit();
-
-  const handleOCRTradeExtraction = (extractedData: {
-    symbol?: string;
-    type?: 'buy' | 'sell';
-    quantity?: number;
-    entryPrice?: number;
-    exitPrice?: number;
-    stopLoss?: number;
-    takeProfit?: number;
-    date?: string;
-    time?: string;
-    broker?: string;
-    orderId?: string;
-    confidence: number;
-  }) => {
-    // Map ExtractedTradeData to TradeFormData
-    setFormData(prev => ({
-      ...prev,
-      symbol: extractedData.symbol || '',
-      type: extractedData.type === 'sell' ? 'sell' : 'buy',
-      entryPrice: extractedData.entryPrice?.toString() || '',
-      exitPrice: extractedData.exitPrice?.toString() || '',
-      size: extractedData.quantity?.toString() || '',
-      entryDate: extractedData.date ? (extractedData.date + (extractedData.time ? `T${extractedData.time}` : '')) : new Date().toISOString().slice(0, 16),
-      exitDate: '',
-      notes: `Imported via OCR` + (extractedData.orderId ? `. Order ID: ${extractedData.orderId}` : ''),
-      tags: [], // Tags are not extracted by OCR yet
-      confidenceRating: Math.round(extractedData.confidence * 100), // Convert 0-1 confidence to 0-100
-      mood: 'neutral' // Mood is not extracted by OCR
-    }));
-    
-    // Switch to manual tab to show the extracted data
-    setActiveTab('manual');
-    toast.success('Trade data extracted! Please review and complete the form.');
-  };
 
   const renderManualEntry = () => (
     <div className="space-y-6">

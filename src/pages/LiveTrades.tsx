@@ -19,11 +19,21 @@ import {
   Bell,
   AlertTriangle,
   Target,
-  DollarSign
+  DollarSign,
+  Filter,
+  MoreVertical
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTrades } from '@/hooks/useTrades';
 import { usePortfolios } from '@/contexts/PortfolioContext';
+import { useNavigate } from 'react-router-dom';
+import { formatPnL, formatPercentage } from '@/lib/pnlCalculator';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface LivePosition {
   id: string;
@@ -58,6 +68,9 @@ const LiveTrades = () => {
   const [activeTab, setActiveTab] = useState('positions');
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pricesVisible, setPricesVisible] = useState(true);
+  const navigate = useNavigate();
   
   // New alert form
   const [newAlert, setNewAlert] = useState({
@@ -164,6 +177,25 @@ const LiveTrades = () => {
   const totalPnL = positions.reduce((sum, pos) => sum + pos.pnl, 0);
   const openPositions = positions.filter(p => p.isActive).length;
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
+
+  const formatDuration = (entryDate: string) => {
+    const now = new Date();
+    const entry = new Date(entryDate);
+    const diff = now.getTime() - entry.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}d`;
+    if (hours > 0) return `${hours}h`;
+    return 'Just now';
+  };
+
   // Show error state if there's an error
   if (error) {
     return (
@@ -189,205 +221,192 @@ const LiveTrades = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Live Trades</h1>
-          <p className="text-slate-400">Monitor your active positions and market alerts</p>
+          <h1 className="text-2xl font-bold">Live Trades</h1>
+          <p className="text-sm text-muted-foreground">
+            {trades.filter(trade => trade.status === 'open').length} active position{trades.filter(trade => trade.status === 'open').length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400' : 'bg-red-400'}`}></div>
-            <span className="text-sm text-slate-400">
-              {isLive ? 'Live' : 'Paused'} • Last update: {lastUpdate.toLocaleTimeString()}
-            </span>
-          </div>
+        <div className="flex items-center space-x-2">
           <Button
-            onClick={() => setIsLive(!isLive)}
             variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
+            size="icon"
+            onClick={() => setPricesVisible(!pricesVisible)}
           >
-            {isLive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            {isLive ? 'Pause' : 'Resume'}
+            {pricesVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate('/history')}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => navigate('/add-trade')}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Trade
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">Total P&L</p>
-                <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  ${totalPnL.toFixed(2)}
-                </p>
+      {/* Trade List */}
+      <Card className="ultra-card">
+        <CardContent className="p-0">
+          {trades.filter(trade => trade.status === 'open').length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
+                <TrendingUp className="h-8 w-8 text-muted-foreground" />
               </div>
-              <DollarSign className="w-8 h-8 text-slate-400" />
+              <h3 className="text-lg font-semibold mb-2">No Active Trades</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                Start tracking your positions by adding a new trade
+              </p>
+              <Button onClick={() => navigate('/add-trade')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Trade
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          ) : (
+            <div className="divide-y divide-border">
+              {trades.filter(trade => trade.status === 'open').map((trade) => {
+                const pnl = trade.profitLoss || 0;
+                const pnlPercent = trade.profitLoss && trade.entryPrice ? 
+                  (trade.profitLoss / (trade.entryPrice * trade.quantity)) * 100 : 0;
 
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">Open Positions</p>
-                <p className="text-2xl font-bold text-white">{openPositions}</p>
-              </div>
-              <Target className="w-8 h-8 text-slate-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">Active Alerts</p>
-                <p className="text-2xl font-bold text-white">{alerts.filter(a => a.isActive).length}</p>
-              </div>
-              <Bell className="w-8 h-8 text-slate-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="positions">Live Positions</TabsTrigger>
-          <TabsTrigger value="alerts">Price Alerts</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="positions" className="space-y-4">
-          <div className="space-y-4">
-            {positions.length === 0 ? (
-              <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-                <CardContent className="p-8 text-center">
-                  <Target className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No Open Positions</h3>
-                  <p className="text-slate-400 mb-6">Your live trading positions will appear here</p>
-                  <Button onClick={() => window.location.href = '/trade-builder'}>
-                    Open New Position
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              positions.map((position) => (
-                <Card key={position.id} className="bg-[#1A1B1E] border-[#2A2B2E]">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
+                return (
+                  <div key={trade.id} className="trade-row">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-lg bg-muted/30 flex items-center justify-center">
+                          {trade.side === 'buy' ? (
+                            <TrendingUp className="h-5 w-5 text-profit" />
+                          ) : (
+                            <TrendingDown className="h-5 w-5 text-loss" />
+                          )}
+                        </div>
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold">{position.symbol}</h3>
-                            <Badge variant={position.type === 'buy' ? 'default' : 'secondary'}>
-                              {position.type.toUpperCase()}
+                          <div className="flex items-center space-x-2">
+                            <span className="font-semibold">{trade.symbol}</span>
+                            <Badge 
+                              variant={trade.side === 'buy' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {trade.side.toUpperCase()}
                             </Badge>
-                            {position.pnl >= 0 ? 
-                              <TrendingUp className="w-4 h-4 text-green-400" /> : 
-                              <TrendingDown className="w-4 h-4 text-red-400" />
-                            }
                           </div>
-                          <p className="text-sm text-slate-400">
-                            Entry: ${position.entryPrice.toFixed(4)} • Current: ${position.currentPrice.toFixed(4)}
-                          </p>
+                          <div className="flex items-center space-x-4 mt-1 text-xs text-muted-foreground">
+                            <span>Entry: {pricesVisible ? trade.entryPrice.toFixed(4) : '••••'}</span>
+                            <span>Qty: {trade.quantity}</span>
+                            <span>{formatDuration(trade.entryDate)}</span>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <div className={`text-lg font-bold ${position.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          ${position.pnl.toFixed(2)}
-                        </div>
-                        <div className={`text-sm ${position.percentage >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {position.percentage >= 0 ? '+' : ''}{position.percentage.toFixed(2)}%
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleClosePosition(position)}
-                          className="flex items-center gap-1"
-                        >
-                          <Target className="w-3 h-3" />
-                          Close
-                        </Button>
                       </div>
                     </div>
                     
-                    {(position.stopLoss || position.takeProfit) && (
-                      <div className="mt-3 pt-3 border-t border-[#2A2B2E] flex gap-4 text-sm">
-                        {position.stopLoss && (
-                          <div>
-                            <span className="text-slate-400">SL: </span>
-                            <span className="text-red-400">${position.stopLoss.toFixed(4)}</span>
-                          </div>
-                        )}
-                        {position.takeProfit && (
-                          <div>
-                            <span className="text-slate-400">TP: </span>
-                            <span className="text-green-400">${position.takeProfit.toFixed(4)}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="alerts" className="space-y-4">
-          <div className="space-y-4">
-            {alerts.length === 0 ? (
-              <Card className="bg-[#1A1B1E] border-[#2A2B2E]">
-                <CardContent className="p-8 text-center">
-                  <Bell className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No Price Alerts</h3>
-                  <p className="text-slate-400 mb-6">Set price alerts to get notified when your targets are hit</p>
-                </CardContent>
-              </Card>
-            ) : (
-              alerts.map((alert) => (
-                <Card key={alert.id} className="bg-[#1A1B1E] border-[#2A2B2E]">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                        <div>
-                          <h3 className="font-semibold">{alert.symbol}</h3>
-                          <p className="text-sm text-slate-400">
-                            Alert when {alert.type} ${alert.targetPrice}
-                          </p>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <div className={pnl >= 0 ? "trade-profit" : "trade-loss"}>
+                          {pricesVisible ? formatPnL(pnl) : '••••'}
+                        </div>
+                        <div className={`text-xs flex items-center justify-end ${
+                          pnlPercent >= 0 ? "text-profit" : "text-loss"
+                        }`}>
+                          {pnlPercent >= 0 ? (
+                            <TrendingUp className="w-3 h-3 mr-1" />
+                          ) : (
+                            <TrendingDown className="w-3 h-3 mr-1" />
+                          )}
+                          {Math.abs(pnlPercent).toFixed(2)}%
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={alert.isActive ? 'default' : 'secondary'}>
-                          {alert.isActive ? 'Active' : 'Paused'}
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteAlert(alert.id)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/trade/${trade.id}`)}>
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/add-trade?edit=${trade.id}`)}>
+                            Edit Trade
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => console.log('Close trade:', trade.id)}
+                          >
+                            Close Trade
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Summary Stats */}
+      {trades.filter(trade => trade.status === 'open').length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="ultra-card">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">Total Positions</div>
+              <div className="text-2xl font-bold">{trades.filter(trade => trade.status === 'open').length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="ultra-card">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">Total P&L</div>
+              <div className={`text-2xl font-bold ${
+                trades.filter(trade => trade.status === 'open').reduce((sum, t) => sum + (t.profitLoss || 0), 0) >= 0 
+                  ? 'text-profit' : 'text-loss'
+              }`}>
+                {pricesVisible 
+                  ? formatPnL(trades.filter(trade => trade.status === 'open').reduce((sum, t) => sum + (t.profitLoss || 0), 0))
+                  : '••••••'
+                }
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="ultra-card">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">Winning</div>
+              <div className="text-2xl font-bold text-profit">
+                {trades.filter(t => (t.profitLoss || 0) > 0).length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="ultra-card">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">Losing</div>
+              <div className="text-2xl font-bold text-loss">
+                {trades.filter(t => (t.profitLoss || 0) < 0).length}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

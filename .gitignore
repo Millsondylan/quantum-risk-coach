@@ -14,6 +14,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
@@ -33,3 +34,56 @@ dist-ssr
 
 # Installer files
 *.dmg
+
+# Android specific
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/captured_outs/
+android/gradle-app.setting
+android/.idea/
+android/app/release/
+android/app/debug/
+
+# APK files
+*.apk
+*.aab
+apk-downloads/
+
+# Test results
+test-results/
+playwright-report/
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+icon-backup-*/
+
+# Supabase
+.supabase/
+
+# Build artifacts
+build/
+out/
+.next/
+.nuxt/
+.vuepress/dist
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Capacitor
+android/capacitor.settings.gradle
+android/app/capacitor.build.gradle

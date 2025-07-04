@@ -1,10 +1,10 @@
 import React from 'react';
-import HomeTabs from '@/components/HomeTabs';
+import UltraTraderDashboard from '@/components/UltraTraderDashboard';
 
 const Index = () => {
   return (
-    <div>
-      <HomeTabs />
+    <div className="w-full">
+      <UltraTraderDashboard />
     </div>
   );
 };

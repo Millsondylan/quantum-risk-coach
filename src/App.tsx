@@ -23,6 +23,7 @@ const TradeBuilder = lazy(() => import('./pages/TradeBuilder'));
 const StrategyAnalyzer = lazy(() => import('./pages/StrategyAnalyzer'));
 const Settings = lazy(() => import('./pages/Settings'));
 const PerformanceCalendar = lazy(() => import('./pages/PerformanceCalendar'));
+const PortfolioTracker = lazy(() => import('./components/PortfolioTracker'));
 
 const ValidationTest = lazy(() => import('./pages/ValidationTest'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -95,10 +96,10 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const navigate = useNavigate();
   
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative flex flex-col">
+    <div className="min-h-screen w-full bg-background text-foreground relative flex flex-col">
       <TopHeader />
       <nav style={{ display: 'none' }} data-testid="nav"></nav>
-      <main className="flex-1 relative z-10 overflow-y-auto pt-16 pb-20 w-full scroll-smooth" data-testid="main-content">
+      <main className="flex-1 relative z-10 overflow-y-auto pt-[6.5rem] pb-20 w-full scroll-smooth" data-testid="main-content">
         <div className="container mx-auto px-4 max-w-7xl w-full">
           {children}
         </div>
@@ -107,8 +108,8 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       {/* Floating Add Button */}
       <button
         onClick={() => navigate('/add-trade')}
-        className="fixed bottom-24 right-4 z-50 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
-        style={{ boxShadow: '0 4px 20px rgba(59, 130, 246, 0.3)' }}
+        className="fab"
+        style={{ boxShadow: '0 4px 20px rgba(78, 78, 255, 0.5)' }}
       >
         <Plus className="w-6 h-6" />
       </button>
@@ -323,6 +324,16 @@ function App() {
                 <ProtectedLayout>
                   <Suspense fallback={<LoadingSpinner message="Loading calendar..." />}>
                     <PerformanceCalendar />
+                  </Suspense>
+                </ProtectedLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/portfolio" element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Suspense fallback={<LoadingSpinner message="Loading portfolio..." />}>
+                    <PortfolioTracker />
                   </Suspense>
                 </ProtectedLayout>
               </ProtectedRoute>
