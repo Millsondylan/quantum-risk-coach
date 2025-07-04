@@ -33,6 +33,9 @@ import { Trade } from '@/lib/localDatabase';
 import { Slider } from '@/components/ui/slider';
 import { localDatabase } from '@/lib/localDatabase';
 import { cn } from '@/lib/utils';
+import { pnlCalculator } from '@/lib/pnlCalculator';
+import { useTrades } from '@/hooks/useTrades';
+import { notificationService } from '@/lib/notificationService';
 
 interface TradeFormData {
   symbol: string;
@@ -60,6 +63,7 @@ interface FormErrors {
 
 const AddTrade: React.FC = () => {
   const [activeTab, setActiveTab] = useState('manual');
+  const { addTrade, loading: tradesLoading } = useTrades();
   const [formData, setFormData] = useState<TradeFormData>({
     symbol: '',
     type: 'buy',
@@ -189,36 +193,62 @@ const AddTrade: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Simulate API call or direct database save
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       const finalSymbol = formData.useCustomSymbol ? formData.customSymbol : formData.symbol;
+      const entryPrice = parseFloat(formData.entryPrice);
+      const exitPrice = parseFloat(formData.exitPrice);
+      const size = parseFloat(formData.size);
+      
+      // Calculate accurate PnL using the proper calculator
+      const pnlCalculation = pnlCalculator.calculatePnL(
+        finalSymbol,
+        entryPrice,
+        exitPrice,
+        size,
+        formData.type === 'buy' ? 'buy' : 'sell',
+        0 // No commission for now
+      );
       
       // Construct the trade object to save
-      const tradeToSave: any = {
-        id: `trade_${Date.now()}`,
+      const tradeToSave: Trade = {
+        id: `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        accountId: 'default', // Will be updated when account management is implemented
         symbol: finalSymbol,
+        type: formData.type === 'buy' ? 'long' : 'short',
         side: formData.type === 'buy' ? 'buy' : 'sell',
-        amount: parseFloat(formData.size),
-        price: parseFloat(formData.entryPrice),
-        fee: 0, // Placeholder
-        profit: calculateProfit() || 0,
-        status: 'closed', // Assuming trades are closed upon entry for simplicity
+        amount: size,
+        quantity: size,
+        price: entryPrice,
+        entryPrice: entryPrice,
+        exitPrice: exitPrice,
+        fee: 0,
+        profit: pnlCalculation.netPnl,
+        profitLoss: pnlCalculation.netPnl,
+        status: 'closed',
         entryDate: formData.entryDate,
+        entryTime: formData.entryDate,
         exitDate: formData.exitDate || new Date().toISOString(),
-        riskReward: 0, // Placeholder
+        exitTime: formData.exitDate || new Date().toISOString(),
+        riskRewardRatio: pnlCalculation.riskRewardRatio || 0,
         tags: formData.tags,
+        notes: formData.notes,
         confidenceRating: formData.confidenceRating,
         mood: formData.mood
       };
 
-      // Save to local database
-      // You would use your actual localDatabase service here
-      console.log('Saving trade:', tradeToSave);
-      // await localDatabase.createTrade(tradeToSave);
-      toast.success('Trade saved successfully!');
-
-      toast.success('Trade added successfully!');
+      // Save to local database using the trades hook
+      await addTrade(tradeToSave);
+      
+      // Send notification about the trade
+      if (pnlCalculation.netPnl > 0) {
+        await notificationService.sendTradeNotification('profit', finalSymbol, pnlCalculation.netPnl);
+      } else if (pnlCalculation.netPnl < 0) {
+        await notificationService.sendTradeNotification('loss', finalSymbol, pnlCalculation.netPnl);
+      } else {
+        await notificationService.sendTradeNotification('closed', finalSymbol, pnlCalculation.netPnl);
+      }
+      
+      console.log('Trade saved successfully:', tradeToSave);
+      console.log('PnL Calculation:', pnlCalculation);
       
       // Reset form
       setFormData({
@@ -355,8 +385,19 @@ const AddTrade: React.FC = () => {
     
     if (isNaN(entry) || isNaN(exit) || isNaN(size)) return null;
     
-    const priceDiff = formData.type === 'buy' ? exit - entry : entry - exit;
-    return priceDiff * size;
+    const finalSymbol = formData.useCustomSymbol ? formData.customSymbol : formData.symbol;
+    
+    // Use proper PnL calculator with forex lot size handling
+    const calculation = pnlCalculator.calculatePnL(
+      finalSymbol,
+      entry,
+      exit,
+      size, // This will be treated as lot size for forex pairs
+      formData.type === 'buy' ? 'buy' : 'sell',
+      0 // No commission for now
+    );
+    
+    return calculation.netPnl;
   };
 
   const profit = calculateProfit();

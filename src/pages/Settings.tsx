@@ -66,7 +66,8 @@ const Settings: React.FC = () => {
     }
     
     await updatePreferences(updates);
-    toast.success('Settings updated successfully!');
+    // No toast notification - settings change silently
+    console.log(`Setting ${key} updated to:`, value);
   };
 
   const handleEnableNotifications = async () => {
@@ -75,17 +76,15 @@ const Settings: React.FC = () => {
         const permission = await Notification.requestPermission();
         setNotificationPermission(permission);
         
-        if (permission === 'granted') {
-          toast.success('Push notifications enabled successfully!');
-        } else {
-          toast.error('Push notification permission denied');
-        }
+        // Update user preferences to reflect notification permission
+        await handlePreferenceUpdate('notifications.pushNotifications', permission === 'granted');
+        
+        console.log('Notification permission:', permission);
       } else {
-        toast.error('Notifications not supported in this browser');
+        console.warn('Notifications not supported in this browser');
       }
     } catch (error) {
       console.error('Error enabling notifications:', error);
-      toast.error('Failed to enable notifications');
     }
   };
 
@@ -96,13 +95,12 @@ const Settings: React.FC = () => {
           body: 'This is a test notification from Quantum Risk Coach',
           icon: '/favicon.ico'
         });
-        toast.success('Test notification sent!');
+        console.log('Test notification sent successfully');
       } else {
-        toast.error('Please enable notifications first');
+        console.warn('Notifications not enabled - please enable notifications first');
       }
     } catch (error) {
       console.error('Error sending test notification:', error);
-      toast.error('Failed to send test notification');
     }
   };
 

@@ -1,0 +1,461 @@
+/* UltraTrader Holographic Theme - TradeNote Mobile */
+/* ================================================ */
+
+/* CSS Custom Properties for Quantum Design System */
+:root {
+  /* Primary Colors */
+  --quantum-primary: #2DF4FF;
+  --quantum-secondary: #A34EFF;
+  --quantum-accent: #FF6F61;
+  --quantum-success: #00D4AA;
+  --quantum-warning: #FFB800;
+  --quantum-error: #FF6F61;
+
+  /* Background Colors */
+  --quantum-bg-primary: #0B0F1A;
+  --quantum-bg-secondary: #1A2233;
+  --quantum-bg-tertiary: #2A3447;
+  --quantum-bg-glass: rgba(11, 15, 26, 0.95);
+  --quantum-bg-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Text Colors */
+  --quantum-text-primary: #FFFFFF;
+  --quantum-text-secondary: #B2B2B2;
+  --quantum-text-muted: #8A8A8A;
+  --quantum-text-inverse: #0B0F1A;
+
+  /* Border Colors */
+  --quantum-border-primary: rgba(45, 244, 255, 0.2);
+  --quantum-border-secondary: rgba(163, 78, 255, 0.2);
+  --quantum-border-accent: rgba(255, 111, 97, 0.2);
+  --quantum-border-glass: rgba(45, 244, 255, 0.1);
+
+  /* Shadow Colors */
+  --quantum-shadow-primary: rgba(45, 244, 255, 0.3);
+  --quantum-shadow-secondary: rgba(163, 78, 255, 0.3);
+  --quantum-shadow-accent: rgba(255, 111, 97, 0.3);
+  --quantum-shadow-dark: rgba(0, 0, 0, 0.3);
+
+  /* Gradient Colors */
+  --quantum-gradient-primary: linear-gradient(135deg, #2DF4FF 0%, #A34EFF 100%);
+  --quantum-gradient-secondary: linear-gradient(135deg, #A34EFF 0%, #2DF4FF 100%);
+  --quantum-gradient-bg: linear-gradient(135deg, #0B0F1A 0%, #1A2233 100%);
+  --quantum-gradient-glass: linear-gradient(135deg, rgba(11, 15, 26, 0.95) 0%, rgba(26, 34, 51, 0.95) 100%);
+
+  /* Animation Durations */
+  --quantum-duration-fast: 150ms;
+  --quantum-duration-normal: 300ms;
+  --quantum-duration-slow: 500ms;
+  --quantum-duration-slower: 1000ms;
+
+  /* Border Radius */
+  --quantum-radius-sm: 8px;
+  --quantum-radius-md: 12px;
+  --quantum-radius-lg: 16px;
+  --quantum-radius-xl: 20px;
+  --quantum-radius-2xl: 24px;
+
+  /* Spacing */
+  --quantum-space-xs: 4px;
+  --quantum-space-sm: 8px;
+  --quantum-space-md: 16px;
+  --quantum-space-lg: 24px;
+  --quantum-space-xl: 32px;
+  --quantum-space-2xl: 48px;
+
+  /* Typography */
+  --quantum-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --quantum-font-size-xs: 12px;
+  --quantum-font-size-sm: 14px;
+  --quantum-font-size-md: 16px;
+  --quantum-font-size-lg: 18px;
+  --quantum-font-size-xl: 20px;
+  --quantum-font-size-2xl: 24px;
+  --quantum-font-size-3xl: 32px;
+
+  /* Z-Index */
+  --quantum-z-dropdown: 1000;
+  --quantum-z-sticky: 1020;
+  --quantum-z-fixed: 1030;
+  --quantum-z-modal-backdrop: 1040;
+  --quantum-z-modal: 1050;
+  --quantum-z-popover: 1060;
+  --quantum-z-tooltip: 1070;
+  --quantum-z-toast: 1080;
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--quantum-font-family);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--quantum-gradient-bg);
+  color: var(--quantum-text-primary);
+  font-family: var(--quantum-font-family);
+  font-size: var(--quantum-font-size-md);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0 0 var(--quantum-space-md) 0;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--quantum-text-primary);
+}
+
+h1 { font-size: var(--quantum-font-size-3xl); }
+h2 { font-size: var(--quantum-font-size-2xl); }
+h3 { font-size: var(--quantum-font-size-xl); }
+h4 { font-size: var(--quantum-font-size-lg); }
+h5 { font-size: var(--quantum-font-size-md); }
+h6 { font-size: var(--quantum-font-size-sm); }
+
+p {
+  margin: 0 0 var(--quantum-space-md) 0;
+  color: var(--quantum-text-secondary);
+}
+
+/* Links */
+a {
+  color: var(--quantum-primary);
+  text-decoration: none;
+  transition: color var(--quantum-duration-fast) ease;
+}
+
+a:hover {
+  color: var(--quantum-secondary);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--quantum-space-sm) var(--quantum-space-md);
+  font-size: var(--quantum-font-size-sm);
+  font-weight: 500;
+  line-height: 1;
+  border: none;
+  border-radius: var(--quantum-radius-md);
+  cursor: pointer;
+  transition: all var(--quantum-duration-normal) ease;
+  text-decoration: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--quantum-gradient-primary);
+  color: var(--quantum-text-inverse);
+  box-shadow: 0 4px 12px var(--quantum-shadow-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px var(--quantum-shadow-primary);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--quantum-primary);
+  border: 1px solid var(--quantum-border-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(45, 244, 255, 0.1);
+  border-color: var(--quantum-primary);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--quantum-text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(45, 244, 255, 0.1);
+  color: var(--quantum-text-primary);
+}
+
+/* Cards */
+.card {
+  background: var(--quantum-gradient-glass);
+  border: 1px solid var(--quantum-border-glass);
+  border-radius: var(--quantum-radius-lg);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px var(--quantum-shadow-dark);
+  transition: all var(--quantum-duration-normal) ease;
+}
+
+.card:hover {
+  border-color: var(--quantum-border-primary);
+  box-shadow: 0 12px 40px var(--quantum-shadow-dark), 0 0 20px var(--quantum-shadow-primary);
+}
+
+.card-header {
+  padding: var(--quantum-space-md);
+  border-bottom: 1px solid var(--quantum-border-glass);
+}
+
+.card-body {
+  padding: var(--quantum-space-md);
+}
+
+.card-footer {
+  padding: var(--quantum-space-md);
+  border-top: 1px solid var(--quantum-border-glass);
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: var(--quantum-space-md);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--quantum-space-xs);
+  font-size: var(--quantum-font-size-sm);
+  font-weight: 500;
+  color: var(--quantum-text-primary);
+}
+
+.form-input {
+  width: 100%;
+  padding: var(--quantum-space-sm) var(--quantum-space-md);
+  font-size: var(--quantum-font-size-md);
+  line-height: 1.5;
+  color: var(--quantum-text-primary);
+  background: rgba(26, 34, 51, 0.5);
+  border: 1px solid var(--quantum-border-glass);
+  border-radius: var(--quantum-radius-md);
+  transition: all var(--quantum-duration-normal) ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--quantum-primary);
+  box-shadow: 0 0 0 3px var(--quantum-shadow-primary);
+}
+
+.form-input::placeholder {
+  color: var(--quantum-text-muted);
+}
+
+/* Alerts */
+.alert {
+  padding: var(--quantum-space-md);
+  margin-bottom: var(--quantum-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--quantum-radius-md);
+  font-size: var(--quantum-font-size-sm);
+}
+
+.alert-success {
+  background: rgba(0, 212, 170, 0.1);
+  border-color: var(--quantum-success);
+  color: var(--quantum-success);
+}
+
+.alert-warning {
+  background: rgba(255, 184, 0, 0.1);
+  border-color: var(--quantum-warning);
+  color: var(--quantum-warning);
+}
+
+.alert-error {
+  background: rgba(255, 111, 97, 0.1);
+  border-color: var(--quantum-error);
+  color: var(--quantum-error);
+}
+
+.alert-info {
+  background: rgba(45, 244, 255, 0.1);
+  border-color: var(--quantum-primary);
+  color: var(--quantum-primary);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--quantum-space-xs) var(--quantum-space-sm);
+  font-size: var(--quantum-font-size-xs);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--quantum-radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-primary {
+  background: var(--quantum-gradient-primary);
+  color: var(--quantum-text-inverse);
+}
+
+.badge-secondary {
+  background: rgba(163, 78, 255, 0.2);
+  color: var(--quantum-secondary);
+  border: 1px solid var(--quantum-border-secondary);
+}
+
+.badge-success {
+  background: rgba(0, 212, 170, 0.2);
+  color: var(--quantum-success);
+  border: 1px solid var(--quantum-success);
+}
+
+.badge-warning {
+  background: rgba(255, 184, 0, 0.2);
+  color: var(--quantum-warning);
+  border: 1px solid var(--quantum-warning);
+}
+
+.badge-error {
+  background: rgba(255, 111, 97, 0.2);
+  color: var(--quantum-error);
+  border: 1px solid var(--quantum-error);
+}
+
+/* Animations */
+@keyframes quantum-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes quantum-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--quantum-shadow-primary);
+  }
+  50% {
+    box-shadow: 0 0 30px var(--quantum-shadow-primary), 0 0 40px var(--quantum-shadow-primary);
+  }
+}
+
+@keyframes quantum-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes quantum-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Utility Classes */
+.quantum-pulse {
+  animation: quantum-pulse 2s infinite;
+}
+
+.quantum-glow {
+  animation: quantum-glow 2s infinite;
+}
+
+.quantum-float {
+  animation: quantum-float 3s ease-in-out infinite;
+}
+
+.quantum-spin {
+  animation: quantum-spin 1s linear infinite;
+}
+
+/* Glassmorphism */
+.glass {
+  background: var(--quantum-gradient-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--quantum-border-glass);
+}
+
+.glass-strong {
+  background: rgba(11, 15, 26, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--quantum-border-primary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  :root {
+    --quantum-space-md: 12px;
+    --quantum-space-lg: 20px;
+    --quantum-space-xl: 28px;
+  }
+
+  .card {
+    border-radius: var(--quantum-radius-md);
+  }
+
+  .btn {
+    padding: var(--quantum-space-md) var(--quantum-space-lg);
+    font-size: var(--quantum-font-size-md);
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --quantum-space-md: 8px;
+    --quantum-space-lg: 16px;
+    --quantum-space-xl: 24px;
+  }
+
+  .btn {
+    padding: var(--quantum-space-lg) var(--quantum-space-xl);
+    font-size: var(--quantum-font-size-lg);
+    min-height: 56px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Colors are already optimized for dark mode */
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --quantum-border-primary: rgba(45, 244, 255, 0.4);
+    --quantum-border-secondary: rgba(163, 78, 255, 0.4);
+    --quantum-border-accent: rgba(255, 111, 97, 0.4);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+} 

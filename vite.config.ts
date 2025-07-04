@@ -1,29 +1,30 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
-import path from 'path'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': resolve(__dirname, 'src'),
     },
   },
   build: {
     outDir: 'dist',
-    target: 'esnext',
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: 'terser',
     rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
-        }
+      input: {
+        main: resolve(__dirname, 'index.html')
       }
     }
   },
-  optimizeDeps: {
-    include: ['react', 'react-dom']
+  server: {
+    port: 5173,
+    host: true,
+    open: true
   }
 })
       
