@@ -61,6 +61,7 @@ const WatchlistTab = () => {
 };
 
 const AnalyticsTab = () => {
+  const navigate = useNavigate();
   const [symbolFilter, setSymbolFilter] = React.useState('pnl');
   const [sortOrder, setSortOrder] = React.useState('decreasing');
   const { trades, getTradeStats } = useTrades();
@@ -121,12 +122,12 @@ const AnalyticsTab = () => {
       
       {/* Chart Placeholder */}
       <div className="h-48 bg-gray-800/50 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-colors"
-           onClick={() => toast.info('Chart functionality coming soon!')}>
-        <p className="text-gray-500">Symbol Performance Chart - Click to load</p>
+           onClick={() => navigate('/performance-calendar')}>
+        <p className="text-gray-500">Symbol Performance Chart - Click to view detailed analytics</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => console.log('View detailed analytics')}>
+        <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => navigate('/performance-calendar')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Symbols</CardTitle>
             <Info className="h-4 w-4 text-gray-400" />
@@ -135,7 +136,7 @@ const AnalyticsTab = () => {
             <div className="text-2xl font-bold">{new Set(trades.map(t => t.symbol)).size}</div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => console.log('View detailed analytics')}>
+        <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => navigate('/performance-calendar')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Average Win</CardTitle>
             <Info className="h-4 w-4 text-gray-400" />
@@ -144,7 +145,7 @@ const AnalyticsTab = () => {
             <div className="text-2xl font-bold text-green-400">{formatPnL(stats.averageWin)}</div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => console.log('View detailed analytics')}>
+        <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => navigate('/performance-calendar')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Average Loss</CardTitle>
             <Info className="h-4 w-4 text-gray-400" />
@@ -153,7 +154,7 @@ const AnalyticsTab = () => {
             <div className="text-2xl font-bold text-red-400">{formatPnL(-stats.averageLoss)}</div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => console.log('View detailed analytics')}>
+        <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => navigate('/performance-calendar')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Max Drawdown</CardTitle>
             <Info className="h-4 w-4 text-gray-400" />
@@ -164,7 +165,7 @@ const AnalyticsTab = () => {
         </Card>
       </div>
 
-      <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => console.log('View symbol breakdown')}>
+      <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => navigate('/performance-calendar')}>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium">Profit Factor</CardTitle>
           <Info className="h-4 w-4 text-gray-400" />
@@ -176,7 +177,7 @@ const AnalyticsTab = () => {
         </CardContent>
       </Card>
       
-      <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => console.log('View trade comparison')}>
+      <Card className="cursor-pointer hover:bg-gray-800/30 transition-colors" onClick={() => navigate('/performance-calendar')}>
         <CardHeader>
           <CardTitle>Risk vs Reward</CardTitle>
         </CardHeader>
@@ -312,7 +313,7 @@ const DashboardTab = () => {
     if (isCleanState) {
       console.log(`Viewing ${metric} - No data available yet`);
     } else {
-      toast.success(`Viewing ${metric} details`);
+      navigate('/performance-calendar');
     }
   };
 
@@ -461,11 +462,15 @@ const CalendarTab = () => {
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   const handleViewChange = (view: string) => {
-    toast.success(`Switched to ${view} view`);
+    if (view === 'Monthly') {
+      navigate('/performance-calendar');
+    } else {
+      toast.info('Yearly view coming soon!');
+    }
   };
 
   const handleMonthNavigation = (direction: 'prev' | 'next') => {
-    toast.success(`Navigated to ${direction === 'prev' ? 'previous' : 'next'} month`);
+    navigate('/performance-calendar');
   };
 
   return (

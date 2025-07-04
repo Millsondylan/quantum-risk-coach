@@ -8,23 +8,19 @@ const TopHeader = () => {
   const [selectedPortfolio, setSelectedPortfolio] = useState('Default Portfolio');
 
   const handleMenuClick = () => {
-    toast.info('Opening navigation menu...');
-    // Could open a sidebar or dropdown menu
+    navigate('/settings');
   };
 
   const handlePortfolioClick = () => {
-    toast.info('Portfolio selector opened');
-    // Could open a portfolio selection modal
+    navigate('/data-management');
   };
 
   const handleFilterClick = () => {
-    toast.info('Opening filters...');
-    // Could open filter options
+    navigate('/history');
   };
 
   const handleLayoutClick = () => {
-    toast.info('Layout options opened');
-    // Could toggle between different layout views
+    navigate('/performance-calendar');
   };
 
   return (

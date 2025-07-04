@@ -94,7 +94,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative flex flex-col">
       <TopHeader />
       <nav style={{ display: 'none' }} data-testid="nav"></nav>
-      <main className="flex-1 relative z-10 overflow-y-auto pt-16 pb-24 w-full" data-testid="main-content">
+      <main className="flex-1 relative z-10 overflow-y-auto pt-20 pb-28 w-full" data-testid="main-content">
         <div className="container mx-auto px-4 max-w-7xl w-full">
           {children}
         </div>
